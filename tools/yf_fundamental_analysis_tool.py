@@ -1,5 +1,5 @@
 import yfinance as yf
-from crewai_tools import tool
+from crewai.tools import tool
 
 @tool
 def yf_fundamental_analysis(ticker: str):
