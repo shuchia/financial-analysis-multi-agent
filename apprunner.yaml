@@ -3,16 +3,24 @@ runtime: docker
 build:
   commands:
     build:
-      - echo "Building the Docker image..."
+      - echo "Building the Docker image for AWS App Runner..."
       - docker build -t financial-analysis-app .
 run:
   runtime-version: latest
-  command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+  command: streamlit run app.py --server.port=8080 --server.address=0.0.0.0 --server.headless=true --server.fileWatcherType=none
   network:
-    port: 8501
+    port: 8080
     env: PORT
   env:
     - name: PORT
-      value: "8501"
+      value: "8080"
     - name: AWS_DEFAULT_REGION
       value: "us-east-1"
+    - name: STREAMLIT_SERVER_PORT
+      value: "8080"
+    - name: STREAMLIT_SERVER_ADDRESS
+      value: "0.0.0.0"
+    - name: STREAMLIT_SERVER_HEADLESS
+      value: "true"
+    - name: STREAMLIT_SERVER_FILE_WATCHER_TYPE
+      value: "none"

@@ -1,67 +1,211 @@
-# Financial Analysis: Multi-Agent Open Source LLM
+# Financial Analysis: Multi-Agent System with AWS Bedrock
 
-An advanced stock analysis tool powered by AI agents that provides comprehensive financial analysis using open-source language models. This application combines technical analysis, fundamental analysis, and sentiment analysis to deliver detailed insights for stock market investments.
+An advanced AI-powered stock analysis platform that leverages multi-agent architecture to provide comprehensive financial analysis. The application uses AWS Bedrock (Claude 3 Haiku) as the LLM backend and combines multiple specialized AI agents to deliver detailed investment insights.
 
-## Features
+## 🚀 Features
 
-- Real-time stock data analysis
-- Technical analysis with chart pattern recognition
-- Fundamental analysis of company financials
-- Market sentiment analysis
-- Risk assessment
-- Competitor analysis
-- Investment strategy recommendations
-- Interactive charts and visualizations
+### Multi-Agent Architecture
+- **Stock Market Researcher**: Gathers comprehensive market data using technical and fundamental analysis tools
+- **Sentiment Analyst**: Analyzes market sentiment from news and social media
+- **Financial Analyst**: Synthesizes data and conducts risk assessments
+- **Investment Strategist**: Develops tailored investment strategies
 
-## Installation
+### Analysis Capabilities
+- **Technical Analysis**: Chart patterns, moving averages, RSI, MACD, and advanced indicators
+- **Fundamental Analysis**: Financial ratios, company metrics, and valuation analysis
+- **Sentiment Analysis**: News sentiment scoring and social media trends
+- **Risk Assessment**: Comprehensive risk evaluation and scenario analysis
+- **Competitor Analysis**: Comparative market analysis
+- **Interactive Visualizations**: Real-time candlestick charts with technical indicators
 
-1. Clone the repository:
-```bash
-git clone https://github.com/imanoop7/Financial-Analysis--Multi-Agent-Open-Source-LLM
-cd Financial-Analysis--Multi-Agent-Open-Source-LLM
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Streamlit UI  │    │   CrewAI Agents  │    │  AWS Bedrock    │
+│                 │◄──►│                  │◄──►│  Claude 3 Haiku │
+│  - User Input   │    │  - Researcher    │    │                 │
+│  - Visualizations│    │  - Analyst       │    └─────────────────┘
+│  - Results      │    │  - Strategist    │           
+└─────────────────┘    │  - Sentiment     │    ┌─────────────────┐
+                       └──────────────────┘    │  Data Sources   │
+                                 │             │                 │
+                                 └────────────►│  - Yahoo Finance│
+                                               │  - News APIs    │
+                                               │  - Market Data  │
+                                               └─────────────────┘
 ```
 
-2. Install the required dependencies:
+## 🛠️ Installation & Setup
+
+### Prerequisites
+- Python 3.11+
+- AWS Account with Bedrock access
+- Git
+
+### Local Development
+
+1. **Clone the repository:**
+```bash
+git clone https://github.com/shuchia/financial-analysis-multi-agent.git
+cd financial-analysis-multi-agent
+```
+
+2. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Make sure you have Ollama installed and running on your system. Visit [Ollama's website](https://ollama.ai/) for installation instructions.
+3. **Configure AWS credentials:**
+```bash
+# Option 1: Environment variables
+export AWS_ACCESS_KEY_ID=your_access_key
+export AWS_SECRET_ACCESS_KEY=your_secret_key
+export AWS_DEFAULT_REGION=us-east-1
 
-## Usage
+# Option 2: AWS CLI configuration
+aws configure
+```
 
-1. Start the application:
+4. **Run the application:**
 ```bash
 streamlit run app.py
 ```
 
-2. Enter a stock symbol (e.g., AAPL for Apple Inc.) in the input field.
+5. **Access the app:**
+   Open your browser to `http://localhost:8501`
 
-3. Click "Analyze Stock" to generate a comprehensive analysis report.
+### Environment Configuration
 
-The application will display:
-- Technical analysis insights
-- Chart patterns
-- Fundamental analysis
-- Market sentiment
-- Risk assessment
-- Competitor analysis
-- Investment strategy recommendations
+Create a `.env` file based on `.env.template`:
+```bash
+cp .env.template .env
+# Edit .env with your AWS credentials
+```
 
-## Dependencies
+## ☁️ AWS App Runner Deployment
 
-- crewai - For multi-agent orchestration
-- langchain - For LLM interactions
-- ollama - For running local LLMs
-- yfinance - For fetching stock data
-- streamlit - For the web interface
-- plotly - For interactive charts
-- And other data analysis libraries
+The application is configured for seamless deployment on AWS App Runner with automatic scaling and managed infrastructure.
 
-## Contributing
+### Quick Deploy
+1. **Prepare AWS:**
+   - Ensure AWS CLI is configured
+   - Set up GitHub connection in App Runner console
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+2. **Deploy:**
+```bash
+./deploy.sh
+```
 
-## License
+3. **Manual Deployment:**
+   - Go to [AWS App Runner Console](https://console.aws.amazon.com/apprunner/)
+   - Create service from source code repository
+   - Connect to this GitHub repository
+   - App Runner will automatically use `apprunner.yaml` configuration
+
+### Configuration Files
+- `apprunner.yaml`: AWS App Runner service configuration
+- `Dockerfile`: Container configuration optimized for cloud deployment
+- `deploy.sh`: Deployment automation script
+- `DEPLOYMENT.md`: Complete deployment guide
+
+## 📊 Usage
+
+1. **Enter Stock Symbol**: Input any valid stock ticker (e.g., AAPL, GOOGL, TSLA)
+2. **Run Analysis**: Click "Analyze Stock" to start the multi-agent workflow
+3. **Review Results**: The system will display:
+   - Comprehensive AI analysis report
+   - Interactive price charts with technical indicators
+   - Key financial statistics and metrics
+   - Investment recommendations
+
+### Sample Analysis Output
+The multi-agent system provides:
+- **Technical Analysis**: RSI, MACD, moving averages, support/resistance levels
+- **Fundamental Metrics**: P/E ratio, market cap, dividend yield, beta
+- **Risk Assessment**: Volatility analysis and risk scoring
+- **Market Sentiment**: News sentiment and social media trends
+- **Investment Strategy**: Tailored recommendations for different investor profiles
+
+## 🔧 Key Dependencies
+
+### Core Framework
+- **CrewAI**: Multi-agent orchestration and workflow management
+- **LangChain**: LLM integration and chain operations
+- **Streamlit**: Web application framework
+
+### AI & Analysis
+- **AWS Bedrock**: Claude 3 Haiku LLM backend
+- **pandas-ta**: Technical analysis indicators
+- **yfinance**: Real-time market data
+- **scipy**: Statistical computations
+
+### Visualization
+- **Plotly**: Interactive charts and graphs
+- **NumPy/Pandas**: Data manipulation and analysis
+
+## 🧪 Local Testing
+
+Test the Docker container locally:
+```bash
+# Build the image
+docker build -t financial-analysis-app .
+
+# Run locally
+docker run -p 8080:8080 \
+  -e AWS_ACCESS_KEY_ID=your_key \
+  -e AWS_SECRET_ACCESS_KEY=your_secret \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  financial-analysis-app
+```
+
+## 📁 Project Structure
+
+```
+├── app.py                          # Main Streamlit application
+├── crew.py                         # Multi-agent crew configuration
+├── requirements.txt                # Python dependencies
+├── Dockerfile                      # Container configuration
+├── apprunner.yaml                 # AWS App Runner config
+├── deploy.sh                      # Deployment script
+├── DEPLOYMENT.md                  # Deployment guide
+├── .env.template                  # Environment variables template
+├── .dockerignore                  # Docker build exclusions
+└── tools/                         # Analysis tools
+    ├── yf_tech_analysis_tool.py   # Technical analysis
+    ├── yf_fundamental_analysis_tool.py # Fundamental analysis
+    ├── sentiment_analysis_tool.py  # Sentiment analysis
+    ├── competitor_analysis_tool.py # Competitor analysis
+    └── risk_assessment_tool.py     # Risk assessment
+```
+
+## 🔒 Security & Best Practices
+
+- Uses IAM roles for AWS access when deployed
+- Non-root user in container for security
+- Environment variable-based configuration
+- Comprehensive health checks
+- Optimized for production deployment
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- 📖 **Documentation**: See `DEPLOYMENT.md` for detailed deployment instructions
+- 🐛 **Issues**: Report bugs via GitHub Issues
+- 💡 **Feature Requests**: Submit enhancement requests via GitHub Issues
+
+---
+
+**Built with ❤️ using AWS Bedrock, CrewAI, and Streamlit**
