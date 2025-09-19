@@ -7,7 +7,7 @@ build:
       - docker build -t financial-analysis-app .
 run:
   runtime-version: latest
-  command: streamlit run app.py --server.port=8080 --server.address=0.0.0.0 --server.headless=true --server.fileWatcherType=none
+  command: streamlit run app.py --server.port=8080 --server.address=0.0.0.0 --server.headless=true --server.fileWatcherType=none --server.enableCORS=false --server.enableXsrfProtection=false
   network:
     port: 8080
     env: PORT
