@@ -17,10 +17,7 @@ def main():
         initial_sidebar_state="expanded"
     )
 
-    # Add this at the top of your app
-    if 'websocket_disabled' not in st.session_state:
-        st.session_state.websocket_disabled = True
-        st.rerun()
+    # WebSocket handling not needed on ECS Fargate
 
     # User input
     stock_symbol = st.text_input("Enter stock symbol (e.g., AAPL):", "AAPL")
