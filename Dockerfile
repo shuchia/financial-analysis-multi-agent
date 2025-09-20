@@ -36,4 +36,6 @@ CMD ["streamlit", "run", "app.py", \
      "--server.headless=true", \
      "--server.fileWatcherType=none", \
      "--server.enableCORS=false", \
-     "--server.enableXsrfProtection=false"]
+     "--server.enableXsrfProtection=false", \
+     "--server.enableWebsocketCompression=false", \
+     "--server.allowRunOnSave=false"]

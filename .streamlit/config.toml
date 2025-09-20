@@ -1,0 +1,12 @@
+[server]
+port = 8080
+address = "0.0.0.0"
+headless = true
+fileWatcherType = "none"
+enableCORS = false
+enableXsrfProtection = false
+enableWebsocketCompression = false
+allowRunOnSave = false
+
+[browser]
+gatherUsageStats = false
