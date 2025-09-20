@@ -38,4 +38,6 @@ CMD ["streamlit", "run", "app.py", \
      "--server.enableCORS=false", \
      "--server.enableXsrfProtection=false", \
      "--server.enableWebsocketCompression=false", \
-     "--server.allowRunOnSave=false"]
+     "--server.allowRunOnSave=false", \
+     "--runner.magicEnabled=false", \
+     "--client.toolbarMode=minimal"]

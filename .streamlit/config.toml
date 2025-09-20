@@ -7,6 +7,13 @@ enableCORS = false
 enableXsrfProtection = false
 enableWebsocketCompression = false
 allowRunOnSave = false
+runOnSave = false
 
 [browser]
 gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+
+[runner]
+magicEnabled = false
