@@ -10,9 +10,17 @@ def main():
     # Configure logging for Streamlit app
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
     logger = logging.getLogger(__name__)
-    
-    st.set_page_config(layout="wide")
-    st.title("AI-Powered Advanced Stock Analysis")
+    # Force HTTP polling instead of WebSocket
+    st.set_page_config(
+        page_title="AI-Powered Advanced Stock Analysis",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+
+    # Add this at the top of your app
+    if 'websocket_disabled' not in st.session_state:
+        st.session_state.websocket_disabled = True
+        st.experimental_rerun()
 
     # User input
     stock_symbol = st.text_input("Enter stock symbol (e.g., AAPL):", "AAPL")
