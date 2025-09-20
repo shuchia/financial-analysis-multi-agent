@@ -54,3 +54,4 @@ test_*.py
 
 # Logs
 *.log
+task-definition.json
