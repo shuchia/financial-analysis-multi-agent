@@ -1,6 +1,10 @@
-# Financial Analysis: Multi-Agent System with AWS Bedrock
+# InvestForge.io: AI-Powered Financial Analysis Platform
+
+🚀 **Live at: [https://investforge.io](https://investforge.io)**
 
 An advanced AI-powered stock analysis platform that leverages multi-agent architecture to provide comprehensive financial analysis. The application uses AWS Bedrock (Claude 3 Haiku) as the LLM backend and combines multiple specialized AI agents to deliver detailed investment insights.
+
+Built with enterprise-grade AWS infrastructure, featuring automatic scaling, SSL encryption, and professional security measures.
 
 ## 🚀 Features
 
@@ -83,41 +87,52 @@ cp .env.template .env
 # Edit .env with your AWS credentials
 ```
 
-## ☁️ AWS App Runner Deployment
+## ☁️ Production AWS Deployment
 
-The application is configured for seamless deployment on AWS App Runner with automatic scaling and managed infrastructure.
+**InvestForge.io** is deployed on enterprise-grade AWS infrastructure with comprehensive security and monitoring.
 
-### Quick Deploy
-1. **Prepare AWS:**
-   - Ensure AWS CLI is configured
-   - Set up GitHub connection in App Runner console
+### Live Application
+- **URL**: [https://investforge.io](https://investforge.io)
+- **SSL**: AWS Certificate Manager (ACM) with automatic renewal
+- **CDN**: CloudFront distribution for global performance
+- **Security**: WAF protection, security groups, and encrypted connections
 
-2. **Deploy:**
-```bash
-./deploy.sh
+### Architecture Overview
+```
+Internet → Route 53 DNS → Application Load Balancer (HTTPS) → ECS Fargate → Streamlit App
+             ↓                      ↓                           ↓
+        SSL Certificate        WAF Protection            Auto-scaling Containers
+        (AWS ACM)             (DDoS/Security)           (1-10 instances)
 ```
 
-3. **Manual Deployment:**
-   - Go to [AWS App Runner Console](https://console.aws.amazon.com/apprunner/)
-   - Create service from source code repository
-   - Connect to this GitHub repository
-   - App Runner will automatically use `apprunner.yaml` configuration
+### Infrastructure Components
+- **Domain**: `investforge.io` with Route 53 DNS management
+- **Load Balancer**: Application Load Balancer with SSL termination
+- **Compute**: ECS Fargate containers (1024 CPU, 2048 MB RAM)
+- **Registry**: Amazon ECR for container images
+- **Security**: AWS WAF, Security Groups, IAM roles
+- **Monitoring**: CloudWatch logs and metrics
+- **Secrets**: AWS Secrets Manager for configuration
 
-### Configuration Files
-- `apprunner.yaml`: AWS App Runner service configuration
-- `Dockerfile`: Container configuration optimized for cloud deployment
-- `deploy.sh`: Deployment automation script
-- `DEPLOYMENT.md`: Complete deployment guide
+### Local Development Setup
+Follow the installation steps below to run the application locally for development and testing.
 
 ## 📊 Usage
 
-1. **Enter Stock Symbol**: Input any valid stock ticker (e.g., AAPL, GOOGL, TSLA)
-2. **Run Analysis**: Click "Analyze Stock" to start the multi-agent workflow
-3. **Review Results**: The system will display:
+### Quick Start
+1. **Visit**: [https://investforge.io](https://investforge.io)
+2. **Enter Stock Symbol**: Input any valid stock ticker (e.g., AAPL, GOOGL, TSLA)
+3. **Run Analysis**: Click "Analyze Stock" to start the multi-agent workflow
+4. **Review Results**: The system will display:
    - Comprehensive AI analysis report
    - Interactive price charts with technical indicators
    - Key financial statistics and metrics
    - Investment recommendations
+
+### Local Development
+1. **Clone & Setup**: Follow installation steps above
+2. **Run Locally**: `streamlit run app.py`
+3. **Access**: Open `http://localhost:8501`
 
 ### Sample Analysis Output
 The multi-agent system provides:
@@ -179,13 +194,23 @@ docker run -p 8080:8080 \
     └── risk_assessment_tool.py     # Risk assessment
 ```
 
-## 🔒 Security & Best Practices
+## 🔒 Security & Production Features
 
-- Uses IAM roles for AWS access when deployed
-- Non-root user in container for security
-- Environment variable-based configuration
-- Comprehensive health checks
-- Optimized for production deployment
+### Security Measures
+- **HTTPS Only**: SSL/TLS encryption with AWS Certificate Manager
+- **WAF Protection**: Web Application Firewall blocking malicious requests
+- **Network Security**: Private security groups and least-privilege access
+- **IAM Roles**: Secure AWS service access without hardcoded credentials
+- **Secrets Management**: AWS Secrets Manager for sensitive configuration
+- **Container Security**: Non-root user and vulnerability scanning
+
+### Production Capabilities
+- **Auto-scaling**: ECS Fargate scales containers based on demand
+- **High Availability**: Multi-AZ deployment with load balancing
+- **Monitoring**: CloudWatch metrics, logs, and alerting
+- **Cost Tracking**: Resource tagging for billing separation
+- **Automated Deployment**: CI/CD with AWS CodeBuild and ECR
+- **Health Checks**: Application and infrastructure health monitoring
 
 ## 🤝 Contributing
 
