@@ -1,0 +1,306 @@
+service: investforge-api-alb
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.9
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  
+  # ALB configuration instead of API Gateway
+  alb:
+    targetGroupPrefix: investforge
+    listenerArn: ${cf:investforge-unified-${self:provider.stage}.HTTPSListenerArn}
+    
+  environment:
+    STAGE: ${self:provider.stage}
+    JWT_SECRET_KEY: ${env:JWT_SECRET_KEY}
+    STRIPE_SECRET_KEY: ${env:STRIPE_SECRET_KEY}
+    STRIPE_WEBHOOK_SECRET: ${env:STRIPE_WEBHOOK_SECRET}
+    REDIS_URL: ${cf:investforge-unified-${self:provider.stage}.RedisEndpoint}
+    SES_REGION: us-east-1
+    DYNAMODB_TABLE_USERS: ${self:service}-${self:provider.stage}-users
+    DYNAMODB_TABLE_USAGE: ${self:service}-${self:provider.stage}-usage
+    DYNAMODB_TABLE_ANALYTICS: ${self:service}-${self:provider.stage}-analytics
+    DYNAMODB_TABLE_WAITLIST: ${self:service}-${self:provider.stage}-waitlist
+    
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: 
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-${self:provider.stage}-*"
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: "*"
+
+plugins:
+  - serverless-python-requirements
+  - serverless-plugin-lambda-alb-integration
+
+custom:
+  pythonRequirements:
+    dockerizePip: non-linux
+    slim: true
+    strip: false
+  
+  # ALB path configuration
+  albBasePath: /api
+
+functions:
+  # Authentication endpoints
+  signup:
+    handler: handlers/auth.signup
+    events:
+      - alb:
+          priority: 1
+          conditions:
+            path: ${self:custom.albBasePath}/auth/signup
+            method: POST
+          
+  login:
+    handler: handlers/auth.login
+    events:
+      - alb:
+          priority: 2
+          conditions:
+            path: ${self:custom.albBasePath}/auth/login
+            method: POST
+          
+  refresh:
+    handler: handlers/auth.refresh_token
+    events:
+      - alb:
+          priority: 3
+          conditions:
+            path: ${self:custom.albBasePath}/auth/refresh
+            method: POST
+          
+  verify_email:
+    handler: handlers/auth.verify_email
+    events:
+      - alb:
+          priority: 4
+          conditions:
+            path: ${self:custom.albBasePath}/auth/verify-email
+            method: POST
+          
+  # User management endpoints
+  get_user:
+    handler: handlers/users.get_user
+    events:
+      - alb:
+          priority: 5
+          conditions:
+            path: ${self:custom.albBasePath}/users/me
+            method: GET
+          authorizer: auth
+            
+  update_user:
+    handler: handlers/users.update_user
+    events:
+      - alb:
+          priority: 6
+          conditions:
+            path: ${self:custom.albBasePath}/users/me
+            method: PUT
+          authorizer: auth
+            
+  delete_user:
+    handler: handlers/users.delete_user
+    events:
+      - alb:
+          priority: 7
+          conditions:
+            path: ${self:custom.albBasePath}/users/me
+            method: DELETE
+          authorizer: auth
+            
+  # Usage tracking endpoints
+  get_usage:
+    handler: handlers/usage.get_usage
+    events:
+      - alb:
+          priority: 8
+          conditions:
+            path: ${self:custom.albBasePath}/users/usage
+            method: GET
+          authorizer: auth
+            
+  increment_usage:
+    handler: handlers/usage.increment_usage
+    events:
+      - alb:
+          priority: 9
+          conditions:
+            path: ${self:custom.albBasePath}/users/usage/*
+            method: POST
+          authorizer: auth
+            
+  # Payment endpoints
+  create_checkout_session:
+    handler: handlers/payments.create_checkout_session
+    events:
+      - alb:
+          priority: 10
+          conditions:
+            path: ${self:custom.albBasePath}/stripe/create-checkout-session
+            method: POST
+          authorizer: auth
+            
+  stripe_webhook:
+    handler: handlers/payments.stripe_webhook
+    events:
+      - alb:
+          priority: 11
+          conditions:
+            path: ${self:custom.albBasePath}/stripe/webhook
+            method: POST
+          
+  # Analytics endpoints
+  track_event:
+    handler: handlers/analytics.track_event
+    events:
+      - alb:
+          priority: 12
+          conditions:
+            path: ${self:custom.albBasePath}/analytics/track
+            method: POST
+          
+  get_analytics:
+    handler: handlers/analytics.get_analytics
+    events:
+      - alb:
+          priority: 13
+          conditions:
+            path: ${self:custom.albBasePath}/analytics
+            method: GET
+          authorizer: auth
+            
+  # Waitlist endpoints
+  join_waitlist:
+    handler: handlers/waitlist.join_waitlist
+    events:
+      - alb:
+          priority: 14
+          conditions:
+            path: ${self:custom.albBasePath}/waitlist/join
+            method: POST
+          
+  # Email endpoints
+  send_welcome_email:
+    handler: handlers/emails.send_welcome_email
+    events:
+      - alb:
+          priority: 15
+          conditions:
+            path: ${self:custom.albBasePath}/emails/welcome
+            method: POST
+          
+  # Health check endpoint
+  health:
+    handler: handlers/health.check
+    events:
+      - alb:
+          priority: 99
+          conditions:
+            path: ${self:custom.albBasePath}/health
+            method: GET
+          
+  # Authorizer function
+  auth:
+    handler: handlers/auth.alb_authorizer
+
+resources:
+  Resources:
+    # Lambda permissions for ALB
+    LambdaPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName: !GetAtt SignupLambdaFunction.Arn
+        Action: lambda:InvokeFunction
+        Principal: elasticloadbalancing.amazonaws.com
+
+    # DynamoDB Tables (same as before)
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-users
+        AttributeDefinitions:
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: user_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: EmailIndex
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST
+        
+    UsageTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-usage
+        AttributeDefinitions:
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: date_feature
+            AttributeType: S
+        KeySchema:
+          - AttributeName: user_id
+            KeyType: HASH
+          - AttributeName: date_feature
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        
+    AnalyticsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-analytics
+        AttributeDefinitions:
+          - AttributeName: event_type
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: S
+        KeySchema:
+          - AttributeName: event_type
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        
+    WaitlistTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-waitlist
+        AttributeDefinitions:
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: email
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+  Outputs:
+    LambdaTargetGroupArn:
+      Description: Lambda target group ARN for ALB
+      Value: ${cf:investforge-unified-${self:provider.stage}.LambdaTargetGroupArn}
+      Export:
+        Name: ${self:service}-${self:provider.stage}-lambda-tg-arn

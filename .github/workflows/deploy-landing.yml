@@ -1,0 +1,73 @@
+name: Deploy Landing Page to S3/CloudFront
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'landing/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'landing/**' ]
+
+env:
+  AWS_REGION: us-east-1
+  S3_BUCKET: investforge-landing-site
+  CLOUDFRONT_DISTRIBUTION_ID: E1234567890ABC
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: |
+        cd landing
+        npm install
+        
+    - name: Run tests
+      run: |
+        cd landing
+        npm test
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Build landing page
+      run: |
+        cd landing
+        npm install
+        npm run build
+
+    - name: Deploy to S3
+      run: |
+        cd landing
+        aws s3 sync dist/ s3://$S3_BUCKET --delete
+
+    - name: Invalidate CloudFront
+      run: |
+        aws cloudfront create-invalidation \
+          --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
+          --paths "/*"

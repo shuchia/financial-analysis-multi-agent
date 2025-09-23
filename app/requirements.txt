@@ -10,3 +10,7 @@ scipy>=1.13.1,<1.14.0
 numpy>=1.26.0,<2.0.0
 textblob
 pandas-ta-classic
+requests>=2.31.0
+pyjwt>=2.8.0
+redis>=4.5.5
+python-dotenv>=1.0.0

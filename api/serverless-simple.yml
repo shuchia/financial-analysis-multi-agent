@@ -1,0 +1,180 @@
+service: investforge-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.9
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    JWT_SECRET_KEY: ${env:JWT_SECRET_KEY, 'dev-jwt-secret-key-change-in-production'}
+    STRIPE_SECRET_KEY: ${env:STRIPE_SECRET_KEY, 'sk_test_placeholder'}
+    STRIPE_WEBHOOK_SECRET: ${env:STRIPE_WEBHOOK_SECRET, 'whsec_placeholder'}
+    SES_REGION: us-east-1
+    DYNAMODB_TABLE_USERS: ${self:service}-${self:provider.stage}-users
+    DYNAMODB_TABLE_USAGE: ${self:service}-${self:provider.stage}-usage
+    DYNAMODB_TABLE_ANALYTICS: ${self:service}-${self:provider.stage}-analytics
+    DYNAMODB_TABLE_WAITLIST: ${self:service}-${self:provider.stage}-waitlist
+    
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: 
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-${self:provider.stage}-*"
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: "*"
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: false
+    slim: true
+    strip: false
+
+functions:
+  # Health check
+  health:
+    handler: handlers/health.check
+    events:
+      - http:
+          path: health
+          method: get
+          cors: true
+          
+  # Authentication endpoints
+  signup:
+    handler: handlers/auth.signup
+    events:
+      - http:
+          path: auth/signup
+          method: post
+          cors: true
+          
+  login:
+    handler: handlers/auth.login
+    events:
+      - http:
+          path: auth/login
+          method: post
+          cors: true
+          
+  # User management endpoints
+  get_user:
+    handler: handlers/users.get_user
+    events:
+      - http:
+          path: users/me
+          method: get
+          cors: true
+          
+  # Usage tracking endpoints
+  get_usage:
+    handler: handlers/usage.get_usage
+    events:
+      - http:
+          path: users/usage
+          method: get
+          cors: true
+          
+  # Analytics endpoints
+  track_event:
+    handler: handlers/analytics.track_event
+    events:
+      - http:
+          path: analytics/track
+          method: post
+          cors: true
+          
+  # Waitlist endpoints
+  join_waitlist:
+    handler: handlers/waitlist.join_waitlist
+    events:
+      - http:
+          path: waitlist/join
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    # DynamoDB Tables
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-users
+        AttributeDefinitions:
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: user_id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: EmailIndex
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST
+        
+    UsageTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-usage
+        AttributeDefinitions:
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: date_feature
+            AttributeType: S
+        KeySchema:
+          - AttributeName: user_id
+            KeyType: HASH
+          - AttributeName: date_feature
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        
+    AnalyticsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-analytics
+        AttributeDefinitions:
+          - AttributeName: event_type
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: S
+        KeySchema:
+          - AttributeName: event_type
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        
+    WaitlistTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-waitlist
+        AttributeDefinitions:
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: email
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST

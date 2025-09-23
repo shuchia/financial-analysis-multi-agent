@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InvestForge - AI-Powered Investment Analysis</title>
+    <meta name="description" content="Professional-grade investment analysis powered by AI. Make smarter investment decisions with our multi-agent analysis platform.">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚒️</text></svg>">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Meta Tags for Social Sharing -->
+    <meta property="og:title" content="InvestForge - AI-Powered Investment Analysis">
+    <meta property="og:description" content="Professional-grade investment analysis powered by AI. Make smarter investment decisions.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://investforge.io">
+    <meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="brand-icon">⚒️</span>
+                <span class="brand-text">InvestForge</span>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <a href="#about" class="nav-link">About</a>
+                <a href="#contact" class="nav-link">Contact</a>
+                <a href="#" class="nav-link btn-outline" onclick="openApp('login')">Sign In</a>
+                <a href="#" class="nav-link btn-primary" onclick="openApp('signup')">Get Started</a>
+            </div>
+            <div class="nav-toggle" id="nav-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1 class="hero-title">
+                        Forge Your Financial Future with 
+                        <span class="gradient-text">AI-Powered Analysis</span>
+                    </h1>
+                    <p class="hero-description">
+                        Professional-grade investment analysis powered by multi-agent AI. 
+                        Get comprehensive stock analysis, portfolio optimization, and risk assessment 
+                        in seconds, not hours.
+                    </p>
+                    <div class="hero-buttons">
+                        <button class="btn btn-primary btn-large" onclick="openApp('demo')">
+                            <span>Try Free Demo</span>
+                            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                        <button class="btn btn-outline btn-large" onclick="scrollToSection('features')">
+                            Learn More
+                        </button>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <span class="stat-number">10K+</span>
+                            <span class="stat-label">Analyses Generated</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">95%</span>
+                            <span class="stat-label">Accuracy Rate</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">< 30s</span>
+                            <span class="stat-label">Analysis Time</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="dashboard-preview">
+                        <div class="preview-header">
+                            <div class="preview-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <span class="preview-title">InvestForge Analysis</span>
+                        </div>
+                        <div class="preview-content">
+                            <div class="preview-chart">
+                                <canvas id="preview-chart"></canvas>
+                            </div>
+                            <div class="preview-metrics">
+                                <div class="metric">
+                                    <span class="metric-label">Risk Score</span>
+                                    <span class="metric-value">7.2/10</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Expected Return</span>
+                                    <span class="metric-value positive">+15.3%</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Confidence</span>
+                                    <span class="metric-value">94%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Powerful Features for Smart Investors</h2>
+                <p class="section-description">
+                    Our AI-powered platform provides institutional-grade analysis tools 
+                    previously available only to hedge funds and professional traders.
+                </p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3 class="feature-title">Multi-Agent AI Analysis</h3>
+                    <p class="feature-description">
+                        Our AI crew of specialized agents analyze stocks from multiple angles: 
+                        technical, fundamental, sentiment, and strategic perspectives.
+                    </p>
+                    <ul class="feature-list">
+                        <li>Technical analysis with 40+ indicators</li>
+                        <li>Fundamental ratio analysis</li>
+                        <li>Real-time sentiment monitoring</li>
+                        <li>Strategic investment recommendations</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3 class="feature-title">Portfolio Optimization</h3>
+                    <p class="feature-description">
+                        Modern Portfolio Theory algorithms optimize your allocation for 
+                        maximum returns at your desired risk level.
+                    </p>
+                    <ul class="feature-list">
+                        <li>Efficient frontier calculation</li>
+                        <li>Risk-adjusted portfolio weights</li>
+                        <li>Correlation analysis</li>
+                        <li>Rebalancing recommendations</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚠️</div>
+                    <h3 class="feature-title">Advanced Risk Assessment</h3>
+                    <p class="feature-description">
+                        Comprehensive risk metrics including VaR, CVaR, and Monte Carlo 
+                        simulations to understand your downside exposure.
+                    </p>
+                    <ul class="feature-list">
+                        <li>Value at Risk (VaR) calculations</li>
+                        <li>Monte Carlo simulations</li>
+                        <li>Stress testing scenarios</li>
+                        <li>Correlation risk analysis</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h3 class="feature-title">Strategy Backtesting</h3>
+                    <p class="feature-description">
+                        Test your investment strategies against historical data to 
+                        validate performance before risking real capital.
+                    </p>
+                    <ul class="feature-list">
+                        <li>Historical performance analysis</li>
+                        <li>Multiple strategy comparison</li>
+                        <li>Drawdown analysis</li>
+                        <li>Risk-adjusted returns</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3 class="feature-title">Real-Time Alerts</h3>
+                    <p class="feature-description">
+                        Stay informed with intelligent alerts about market movements, 
+                        portfolio changes, and new opportunities.
+                    </p>
+                    <ul class="feature-list">
+                        <li>Price movement alerts</li>
+                        <li>Technical signal notifications</li>
+                        <li>Portfolio rebalancing reminders</li>
+                        <li>Market sentiment changes</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3 class="feature-title">Professional Reports</h3>
+                    <p class="feature-description">
+                        Generate comprehensive, institutional-quality investment reports 
+                        with clear visualizations and actionable insights.
+                    </p>
+                    <ul class="feature-list">
+                        <li>PDF report generation</li>
+                        <li>Interactive charts</li>
+                        <li>Executive summaries</li>
+                        <li>Shareable analysis</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Choose Your Plan</h2>
+                <p class="section-description">
+                    Start free and upgrade as your investment needs grow. 
+                    All plans include our core AI analysis features.
+                </p>
+            </div>
+
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3 class="pricing-title">Free</h3>
+                        <div class="pricing-price">
+                            <span class="price-amount">$0</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                        <p class="pricing-description">Perfect for getting started</p>
+                    </div>
+                    <div class="pricing-features">
+                        <ul>
+                            <li><span class="check">✓</span> 5 stock analyses per month</li>
+                            <li><span class="check">✓</span> Basic technical indicators</li>
+                            <li><span class="check">✓</span> Fundamental analysis</li>
+                            <li><span class="check">✓</span> Community support</li>
+                            <li><span class="cross">✗</span> Portfolio optimization</li>
+                            <li><span class="cross">✗</span> Risk assessment tools</li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-outline btn-full" onclick="openApp('signup', 'free')">
+                        Get Started Free
+                    </button>
+                </div>
+
+                <div class="pricing-card featured">
+                    <div class="pricing-badge">Most Popular</div>
+                    <div class="pricing-header">
+                        <h3 class="pricing-title">Growth</h3>
+                        <div class="pricing-price">
+                            <span class="price-amount">$4.99</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                        <p class="pricing-description">For serious investors</p>
+                    </div>
+                    <div class="pricing-features">
+                        <ul>
+                            <li><span class="check">✓</span> Unlimited stock analyses</li>
+                            <li><span class="check">✓</span> Advanced technical analysis</li>
+                            <li><span class="check">✓</span> Portfolio optimization</li>
+                            <li><span class="check">✓</span> Risk assessment tools</li>
+                            <li><span class="check">✓</span> Strategy backtesting</li>
+                            <li><span class="check">✓</span> Priority support</li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-primary btn-full" onclick="openApp('signup', 'growth')">
+                        Start Growth Plan
+                    </button>
+                </div>
+
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3 class="pricing-title">Pro</h3>
+                        <div class="pricing-price">
+                            <span class="price-amount">$9.99</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                        <p class="pricing-description">For professional traders</p>
+                    </div>
+                    <div class="pricing-features">
+                        <ul>
+                            <li><span class="check">✓</span> Everything in Growth</li>
+                            <li><span class="check">✓</span> Real-time alerts</li>
+                            <li><span class="check">✓</span> API access</li>
+                            <li><span class="check">✓</span> Custom indicators</li>
+                            <li><span class="check">✓</span> White-label reports</li>
+                            <li><span class="check">✓</span> Dedicated support</li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-outline btn-full" onclick="openApp('signup', 'pro')">
+                        Go Pro
+                    </button>
+                </div>
+            </div>
+
+            <div class="pricing-faq">
+                <p><strong>Questions?</strong> All plans include a 7-day free trial. Cancel anytime.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <div class="about-content">
+                <div class="about-text">
+                    <h2 class="section-title">Built by Investors, for Investors</h2>
+                    <p>
+                        InvestForge was created by a team of quantitative analysts, software engineers, 
+                        and financial professionals who were frustrated with the lack of accessible, 
+                        professional-grade investment analysis tools.
+                    </p>
+                    <p>
+                        We believe that sophisticated financial analysis shouldn't be limited to 
+                        hedge funds and investment banks. Our mission is to democratize access to 
+                        institutional-quality investment tools powered by cutting-edge AI.
+                    </p>
+                    <div class="about-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">15+</span>
+                            <span class="stat-text">Years Combined Experience</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">$2B+</span>
+                            <span class="stat-text">Assets Analyzed</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">500+</span>
+                            <span class="stat-text">Happy Investors</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-visual">
+                    <div class="team-grid">
+                        <div class="team-member">
+                            <div class="member-avatar">👨‍💼</div>
+                            <div class="member-info">
+                                <h4>Alex Chen</h4>
+                                <p>Quantitative Analyst</p>
+                            </div>
+                        </div>
+                        <div class="team-member">
+                            <div class="member-avatar">👩‍💻</div>
+                            <div class="member-info">
+                                <h4>Sarah Johnson</h4>
+                                <p>AI Engineer</p>
+                            </div>
+                        </div>
+                        <div class="team-member">
+                            <div class="member-avatar">👨‍🔬</div>
+                            <div class="member-info">
+                                <h4>Mike Rodriguez</h4>
+                                <p>Risk Specialist</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Get in Touch</h2>
+                <p class="section-description">
+                    Have questions? Want to learn more? We're here to help.
+                </p>
+            </div>
+            
+            <div class="contact-grid">
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <div class="contact-icon">📧</div>
+                        <div class="contact-details">
+                            <h4>Email Us</h4>
+                            <p>support@investforge.io</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">💬</div>
+                        <div class="contact-details">
+                            <h4>Live Chat</h4>
+                            <p>Available 9 AM - 6 PM EST</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">📚</div>
+                        <div class="contact-details">
+                            <h4>Documentation</h4>
+                            <p>Comprehensive guides and tutorials</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <form class="contact-form" id="contact-form">
+                    <div class="form-group">
+                        <input type="text" name="name" placeholder="Your Name" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" name="email" placeholder="Your Email" required>
+                    </div>
+                    <div class="form-group">
+                        <select name="subject" required>
+                            <option value="">Select a topic</option>
+                            <option value="general">General Inquiry</option>
+                            <option value="support">Technical Support</option>
+                            <option value="sales">Sales Question</option>
+                            <option value="feedback">Feedback</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <textarea name="message" placeholder="Your Message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">Send Message</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-brand">
+                        <span class="brand-icon">⚒️</span>
+                        <span class="brand-text">InvestForge</span>
+                    </div>
+                    <p>Professional-grade investment analysis powered by AI.</p>
+                    <div class="social-links">
+                        <a href="#" aria-label="Twitter">🐦</a>
+                        <a href="#" aria-label="LinkedIn">💼</a>
+                        <a href="#" aria-label="GitHub">🔗</a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#pricing">Pricing</a></li>
+                        <li><a href="#">API</a></li>
+                        <li><a href="#">Integrations</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">Tutorials</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Research</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                        <li><a href="#">Privacy</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2024 InvestForge. All rights reserved.</p>
+                <div class="footer-links">
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script src="js/chart.js"></script>
+</body>
+</html>

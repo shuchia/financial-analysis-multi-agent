@@ -1,0 +1,361 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Enhanced InvestForge deployment with unified architecture'
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: investforge.io
+    Description: Domain name for the application
+  CertificateArn:
+    Type: String
+    Description: ARN of the existing ACM SSL certificate
+  ExistingALBArn:
+    Type: String
+    Description: ARN of the existing Application Load Balancer
+  ExistingVPCId:
+    Type: String
+    Description: ID of the existing VPC
+  ExistingSubnetIds:
+    Type: CommaDelimitedList
+    Description: List of existing subnet IDs
+  GitHubRepo:
+    Type: String
+    Default: Financial-Analysis--Multi-Agent-Open-Source-LLM
+    Description: GitHub repository name
+  GitHubOwner:
+    Type: String
+    Description: GitHub repository owner
+
+Resources:
+  # S3 bucket for landing page
+  LandingPageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${DomainName}-landing-page"
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  # S3 bucket policy for CloudFront access
+  LandingPageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LandingPageBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudFrontAccess
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${LandingPageBucket}/*"
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+
+  # CloudFront Origin Access Control
+  OriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${DomainName}-OAC"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # CloudFront distribution
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - !Ref DomainName
+          - !Sub "app.${DomainName}"
+        DefaultRootObject: index.html
+        Enabled: true
+        HttpVersion: http2
+        IPV6Enabled: true
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        Origins:
+          # S3 origin for landing page
+          - Id: S3Origin
+            DomainName: !GetAtt LandingPageBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+            OriginAccessControlId: !Ref OriginAccessControl
+          # ALB origin for app and API
+          - Id: ALBOrigin
+            DomainName: !Sub "${ExistingALBArn.DnsName}"
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+        CacheBehaviors:
+          # App traffic to ALB
+          - PathPattern: "/app*"
+            TargetOriginId: ALBOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - DELETE
+              - GET
+              - HEAD
+              - OPTIONS
+              - PATCH
+              - POST
+              - PUT
+            CachedMethods:
+              - GET
+              - HEAD
+            Compress: true
+            ForwardedValues:
+              QueryString: true
+              Headers:
+                - Authorization
+                - Content-Type
+                - Host
+              Cookies:
+                Forward: all
+            DefaultTTL: 0
+            MaxTTL: 0
+            MinTTL: 0
+          # API traffic to ALB (for Lambda target groups)
+          - PathPattern: "/api*"
+            TargetOriginId: ALBOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - DELETE
+              - GET
+              - HEAD
+              - OPTIONS
+              - PATCH
+              - POST
+              - PUT
+            CachedMethods:
+              - GET
+              - HEAD
+            Compress: true
+            ForwardedValues:
+              QueryString: true
+              Headers:
+                - Authorization
+                - Content-Type
+                - Host
+              Cookies:
+                Forward: all
+            DefaultTTL: 0
+            MaxTTL: 0
+            MinTTL: 0
+
+  # Lambda target groups for ALB integration
+  LambdaTargetGroupHealth:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: investforge-lambda-health
+      TargetType: lambda
+      HealthCheckEnabled: false
+
+  LambdaTargetGroupAuth:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: investforge-lambda-auth
+      TargetType: lambda
+      HealthCheckEnabled: false
+
+  LambdaTargetGroupWaitlist:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: investforge-lambda-waitlist
+      TargetType: lambda
+      HealthCheckEnabled: false
+
+  LambdaTargetGroupAnalytics:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: investforge-lambda-analytics
+      TargetType: lambda
+      HealthCheckEnabled: false
+
+  # ALB Listener Rules (to be added to existing ALB)
+  # These will be outputs for manual configuration or separate stack
+  
+  # Route 53 record updates
+  Route53RecordRoot:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref Route53HostedZone
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2 # CloudFront hosted zone ID
+        EvaluateTargetHealth: false
+
+  Route53RecordApp:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref Route53HostedZone
+      Name: !Sub "app.${DomainName}"
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2 # CloudFront hosted zone ID
+        EvaluateTargetHealth: false
+
+  # Enhanced CodeBuild project
+  EnhancedCodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: investforge-enhanced-build
+      Description: Enhanced build for unified InvestForge architecture
+      ServiceRole: !Ref CodeBuildRole
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        PrivilegedMode: true
+      Source:
+        Type: GITHUB
+        Location: !Sub "https://github.com/${GitHubOwner}/${GitHubRepo}.git"
+        BuildSpec: |
+          version: 0.2
+          phases:
+            pre_build:
+              commands:
+                - echo Logging in to Amazon ECR...
+                - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+                - echo Installing Serverless Framework...
+                - npm install -g serverless
+            build:
+              commands:
+                - echo Build started on `date`
+                
+                # Build and push Streamlit app
+                - echo Building Streamlit Docker image...
+                - cd app
+                - docker build -t investforge-app .
+                - docker tag investforge-app:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/investforge-app:latest
+                - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/investforge-app:latest
+                - cd ..
+                
+                # Deploy serverless API
+                - echo Deploying serverless API...
+                - cd api
+                - serverless deploy --stage prod
+                - cd ..
+                
+                # Upload landing page to S3
+                - echo Uploading landing page...
+                - aws s3 sync landing/ s3://$LANDING_BUCKET_NAME/ --delete
+                
+                # Update Lambda target group targets
+                - echo Registering Lambda functions with ALB...
+                - aws elbv2 register-targets --target-group-arn $LAMBDA_TG_HEALTH_ARN --targets Id=$(aws lambda get-function --function-name investforge-health --query 'Configuration.FunctionArn' --output text)
+                - aws elbv2 register-targets --target-group-arn $LAMBDA_TG_AUTH_ARN --targets Id=$(aws lambda get-function --function-name investforge-signup --query 'Configuration.FunctionArn' --output text)
+                - aws elbv2 register-targets --target-group-arn $LAMBDA_TG_WAITLIST_ARN --targets Id=$(aws lambda get-function --function-name investforge-waitlist --query 'Configuration.FunctionArn' --output text)
+                - aws elbv2 register-targets --target-group-arn $LAMBDA_TG_ANALYTICS_ARN --targets Id=$(aws lambda get-function --function-name investforge-analytics --query 'Configuration.FunctionArn' --output text)
+            post_build:
+              commands:
+                - echo Build completed on `date`
+                - echo Triggering ECS service update...
+                - aws ecs update-service --cluster investforge-cluster --service investforge-service --force-new-deployment
+          environment:
+            variables:
+              AWS_DEFAULT_REGION: us-east-1
+              AWS_ACCOUNT_ID: !Ref AWS::AccountId
+              LANDING_BUCKET_NAME: !Ref LandingPageBucket
+              LAMBDA_TG_HEALTH_ARN: !Ref LambdaTargetGroupHealth
+              LAMBDA_TG_AUTH_ARN: !Ref LambdaTargetGroupAuth
+              LAMBDA_TG_WAITLIST_ARN: !Ref LambdaTargetGroupWaitlist
+              LAMBDA_TG_ANALYTICS_ARN: !Ref LambdaTargetGroupAnalytics
+
+  # IAM role for CodeBuild
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCodeBuildDeveloperAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+        - arn:aws:iam::aws:policy/AmazonECS_FullAccess
+        - arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess
+        - arn:aws:iam::aws:policy/AWSLambda_FullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      Policies:
+        - PolicyName: ServerlessDeployPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:*
+                  - iam:*
+                  - apigateway:*
+                  - lambda:*
+                  - dynamodb:*
+                  - logs:*
+                Resource: '*'
+
+Outputs:
+  CloudFrontDomainName:
+    Description: CloudFront distribution domain name
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudFrontDomain"
+
+  LandingPageBucketName:
+    Description: S3 bucket for landing page
+    Value: !Ref LandingPageBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-LandingBucket"
+
+  LambdaTargetGroups:
+    Description: Lambda target group ARNs for ALB configuration
+    Value: !Sub |
+      Health: ${LambdaTargetGroupHealth}
+      Auth: ${LambdaTargetGroupAuth}
+      Waitlist: ${LambdaTargetGroupWaitlist}
+      Analytics: ${LambdaTargetGroupAnalytics}
+
+  ALBListenerRulesNeeded:
+    Description: ALB listener rules to be added manually
+    Value: !Sub |
+      Rule 1: /api/health* -> ${LambdaTargetGroupHealth}
+      Rule 2: /api/auth/* -> ${LambdaTargetGroupAuth}
+      Rule 3: /api/waitlist/* -> ${LambdaTargetGroupWaitlist}
+      Rule 4: /api/analytics/* -> ${LambdaTargetGroupAnalytics}
+      Rule 5: /app* -> Existing ECS Target Group
+      Rule 6: /* -> Default (ECS or error page)

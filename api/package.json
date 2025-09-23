@@ -1,0 +1,37 @@
+{
+  "name": "investforge-api",
+  "version": "1.0.0",
+  "description": "InvestForge serverless API backend",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "sls deploy",
+    "deploy:dev": "sls deploy --stage dev",
+    "deploy:prod": "sls deploy --stage prod",
+    "remove": "sls remove",
+    "logs": "sls logs -f",
+    "invoke": "sls invoke -f",
+    "offline": "sls offline",
+    "test": "python -m pytest tests/",
+    "lint": "python -m flake8 handlers/ utils/ models/",
+    "format": "python -m black handlers/ utils/ models/"
+  },
+  "devDependencies": {
+    "serverless": "^3.30.0",
+    "serverless-python-requirements": "^5.4.0",
+    "serverless-offline": "^12.0.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/investforge/api"
+  },
+  "keywords": [
+    "serverless",
+    "aws",
+    "lambda",
+    "api",
+    "fintech",
+    "investment"
+  ],
+  "author": "InvestForge Team",
+  "license": "MIT"
+}
