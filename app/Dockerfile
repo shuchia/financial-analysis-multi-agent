@@ -31,8 +31,8 @@ USER streamlit-user
 EXPOSE 8080
 
 # Health check for ALB
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/app/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/app/_stcore/health || exit 1
 
 # Run Streamlit with config file
 CMD ["streamlit", "run", "app.py"]
