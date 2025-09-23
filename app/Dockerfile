@@ -1,5 +1,6 @@
 # Production Dockerfile for Streamlit app
-FROM python:3.11-slim
+# Use AWS Public ECR instead of Docker Hub to avoid rate limits
+FROM public.ecr.aws/docker/library/python:3.11-slim
 
 # Set working directory
 WORKDIR /app
