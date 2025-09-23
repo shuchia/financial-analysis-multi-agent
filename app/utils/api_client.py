@@ -61,11 +61,37 @@ class APIClient:
                     st.session_state.page = 'login'
                     st.rerun()
             
+            # Handle specific error codes with better messages
+            if response.status_code == 409:
+                # Parse the error response to get the specific message
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get('message', 'Conflict error occurred')
+                    if 'already exists' in error_message.lower():
+                        st.error("An account with this email already exists. Please try logging in instead.")
+                    else:
+                        st.error(f"Conflict: {error_message}")
+                except:
+                    st.error("An account with this email already exists. Please try logging in instead.")
+                return None
+            
+            elif response.status_code == 400:
+                # Parse validation errors
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get('message', 'Invalid request')
+                    st.error(f"Validation Error: {error_message}")
+                except:
+                    st.error("Invalid request. Please check your input.")
+                return None
+            
             response.raise_for_status()
             return response.json()
         
         except requests.exceptions.RequestException as e:
-            st.error(f"API Error: {str(e)}")
+            # Only show generic error for actual network/unexpected errors
+            if response.status_code not in [400, 409]:
+                st.error(f"API Error: {str(e)}")
             return None
     
     # Authentication endpoints

@@ -157,14 +157,15 @@ def show_login_signup():
                     elif len(password) < 8:
                         st.error("Password must be at least 8 characters.")
                     else:
-                        if create_user_account(email, password, plan):
-                            st.session_state.authenticated = True
-                            st.session_state.user_email = email
-                            st.session_state.show_onboarding = True
-                            track_signup(email, plan)
-                            st.rerun()
-                        else:
-                            st.error("Account creation failed. Email may already be in use.")
+                        with st.spinner("Creating your account..."):
+                            if create_user_account(email, password, plan):
+                                st.success("Account created successfully! Welcome to InvestForge!")
+                                st.session_state.authenticated = True
+                                st.session_state.user_email = email
+                                st.session_state.show_onboarding = True
+                                track_signup(email, plan)
+                                st.rerun()
+                            # Note: Error messages are now handled by the API client
 
         # Social login options
         st.markdown("---")
