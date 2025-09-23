@@ -19,9 +19,6 @@ RUN pip3 install -r requirements.txt
 # Copy application code
 COPY . .
 
-# Copy Streamlit configuration
-COPY .streamlit/ .streamlit/
-
 # Create non-root user
 RUN adduser --disabled-password --gecos '' streamlit-user && \
     chown -R streamlit-user:streamlit-user /app
@@ -34,5 +31,10 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8080/app/_stcore/health || exit 1
 
-# Run Streamlit with config file
-CMD ["streamlit", "run", "app.py"]
+# Run Streamlit with explicit configuration
+CMD ["streamlit", "run", "app.py", \
+     "--server.port=8080", \
+     "--server.address=0.0.0.0", \
+     "--server.baseUrlPath=/app", \
+     "--server.enableCORS=false", \
+     "--server.enableXsrfProtection=false"]
