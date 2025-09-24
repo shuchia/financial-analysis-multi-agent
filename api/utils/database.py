@@ -16,11 +16,19 @@ class DatabaseClient:
         self.stage = os.getenv('STAGE', 'dev')
         self.service_name = 'investforge-api'
         
-        # Table references
-        self.users_table = self.dynamodb.Table(f'{self.service_name}-{self.stage}-users')
-        self.usage_table = self.dynamodb.Table(f'{self.service_name}-{self.stage}-usage')
-        self.analytics_table = self.dynamodb.Table(f'{self.service_name}-{self.stage}-analytics')
-        self.waitlist_table = self.dynamodb.Table(f'{self.service_name}-{self.stage}-waitlist')
+        # Table references - use environment variables if available, fallback to actual table names
+        self.users_table = self.dynamodb.Table(
+            os.getenv('DYNAMODB_TABLE_USERS', 'investforge-users-simple')
+        )
+        self.usage_table = self.dynamodb.Table(
+            os.getenv('DYNAMODB_TABLE_USAGE', 'investforge-usage')
+        )
+        self.analytics_table = self.dynamodb.Table(
+            os.getenv('DYNAMODB_TABLE_ANALYTICS', 'investforge-analytics')
+        )
+        self.waitlist_table = self.dynamodb.Table(
+            os.getenv('DYNAMODB_TABLE_WAITLIST', f'{self.service_name}-{self.stage}-waitlist')
+        )
     
     # User operations
     def create_user(self, user_data: Dict[str, Any]) -> bool:
