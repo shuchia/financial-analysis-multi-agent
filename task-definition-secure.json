@@ -1,0 +1,48 @@
+{
+  "family": "financial-analysis-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::453636587892:role/FinancialAnalysisECSExecutionRole",
+  "taskRoleArn": "arn:aws:iam::453636587892:role/FinancialAnalysisECSTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "financial-analysis-container",
+      "image": "453636587892.dkr.ecr.us-east-1.amazonaws.com/financial-analysis-app:latest",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "AWS_DEFAULT_REGION",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:453636587892:secret:financial-analysis/config-kvrLdv:AWS_DEFAULT_REGION::"
+        }
+      ],
+      "environment": [
+        {
+          "name": "PORT",
+          "value": "8080"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/financial-analysis",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8080/_stcore/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}

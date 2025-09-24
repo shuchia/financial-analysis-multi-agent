@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Application Load Balancer simulation (using nginx)
+  alb:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./config/nginx/alb.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - streamlit
+      - api
+    networks:
+      - investforge-network
+
+  # Streamlit Application (ECS simulation)
+  streamlit:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    environment:
+      - API_BASE_URL=http://alb/api
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET_KEY=dev-secret-key-change-in-production
+    depends_on:
+      - redis
+    networks:
+      - investforge-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/app/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API (Lambda simulation using serverless-offline)
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    environment:
+      - STAGE=dev
+      - JWT_SECRET_KEY=dev-secret-key-change-in-production
+      - REDIS_URL=redis://redis:6379
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+    depends_on:
+      - dynamodb
+      - redis
+    networks:
+      - investforge-network
+
+  # Landing Page (CloudFront simulation)
+  landing:
+    image: nginx:alpine
+    volumes:
+      - ./landing:/usr/share/nginx/html
+      - ./config/nginx/landing.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - investforge-network
+
+  # Redis for session management
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - investforge-network
+
+  # DynamoDB Local
+  dynamodb:
+    image: amazon/dynamodb-local
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    networks:
+      - investforge-network
+
+volumes:
+  redis_data:
+
+networks:
+  investforge-network:
+    driver: bridge

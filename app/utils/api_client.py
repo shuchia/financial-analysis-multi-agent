@@ -367,6 +367,48 @@ class APIClient:
             # Don't show error for analytics failures
             return False
     
+    # User preferences endpoints
+    
+    def get_user_preferences(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get user preferences."""
+        try:
+            response = requests.post(
+                f"{self.base_url}/users/preferences",
+                headers=self._get_headers(include_auth=False),
+                json={'email': email, 'action': 'get'},
+                timeout=self.timeout
+            )
+            
+            result = self._handle_response(response)
+            if result and result.get('success'):
+                return result['data']
+            
+            return None
+            
+        except Exception as e:
+            st.error(f"Failed to get preferences: {str(e)}")
+            return None
+    
+    def save_user_preferences(self, email: str, preferences: Dict[str, Any]) -> bool:
+        """Save user preferences."""
+        try:
+            response = requests.post(
+                f"{self.base_url}/users/preferences",
+                headers=self._get_headers(include_auth=False),
+                json={
+                    'email': email,
+                    'preferences': preferences
+                },
+                timeout=self.timeout
+            )
+            
+            result = self._handle_response(response)
+            return result is not None and result.get('success', False)
+            
+        except Exception as e:
+            st.error(f"Failed to save preferences: {str(e)}")
+            return False
+
     # Waitlist endpoints
     
     def join_waitlist(self, email: str, source: str = 'website') -> Optional[Dict[str, Any]]:
@@ -390,6 +432,87 @@ class APIClient:
             
         except Exception as e:
             st.error(f"Failed to join waitlist: {str(e)}")
+            return None
+
+
+    # Enhanced analytics methods
+    
+    def track_signup_event(self, user_id: str, plan: str, referral_source: str = None) -> bool:
+        """Track user signup event."""
+        return self.track_event('user_signup', {
+            'plan': plan,
+            'referral_source': referral_source,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    def track_login_event(self, user_id: str) -> bool:
+        """Track user login event."""
+        return self.track_event('user_login', {
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    def track_analysis_event(self, user_id: str, symbol: str, analysis_type: str) -> bool:
+        """Track stock analysis event."""
+        return self.track_event('stock_analysis', {
+            'symbol': symbol,
+            'analysis_type': analysis_type,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    def track_preferences_event(self, user_id: str, preferences: Dict[str, Any]) -> bool:
+        """Track preferences completion event."""
+        return self.track_event('preferences_completed', {
+            'experience': preferences.get('experience'),
+            'risk_tolerance': preferences.get('risk_tolerance'),
+            'initial_amount': preferences.get('initial_amount'),
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    def increment_feature_usage(self, user_id: str, feature: str, count: int = 1) -> bool:
+        """Increment usage count for a feature."""
+        try:
+            response = requests.post(
+                f"{self.base_url}/analytics/usage",
+                headers=self._get_headers(include_auth=False),
+                json={
+                    'action': 'usage',
+                    'user_id': user_id,
+                    'feature': feature,
+                    'count': count
+                },
+                timeout=self.timeout
+            )
+            
+            return response.status_code == 200
+            
+        except Exception:
+            return False
+    
+    def get_user_usage(self, user_id: str, month: str = None) -> Optional[Dict[str, Any]]:
+        """Get user usage statistics."""
+        try:
+            payload = {
+                'action': 'get_usage',
+                'user_id': user_id
+            }
+            if month:
+                payload['month'] = month
+            
+            response = requests.post(
+                f"{self.base_url}/analytics/usage",
+                headers=self._get_headers(include_auth=False),
+                json=payload,
+                timeout=self.timeout
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('success'):
+                    return result['data']
+            
+            return None
+            
+        except Exception:
             return None
 
 

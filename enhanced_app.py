@@ -1,5 +1,5 @@
 # =====================================
-# File: app.py - Enhanced with landing page integration
+# File: enhanced_app.py - Full AI Integration with Usage Tracking
 # =====================================
 
 import streamlit as st
@@ -21,6 +21,66 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# =====================================
+# Configuration & Setup
+# =====================================
+
+# Health check endpoint for ALB
+if 'health' in st.query_params:
+    st.write("OK")
+    st.stop()
+
+st.set_page_config(
+    page_title="InvestForge - AI Investment Analysis",
+    page_icon="⚒️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS for better UI
+st.markdown("""
+<style>
+    /* Loading animation */
+    .stSpinner > div {
+        text-align: center;
+        margin-top: 20px;
+    }
+    
+    /* Error boundary styling */
+    .error-container {
+        background-color: #ffebee;
+        border: 1px solid #ef5350;
+        border-radius: 4px;
+        padding: 16px;
+        margin: 16px 0;
+    }
+    
+    /* Success animation */
+    .success-container {
+        background-color: #e8f5e9;
+        border: 1px solid #4caf50;
+        border-radius: 4px;
+        padding: 16px;
+        margin: 16px 0;
+    }
+    
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] button {
+        font-size: 16px;
+        font-weight: 500;
+    }
+    
+    /* Usage counter styling */
+    .usage-counter {
+        background-color: #f5f5f5;
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+        margin: 10px 0;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # =====================================
 # Error Boundary Implementation
@@ -63,23 +123,6 @@ class ErrorBoundary:
         return False
 
 # =====================================
-# Configuration & Setup
-# =====================================
-
-# Health check endpoint for ALB
-if 'health' in st.query_params:
-    st.write("OK")
-    st.stop()
-
-st.set_page_config(
-    page_title="InvestForge - AI Investment Analysis",
-    page_icon="⚒️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-
-# =====================================
 # Session State Management
 # =====================================
 
@@ -104,248 +147,74 @@ def init_session_state():
     if 'analysis_history' not in st.session_state:
         st.session_state.analysis_history = []
 
-
 # =====================================
-# URL Parameter Processing
-# =====================================
-
-def process_url_params():
-    """Process parameters passed from landing page."""
-    query_params = st.query_params
-
-    # Check for email from waitlist
-    if 'email' in query_params:
-        st.session_state.user_email = query_params['email'][0]
-        st.session_state.show_welcome = True
-
-    # Check for selected plan
-    if 'plan' in query_params:
-        st.session_state.user_plan = query_params['plan'][0]
-        st.session_state.show_pricing = True
-
-    # Check for demo mode
-    if 'mode' in query_params and query_params['mode'][0] == 'demo':
-        st.session_state.demo_mode = True
-        st.session_state.authenticated = True
-        st.session_state.user_email = 'demo@investforge.io'
-
-    # Check for referral source
-    if 'ref' in query_params:
-        st.session_state.referral_source = query_params['ref'][0]
-        track_referral(query_params['ref'][0])
-
-
-# =====================================
-# Authentication System
+# Usage Tracking Functions
 # =====================================
 
-def show_login_signup():
-    """Display login/signup interface."""
-    col1, col2, col3 = st.columns([1, 2, 1])
+def load_user_usage():
+    """Load user's current month usage from API."""
+    if not st.session_state.user_data:
+        return
+    
+    user_id = st.session_state.user_data.get('user_id')
+    if not user_id:
+        return
+    
+    try:
+        usage = api_client.get_user_usage(user_id)
+        if usage:
+            st.session_state.monthly_usage = usage.get('usage', {})
+            st.session_state.analyses_count = st.session_state.monthly_usage.get('analyses_count', 0)
+            logger.info(f"Loaded usage for user {user_id}: {st.session_state.analyses_count} analyses")
+    except Exception as e:
+        logger.error(f"Failed to load usage: {e}")
+        st.session_state.monthly_usage = {}
+        st.session_state.analyses_count = 0
 
-    with col2:
-        st.markdown("""
-        <div style='text-align: center; padding: 2rem 0;'>
-            <h1 style='font-size: 3rem; background: linear-gradient(135deg, #FF6B35, #004E89);
-                       -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
-                ⚒️ InvestForge
-            </h1>
-            <p style='color: #666; font-size: 1.2rem;'>Forge Your Financial Future</p>
-        </div>
-        """, unsafe_allow_html=True)
+def check_usage_limits() -> Tuple[bool, str]:
+    """Check if user has reached their usage limits."""
+    if st.session_state.demo_mode:
+        return True, ""
+    
+    if st.session_state.user_plan == 'free':
+        limit = 5
+        current = st.session_state.analyses_count
+        
+        if current >= limit:
+            return False, f"You've reached your monthly limit of {limit} analyses."
+        else:
+            remaining = limit - current
+            return True, f"{remaining} analyses remaining this month"
+    
+    # Growth and Pro plans have unlimited analyses
+    return True, "Unlimited analyses"
 
-        tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
-
-        with tab1:
-            with st.form("login_form"):
-                email = st.text_input("Email", value=st.session_state.user_email or "")
-                password = st.text_input("Password", type="password")
-                remember = st.checkbox("Remember me")
-
-                col1, col2 = st.columns(2)
-                with col1:
-                    submitted = st.form_submit_button("Sign In", use_container_width=True, type="primary")
-                with col2:
-                    demo = st.form_submit_button("Try Demo", use_container_width=True)
-
-                if submitted:
-                    if authenticate_user(email, password):
-                        st.session_state.authenticated = True
-                        st.session_state.user_email = email
-                        if remember:
-                            save_session_cookie(email)
-                        # Load user preferences
-                        load_user_preferences()
-                        st.rerun()
-                    else:
-                        st.error("Invalid credentials. Please try again.")
-
-                if demo:
-                    st.session_state.demo_mode = True
-                    st.session_state.authenticated = True
-                    st.session_state.user_email = "demo@investforge.io"
-                    st.rerun()
-
-        with tab2:
-            with st.form("signup_form"):
-                email = st.text_input("Email", value=st.session_state.user_email or "")
-                password = st.text_input("Password", type="password")
-                confirm_password = st.text_input("Confirm Password", type="password")
-
-                # Plan selection
-                plan = st.radio(
-                    "Choose Your Plan",
-                    ["Free - Start Learning", "Growth ($4.99/mo) - Most Popular", "Pro ($9.99/mo) - Advanced"],
-                    index=0 if st.session_state.user_plan == 'free' else
-                    1 if st.session_state.user_plan == 'growth' else 2
-                )
-
-                terms = st.checkbox("I agree to the Terms of Service and Privacy Policy")
-
-                submitted = st.form_submit_button("Create Account", use_container_width=True, type="primary")
-
-                if submitted:
-                    if not terms:
-                        st.error("Please accept the terms and conditions.")
-                    elif password != confirm_password:
-                        st.error("Passwords do not match.")
-                    elif len(password) < 8:
-                        st.error("Password must be at least 8 characters.")
-                    else:
-                        with st.spinner("Creating your account..."):
-                            if create_user_account(email, password, plan):
-                                st.success("Account created successfully! Welcome to InvestForge!")
-                                st.session_state.authenticated = True
-                                st.session_state.user_email = email
-                                st.session_state.show_onboarding = True
-                                track_signup(email, plan)
-                                # Load user preferences (will be empty for new users)
-                                load_user_preferences()
-                                st.rerun()
-                            # Note: Error messages are now handled by the API client
-
-        # Social login options
-        st.markdown("---")
-        st.markdown("Or continue with:")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("🔍 Google", use_container_width=True):
-                initiate_google_auth()
-        with col2:
-            if st.button("🍎 Apple", use_container_width=True):
-                initiate_apple_auth()
-        with col3:
-            if st.button("📧 Email Magic Link", use_container_width=True):
-                send_magic_link(email)
-
+def increment_usage(feature: str = 'analyses_count'):
+    """Increment usage counter and update in database."""
+    if st.session_state.demo_mode:
+        return
+    
+    user_id = st.session_state.user_data.get('user_id')
+    if not user_id:
+        return
+    
+    try:
+        # Update local counter immediately for responsive UI
+        if feature == 'analyses_count':
+            st.session_state.analyses_count += 1
+        
+        # Update in database
+        success = api_client.increment_feature_usage(user_id, feature, 1)
+        if success:
+            logger.info(f"Incremented {feature} usage for user {user_id}")
+        else:
+            logger.error(f"Failed to increment {feature} usage")
+    except Exception as e:
+        logger.error(f"Error incrementing usage: {e}")
 
 # =====================================
-# Onboarding Flow
+# Main Application Functions
 # =====================================
-
-def show_onboarding():
-    """Display onboarding flow for new users."""
-    st.markdown("## Welcome to InvestForge! 🎉")
-    st.markdown("Let's get you started on your investment journey.")
-
-    # Progress bar
-    progress = st.progress(0)
-
-    # Step 1: Investment Experience
-    with st.container():
-        st.markdown("### Step 1: Tell us about your experience")
-        experience = st.radio(
-            "How would you describe your investment experience?",
-            ["Complete beginner 🌱", "Some knowledge 📚", "Intermediate 📈", "Advanced 🚀"]
-        )
-        progress.progress(25)
-
-    # Step 2: Investment Goals
-    with st.container():
-        st.markdown("### Step 2: What are your goals?")
-        goals = st.multiselect(
-            "Select all that apply:",
-            ["Learn about investing", "Build long-term wealth", "Generate passive income",
-             "Save for retirement", "Short-term trading", "Understand my employer's stock"]
-        )
-        progress.progress(50)
-
-    # Step 3: Risk Tolerance
-    with st.container():
-        st.markdown("### Step 3: Risk preference")
-        risk = st.slider(
-            "How much risk are you comfortable with?",
-            1, 10, 5,
-            help="1 = Very Conservative, 10 = Very Aggressive"
-        )
-        progress.progress(75)
-
-    # Step 4: Initial Amount
-    with st.container():
-        st.markdown("### Step 4: Starting amount")
-        amount = st.select_slider(
-            "How much are you planning to start with?",
-            options=["$0-100", "$100-500", "$500-1,000", "$1,000-5,000", "$5,000+"]
-        )
-        progress.progress(100)
-
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        if st.button("Complete Setup", type="primary", use_container_width=True):
-            # Save preferences
-            save_user_preferences(experience, goals, risk, amount)
-            st.session_state.onboarding_complete = True
-            st.balloons()
-            st.success("Setup complete! Let's analyze your first stock.")
-            st.rerun()
-
-
-# =====================================
-# Main Application
-# =====================================
-
-def main_app():
-    """Main application interface."""
-
-    # Sidebar
-    with st.sidebar:
-        st.markdown(f"### ⚒️ InvestForge")
-        st.markdown(f"**User:** {st.session_state.user_email}")
-        st.markdown(f"**Plan:** {st.session_state.user_plan.title()}")
-
-        if st.session_state.user_plan == 'free':
-            analyses_left = 5 - st.session_state.analyses_count
-            st.progress(st.session_state.analyses_count / 5)
-            st.markdown(f"**Analyses Left:** {analyses_left}/5")
-
-            if analyses_left <= 2:
-                st.warning("Running low on analyses! Upgrade to Growth for unlimited access.")
-                if st.button("🚀 Upgrade Now", use_container_width=True):
-                    show_upgrade_modal()
-
-        st.markdown("---")
-
-        # Navigation
-        page = st.selectbox(
-            "Navigation",
-            ["📊 Analysis", "💼 Portfolio", "📈 Backtesting",
-             "🎯 Risk Assessment", "📚 Learn", "⚙️ Settings"]
-        )
-
-    # Main content area
-    if page == "📊 Analysis":
-        show_analysis_page()
-    elif page == "💼 Portfolio":
-        show_portfolio_page()
-    elif page == "📈 Backtesting":
-        show_backtesting_page()
-    elif page == "🎯 Risk Assessment":
-        show_risk_page()
-    elif page == "📚 Learn":
-        show_education_page()
-    elif page == "⚙️ Settings":
-        show_settings_page()
-
 
 def show_analysis_page():
     """Stock analysis page with real AI integration."""
@@ -429,171 +298,6 @@ def show_analysis_page():
     if f'analysis_result_{ticker}' in st.session_state:
         display_analysis_results(ticker)
 
-
-# =====================================
-# Helper Functions
-# =====================================
-
-def authenticate_user(email: str, password: str) -> bool:
-    """Authenticate user credentials using API."""
-    result = api_client.login(email, password)
-    return result is not None
-
-
-def create_user_account(email: str, password: str, plan: str) -> bool:
-    """Create new user account using API."""
-    result = api_client.signup(email, password, plan=plan)
-    return result is not None
-
-
-def load_user_preferences():
-    """Load user preferences from API."""
-    if st.session_state.user_email:
-        preferences = api_client.get_user_preferences(st.session_state.user_email)
-        if preferences:
-            st.session_state.user_preferences = preferences
-            return preferences
-    return None
-
-
-def save_user_preferences(experience, goals, risk, amount):
-    """Save user onboarding preferences."""
-    preferences = {
-        'experience': experience,
-        'goals': goals,
-        'risk_tolerance': risk,
-        'initial_amount': amount,
-        'timestamp': datetime.now().isoformat()
-    }
-    
-    # Save to session state
-    st.session_state.user_preferences = preferences
-    
-    # Save to database via API
-    if st.session_state.user_email:
-        success = api_client.save_user_preferences(st.session_state.user_email, preferences)
-        if success:
-            st.success("✅ Preferences saved successfully!")
-            
-            # Track preferences completion
-            user_data = st.session_state.get('user_data', {})
-            user_id = user_data.get('user_id')
-            if user_id:
-                api_client.track_preferences_event(user_id, preferences)
-                api_client.increment_feature_usage(user_id, 'onboarding_completed', 1)
-        else:
-            st.warning("⚠️ Preferences saved locally but couldn't sync to server")
-
-
-def track_signup(email: str, plan: str):
-    """Track user signup for analytics."""
-    # Implement analytics tracking
-    pass
-
-
-def track_referral(source: str):
-    """Track referral source."""
-    # Implement referral tracking
-    pass
-
-
-def initiate_payment(plan: str):
-    """Initiate Stripe payment flow."""
-    # Implement Stripe checkout
-    st.info(f"Redirecting to payment for {plan} plan...")
-
-
-def show_upgrade_modal():
-    """Show upgrade modal."""
-    st.markdown("""
-    ### 🚀 Upgrade to Growth
-
-    **Unlock unlimited analyses and advanced features:**
-    - ✅ Unlimited stock analyses
-    - ✅ Portfolio optimization
-    - ✅ Risk simulations
-    - ✅ Backtesting strategies
-    - ✅ Priority support
-
-    **Only $4.99/month** (Less than a coffee!)
-    """)
-
-    if st.button("Upgrade Now", type="primary"):
-        initiate_payment('growth')
-
-
-# =====================================
-# Usage Tracking Functions
-# =====================================
-
-def load_user_usage():
-    """Load user's current month usage from API."""
-    if not st.session_state.user_data:
-        return
-    
-    user_id = st.session_state.user_data.get('user_id')
-    if not user_id:
-        return
-    
-    try:
-        usage = api_client.get_user_usage(user_id)
-        if usage:
-            st.session_state.monthly_usage = usage.get('usage', {})
-            st.session_state.analyses_count = st.session_state.monthly_usage.get('analyses_count', 0)
-            logger.info(f"Loaded usage for user {user_id}: {st.session_state.analyses_count} analyses")
-    except Exception as e:
-        logger.error(f"Failed to load usage: {e}")
-        st.session_state.monthly_usage = {}
-        st.session_state.analyses_count = 0
-
-
-def check_usage_limits() -> Tuple[bool, str]:
-    """Check if user has reached their usage limits."""
-    if st.session_state.demo_mode:
-        return True, ""
-    
-    if st.session_state.user_plan == 'free':
-        limit = 5
-        current = st.session_state.analyses_count
-        
-        if current >= limit:
-            return False, f"You've reached your monthly limit of {limit} analyses."
-        else:
-            remaining = limit - current
-            return True, f"{remaining} analyses remaining this month"
-    
-    # Growth and Pro plans have unlimited analyses
-    return True, "Unlimited analyses"
-
-
-def increment_usage(feature: str = 'analyses_count'):
-    """Increment usage counter and update in database."""
-    if st.session_state.demo_mode:
-        return
-    
-    user_id = st.session_state.user_data.get('user_id')
-    if not user_id:
-        return
-    
-    try:
-        # Update local counter immediately for responsive UI
-        if feature == 'analyses_count':
-            st.session_state.analyses_count += 1
-        
-        # Update in database
-        success = api_client.increment_feature_usage(user_id, feature, 1)
-        if success:
-            logger.info(f"Incremented {feature} usage for user {user_id}")
-        else:
-            logger.error(f"Failed to increment {feature} usage")
-    except Exception as e:
-        logger.error(f"Error incrementing usage: {e}")
-
-
-# =====================================
-# AI Analysis Functions
-# =====================================
-
 def run_ai_analysis(ticker: str, depth: str, include_competitors: bool, include_sentiment: bool):
     """Run the actual AI crew analysis."""
     
@@ -615,7 +319,7 @@ def run_ai_analysis(ticker: str, depth: str, include_competitors: bool, include_
             
             try:
                 # Import crew dynamically to handle import errors
-                from crew import create_crew, run_analysis
+                from app.crew import create_crew, run_analysis
                 
                 # Phase 1: Create crew
                 status_text.text("🔧 Creating specialized AI crew...")
@@ -692,7 +396,6 @@ def run_ai_analysis(ticker: str, depth: str, include_competitors: bool, include_
                 progress_container.empty()
                 st.warning("Using simplified analysis. Full AI analysis requires additional setup.")
 
-
 def parse_crew_results(result, ticker: str) -> Dict[str, Any]:
     """Parse the crew analysis results into structured data."""
     
@@ -722,7 +425,6 @@ def parse_crew_results(result, ticker: str) -> Dict[str, Any]:
             'strategy': "",
             'full_result': str(result)
         }
-
 
 def generate_mock_analysis(ticker: str) -> Dict[str, Any]:
     """Generate mock analysis data for demo/fallback."""
@@ -771,44 +473,9 @@ def generate_mock_analysis(ticker: str) -> Dict[str, Any]:
             'ai_insights': "Analysis data temporarily unavailable."
         }
 
-
-# =====================================
-# Landing Page Integration Functions
-# =====================================
-
-def save_session_cookie(email: str):
-    """Save session cookie for remember me functionality."""
-    # In production, use proper session management
-    st.session_state.remembered_email = email
-
-
-def send_magic_link(email: str):
-    """Send magic link for passwordless login."""
-    if email:
-        st.info(f"Magic link sent to {email}! Check your inbox.")
-        # Implement actual magic link sending
-    else:
-        st.error("Please enter your email address.")
-
-
-def initiate_google_auth():
-    """Initiate Google OAuth flow."""
-    # Implement Google OAuth
-    st.info("Redirecting to Google login...")
-
-
-def initiate_apple_auth():
-    """Initiate Apple Sign In flow."""
-    # Implement Apple Sign In
-    st.info("Redirecting to Apple login...")
-
-
-# =====================================
-# Display Functions
-# =====================================
-
 def display_analysis_results(ticker: str):
     """Display the analysis results in organized tabs."""
+    
     result_data = st.session_state.get(f'analysis_result_{ticker}')
     if not result_data:
         return
@@ -843,7 +510,6 @@ def display_analysis_results(ticker: str):
     with col3:
         if st.button("📤 Share Analysis", use_container_width=True):
             st.info("Sharing feature coming soon!")
-
 
 def display_overview_tab(ticker: str, data: Dict[str, Any]):
     """Display overview metrics with real or mock data."""
@@ -919,7 +585,6 @@ def display_overview_tab(ticker: str, data: Dict[str, Any]):
         logger.error(f"Error displaying overview: {e}")
         st.error("Unable to load real-time data. Please try again.")
 
-
 def display_technical_tab(ticker: str, data: Dict[str, Any]):
     """Display technical analysis results."""
     
@@ -953,7 +618,6 @@ def display_technical_tab(ticker: str, data: Dict[str, Any]):
         # Chart patterns
         st.markdown("#### Chart Patterns Detected")
         st.success("📈 Ascending triangle pattern forming - Bullish signal")
-
 
 def display_fundamental_tab(ticker: str, data: Dict[str, Any]):
     """Display fundamental analysis results."""
@@ -1010,7 +674,6 @@ def display_fundamental_tab(ticker: str, data: Dict[str, Any]):
             logger.error(f"Error displaying fundamentals: {e}")
             st.info("Fundamental data analysis in progress...")
 
-
 def display_ai_insights_tab(ticker: str, data: Dict[str, Any]):
     """Display AI-generated insights and recommendations."""
     
@@ -1057,85 +720,70 @@ def display_ai_insights_tab(ticker: str, data: Dict[str, Any]):
         • Risk: Moderate
         """)
 
+# =====================================
+# Import existing functions from app.py
+# =====================================
 
-# Deprecated functions for backwards compatibility
-def display_overview(ticker: str):
-    """Display stock overview (deprecated - use display_overview_tab)."""
-    display_overview_tab(ticker, {})
+# Import all the authentication and helper functions from the original app.py
+from app import (
+    init_session_state as original_init_session_state,
+    process_url_params,
+    show_login_signup,
+    show_onboarding,
+    authenticate_user,
+    create_user_account,
+    save_user_preferences,
+    load_user_preferences,
+    track_signup,
+    track_referral,
+    initiate_payment,
+    show_upgrade_modal,
+    save_session_cookie,
+    send_magic_link,
+    initiate_google_auth,
+    initiate_apple_auth,
+    show_portfolio_page,
+    show_backtesting_page,
+    show_risk_page,
+    show_education_page,
+    show_settings_page
+)
 
+# =====================================
+# Main Application
+# =====================================
 
-def display_technical_analysis(ticker: str):
-    """Display technical analysis (deprecated - use display_technical_tab)."""
-    display_technical_tab(ticker, {})
-
-
-def display_fundamental_analysis(ticker: str):
-    """Display fundamental analysis (deprecated - use display_fundamental_tab)."""
-    display_fundamental_tab(ticker, {})
-
-
-def display_ai_insights(ticker: str):
-    """Display AI-generated insights (deprecated - use display_ai_insights_tab)."""
-    display_ai_insights_tab(ticker, {})
-
-
-def show_portfolio_page():
-    """Portfolio management page."""
-    st.title("Portfolio Optimization")
-
-    if st.session_state.user_plan == 'free':
-        st.warning("Portfolio optimization is a Growth feature. Upgrade to access!")
-        return
-
-    # Portfolio interface here
-
-
-def show_backtesting_page():
-    """Backtesting page."""
-    st.title("Strategy Backtesting")
-
-    if st.session_state.user_plan == 'free':
-        st.warning("Backtesting is a Growth feature. Upgrade to access!")
-        return
-
-    # Backtesting interface here
-
-
-def show_risk_page():
-    """Risk assessment page."""
-    st.title("Risk Assessment")
-    # Risk assessment interface here
-
-
-def show_education_page():
-    """Educational content page."""
-    st.title("Learn Investing")
-    st.markdown("### Start your investment education journey")
-    # Educational content here
-
-
-def show_settings_page():
-    """User settings page."""
-    st.title("Settings")
-
-    tab1, tab2, tab3 = st.tabs(["Profile", "Subscription", "Preferences"])
-
-    with tab1:
-        st.markdown("### Profile Settings")
-        # Profile settings here
-
-    with tab2:
-        st.markdown("### Subscription Management")
-        st.info(f"Current Plan: **{st.session_state.user_plan.title()}**")
-
-        if st.session_state.user_plan != 'pro':
-            if st.button("Upgrade Plan"):
-                show_upgrade_modal()
-
-    with tab3:
-        st.markdown("### Preferences")
-        # User preferences here
-
+def main_app():
+    """Main application interface with enhanced features."""
+    
+    # Sidebar
+    with st.sidebar:
+        st.markdown(f"### ⚒️ InvestForge")
+        st.markdown(f"**User:** {st.session_state.user_email}")
+        st.markdown(f"**Plan:** {st.session_state.user_plan.title()}")
+        
+        st.markdown("---")
+        
+        # Navigation
+        page = st.selectbox(
+            "Navigation",
+            ["📊 Analysis", "💼 Portfolio", "📈 Backtesting",
+             "🎯 Risk Assessment", "📚 Learn", "⚙️ Settings"]
+        )
+    
+    # Main content area
+    if page == "📊 Analysis":
+        show_analysis_page()
+    elif page == "💼 Portfolio":
+        show_portfolio_page()
+    elif page == "📈 Backtesting":
+        show_backtesting_page()
+    elif page == "🎯 Risk Assessment":
+        show_risk_page()
+    elif page == "📚 Learn":
+        show_education_page()
+    elif page == "⚙️ Settings":
+        show_settings_page()
 
 # =====================================
 # Main Execution
@@ -1144,10 +792,11 @@ def show_settings_page():
 if __name__ == "__main__":
     # Initialize session state
     init_session_state()
-
+    original_init_session_state()
+    
     # Process URL parameters from landing page
     process_url_params()
-
+    
     # Show appropriate interface
     if not st.session_state.authenticated:
         show_login_signup()
