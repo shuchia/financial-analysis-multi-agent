@@ -16,11 +16,9 @@ def create_crew(stock_symbol):
     logger.info(f"Creating crew for stock symbol: {stock_symbol}")
     
     # Initialize AWS Bedrock LLM using CrewAI's LLM class
+    # In ECS Fargate, credentials are automatically obtained from the task role
     llm = LLM(
         model="anthropic.claude-3-haiku-20240307-v1:0",
-        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-        aws_session_token=os.getenv('AWS_SESSION_TOKEN'),  # Optional for temporary credentials
         region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
     )
     logger.debug("AWS Bedrock LLM initialized successfully")
@@ -137,6 +135,16 @@ def run_analysis(stock_symbol):
         logger.info(f"=== CREW EXECUTION COMPLETED ===")
         logger.info(f"Analysis completed successfully in {execution_time:.2f} seconds")
         logger.debug(f"Result type: {type(result)}")
+        logger.debug(f"Result content: {result}")
+        
+        # Validate result is not None or empty
+        if result is None:
+            logger.error("Result is None")
+            raise ValueError("Invalid response from LLM call - None or empty")
+        
+        if hasattr(result, 'tasks_output') and not result.tasks_output:
+            logger.error("Result tasks_output is empty")
+            raise ValueError("Invalid response from LLM call - None or empty")
         
         return result
         
