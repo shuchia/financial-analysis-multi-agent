@@ -16,16 +16,19 @@
           "protocol": "tcp"
         }
       ],
-      "secrets": [
-        {
-          "name": "AWS_DEFAULT_REGION",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:453636587892:secret:financial-analysis/config-kvrLdv:AWS_DEFAULT_REGION::"
-        }
-      ],
+      "secrets": [],
       "environment": [
         {
           "name": "PORT",
           "value": "8080"
+        },
+        {
+          "name": "AWS_DEFAULT_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
         }
       ],
       "logConfiguration": {
@@ -39,9 +42,9 @@
       "healthCheck": {
         "command": ["CMD-SHELL", "curl -f http://localhost:8080/_stcore/health || exit 1"],
         "interval": 30,
-        "timeout": 5,
+        "timeout": 10,
         "retries": 3,
-        "startPeriod": 60
+        "startPeriod": 120
       }
     }
   ]

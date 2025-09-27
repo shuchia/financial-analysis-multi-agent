@@ -303,6 +303,7 @@ import json
 import boto3
 from datetime import datetime
 import base64
+import uuid
 
 def lambda_handler(event, context):
     """ALB-compatible analytics function."""
@@ -348,9 +349,10 @@ def lambda_handler(event, context):
         
         # Save to DynamoDB
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('investforge-api-dev-analytics')
+        table = dynamodb.Table('investforge-analytics')
         
         table.put_item(Item={
+            'event_id': str(uuid.uuid4()),
             'event_type': event_type,
             'timestamp': datetime.utcnow().isoformat(),
             'user_id': user_id,

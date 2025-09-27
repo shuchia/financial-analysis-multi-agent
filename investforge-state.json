@@ -1,0 +1,6 @@
+{
+        "ecs_desired_count": 1,
+        "shutdown_time": "2025-09-27T13:33:26Z",
+        "cluster": "financial-analysis-cluster",
+        "service": "financial-analysis-service"
+    }

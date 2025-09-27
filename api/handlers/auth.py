@@ -1,9 +1,11 @@
 """
 Authentication handlers for user signup, login, and token management.
+Enhanced with rate limiting, account lockout, and security features.
 """
 
 import json
 import os
+import logging
 from typing import Dict, Any
 from datetime import datetime
 from pydantic import ValidationError
@@ -14,11 +16,17 @@ from utils.response import (
 )
 from utils.database import db
 from utils.auth import jwt_manager, password_manager, extract_token_from_event
+from utils.rate_limiter import rate_limit, get_ip_identifier, AUTH_RATE_LIMIT
+from utils.account_security import account_security, check_password_complexity, is_password_compromised
 from models.user import User, UserSignup, UserLogin
 
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
+
+@rate_limit(max_requests=10, window_seconds=3600, identifier_func=get_ip_identifier)
 def signup(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    """Handle user signup."""
+    """Handle user signup with rate limiting."""
     try:
         # Parse request body
         body = json.loads(event.get('body', '{}'))
@@ -84,8 +92,9 @@ def signup(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return server_error_response("Internal server error")
 
 
+@rate_limit(**AUTH_RATE_LIMIT, identifier_func=get_ip_identifier)
 def login(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    """Handle user login."""
+    """Handle user login with enhanced security."""
     try:
         # Parse request body
         body = json.loads(event.get('body', '{}'))
@@ -96,22 +105,53 @@ def login(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         except ValidationError as e:
             return validation_error_response(e.errors())
         
+        # Get IP address for security logging
+        ip_address = event.get('requestContext', {}).get('identity', {}).get('sourceIp', 'unknown')
+        user_agent = event.get('requestContext', {}).get('identity', {}).get('userAgent', 'unknown')
+        
+        # Check account lockout
+        is_locked, lock_reason = account_security.check_account_lockout(login_data.email)
+        if is_locked:
+            logger.warning(f"Login attempt on locked account: {login_data.email} from {ip_address}")
+            return error_response(lock_reason, 423)  # 423 = Locked
+        
         # Get user by email
         user_data = db.get_user_by_email(login_data.email)
         if not user_data:
+            # Record failed attempt even for non-existent users to prevent enumeration
+            account_security.record_failed_attempt(login_data.email, ip_address, user_agent)
             return unauthorized_response("Invalid email or password")
         
         user = User(user_data)
         
+        # Check if account is suspended
+        if user_data.get('status') == 'suspended':
+            logger.warning(f"Login attempt on suspended account: {login_data.email}")
+            return error_response("Account is suspended", 403)
+        
         # Verify password
         if not password_manager.verify_password(login_data.password, user.password_hash):
-            return unauthorized_response("Invalid email or password")
+            # Record failed attempt
+            account_locked, security_message = account_security.record_failed_attempt(
+                login_data.email, ip_address, user_agent
+            )
+            
+            logger.warning(f"Failed login attempt for {login_data.email} from {ip_address}")
+            
+            if account_locked:
+                return error_response(security_message, 423)  # Account locked
+            else:
+                return unauthorized_response(security_message)
+        
+        # Successful login - clear any failed attempts
+        account_security.clear_failed_attempts(login_data.email)
         
         # Update last login
         user.update_login_time()
         db.update_user(user.user_id, {
             'last_login': user.last_login,
-            'updated_at': user.updated_at
+            'updated_at': user.updated_at,
+            'last_login_ip': ip_address
         })
         
         # Create tokens
@@ -124,6 +164,8 @@ def login(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Track login event
         from handlers.analytics import track_login_event
         track_login_event(user.user_id)
+        
+        logger.info(f"Successful login for {login_data.email} from {ip_address}")
         
         return success_response(
             data={
@@ -138,7 +180,7 @@ def login(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     except json.JSONDecodeError:
         return error_response("Invalid JSON in request body", 400)
     except Exception as e:
-        print(f"Login error: {str(e)}")
+        logger.error(f"Login error: {str(e)}")
         return server_error_response("Internal server error")
 
 

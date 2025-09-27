@@ -29,6 +29,9 @@ class DatabaseClient:
         self.waitlist_table = self.dynamodb.Table(
             os.getenv('DYNAMODB_TABLE_WAITLIST', f'{self.service_name}-{self.stage}-waitlist')
         )
+        self.password_resets_table = self.dynamodb.Table(
+            os.getenv('DYNAMODB_TABLE_PASSWORD_RESETS', f'{self.service_name}-{self.stage}-password-resets')
+        )
     
     # User operations
     def create_user(self, user_data: Dict[str, Any]) -> bool:
@@ -61,6 +64,21 @@ class DatabaseClient:
             return items[0] if items else None
         except Exception:
             return None
+    
+    def get_user_by_google_id(self, google_id: str) -> Optional[Dict[str, Any]]:
+        """Get user by Google ID."""
+        try:
+            response = self.users_table.scan(
+                FilterExpression=Attr('google_id').eq(google_id)
+            )
+            items = response.get('Items', [])
+            return items[0] if items else None
+        except Exception:
+            return None
+    
+    def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user by user ID (alias for get_user)."""
+        return self.get_user(user_id)
     
     def update_user(self, user_id: str, updates: Dict[str, Any]) -> bool:
         """Update user data."""
@@ -148,6 +166,91 @@ class DatabaseClient:
             return response.get('Items', [])
         except Exception:
             return []
+    
+    # Password reset operations
+    def create_password_reset(self, reset_data: Dict[str, Any]) -> bool:
+        """Create a password reset token."""
+        try:
+            self.password_resets_table.put_item(Item=reset_data)
+            return True
+        except Exception:
+            return False
+    
+    def get_password_reset(self, reset_token: str) -> Optional[Dict[str, Any]]:
+        """Get password reset data by token."""
+        try:
+            response = self.password_resets_table.get_item(
+                Key={'reset_token': reset_token}
+            )
+            return response.get('Item')
+        except Exception:
+            return None
+    
+    def update_password_reset(self, reset_token: str, updates: Dict[str, Any]) -> bool:
+        """Update password reset data."""
+        try:
+            update_expression = "SET "
+            expression_values = {}
+            
+            for key, value in updates.items():
+                update_expression += f"{key} = :{key}, "
+                expression_values[f":{key}"] = value
+            
+            update_expression = update_expression.rstrip(", ")
+            
+            self.password_resets_table.update_item(
+                Key={'reset_token': reset_token},
+                UpdateExpression=update_expression,
+                ExpressionAttributeValues=expression_values
+            )
+            return True
+        except Exception:
+            return False
+    
+    def delete_password_reset(self, reset_token: str) -> bool:
+        """Delete a password reset token."""
+        try:
+            self.password_resets_table.delete_item(
+                Key={'reset_token': reset_token}
+            )
+            return True
+        except Exception:
+            return False
+    
+    # Waitlist operations
+    def add_to_waitlist(self, email: str, data: Dict[str, Any]) -> bool:
+        """Add email to waitlist."""
+        try:
+            waitlist_data = {
+                'email': email,
+                'timestamp': data.get('timestamp'),
+                'source': data.get('source', 'unknown'),
+                'metadata': data.get('metadata', {})
+            }
+            
+            self.waitlist_table.put_item(
+                Item=waitlist_data,
+                ConditionExpression='attribute_not_exists(email)'
+            )
+            return True
+        except Exception:
+            return False
+    
+    def get_waitlist_entry(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get waitlist entry by email."""
+        try:
+            response = self.waitlist_table.get_item(Key={'email': email})
+            return response.get('Item')
+        except Exception:
+            return None
+    
+    def remove_from_waitlist(self, email: str) -> bool:
+        """Remove email from waitlist."""
+        try:
+            self.waitlist_table.delete_item(Key={'email': email})
+            return True
+        except Exception:
+            return False
     
     # Waitlist operations
     def add_to_waitlist(self, waitlist_data: Dict[str, Any]) -> bool:

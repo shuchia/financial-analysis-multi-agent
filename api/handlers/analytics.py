@@ -237,6 +237,69 @@ def track_analysis_event(user_id: str, symbol: str, analysis_type: str, duration
     db.track_event(event_record)
 
 
+def track_password_reset_event(user_id: str):
+    """Track password reset event."""
+    event_record = {
+        'event_type': 'password_reset',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': user_id,
+        'event_data': {},
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)
+
+
+def track_email_verification_event(user_id: str):
+    """Track email verification event."""
+    event_record = {
+        'event_type': 'email_verification',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': user_id,
+        'event_data': {},
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)
+
+
+def track_account_lockout_event(user_id: str, reason: str, attempts: int):
+    """Track account lockout event."""
+    event_data = {
+        'reason': reason,
+        'failed_attempts': attempts
+    }
+    
+    event_record = {
+        'event_type': 'account_lockout',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': user_id,
+        'event_data': event_data,
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)
+
+
+def track_failed_login_event(email: str, ip_address: str, attempts: int):
+    """Track failed login attempt."""
+    event_data = {
+        'email': email,
+        'ip_address': ip_address,
+        'failed_attempts': attempts
+    }
+    
+    event_record = {
+        'event_type': 'failed_login',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': None,  # No user ID for failed attempts
+        'event_data': event_data,
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)
+
+
 def get_dashboard_stats(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Get dashboard statistics for admin users."""
     try:
@@ -276,4 +339,126 @@ def get_dashboard_stats(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return error_response("Days parameter must be a valid integer", 400)
     except Exception as e:
         print(f"Get dashboard stats error: {str(e)}")
+        return server_error_response("Internal server error")
+
+
+def increment_usage_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Handle usage increment requests."""
+    try:
+        # Get authenticated user
+        user_info = get_user_from_event(event)
+        if not user_info:
+            return unauthorized_response("Authentication required")
+        
+        user_id = user_info['user_id']
+        
+        # Parse request body
+        body = json.loads(event.get('body', '{}'))
+        feature = body.get('feature')
+        count = body.get('count', 1)
+        
+        if not feature:
+            return error_response("Feature is required", 400)
+        
+        # Get current date
+        current_date = datetime.utcnow().strftime('%Y-%m-%d')
+        
+        # Increment usage
+        success = db.increment_usage(user_id, current_date, feature, count)
+        if not success:
+            return server_error_response("Failed to increment usage")
+        
+        # Get updated usage
+        usage_data = db.get_usage(user_id, current_date)
+        
+        return success_response(
+            data={
+                'user_id': user_id,
+                'feature': feature,
+                'count': count,
+                'total_usage': usage_data
+            },
+            message="Usage incremented successfully"
+        )
+        
+    except json.JSONDecodeError:
+        return error_response("Invalid JSON in request body", 400)
+    except Exception as e:
+        print(f"Increment usage error: {str(e)}")
+        return server_error_response("Internal server error")
+
+
+def check_usage_limit_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Check if user has reached usage limits."""
+    try:
+        # Get authenticated user
+        user_info = get_user_from_event(event)
+        if not user_info:
+            return unauthorized_response("Authentication required")
+        
+        user_id = user_info['user_id']
+        
+        # Parse request body
+        body = json.loads(event.get('body', '{}'))
+        feature = body.get('feature')
+        count = body.get('count', 1)
+        
+        if not feature:
+            return error_response("Feature is required", 400)
+        
+        # Get user plan
+        user_data = db.get_user(user_id)
+        if not user_data:
+            return error_response("User not found", 404)
+        
+        user_plan = user_data.get('plan', 'free')
+        
+        # Define limits per plan
+        limits = {
+            'free': {
+                'analyses_count': 5,
+                'api_calls': 100
+            },
+            'premium': {
+                'analyses_count': 100,
+                'api_calls': 1000
+            },
+            'professional': {
+                'analyses_count': -1,  # unlimited
+                'api_calls': -1
+            }
+        }
+        
+        plan_limits = limits.get(user_plan, limits['free'])
+        feature_limit = plan_limits.get(feature, 0)
+        
+        # Get current usage
+        current_date = datetime.utcnow().strftime('%Y-%m-%d')
+        usage_data = db.get_usage(user_id, current_date)
+        current_usage = usage_data.get(feature, 0)
+        
+        # Check if unlimited
+        if feature_limit == -1:
+            allowed = True
+            remaining = -1
+        else:
+            allowed = (current_usage + count) <= feature_limit
+            remaining = max(0, feature_limit - current_usage)
+        
+        return success_response(
+            data={
+                'allowed': allowed,
+                'current_usage': current_usage,
+                'limit': feature_limit,
+                'remaining': remaining,
+                'plan': user_plan,
+                'feature': feature
+            },
+            message="Usage limit check completed"
+        )
+        
+    except json.JSONDecodeError:
+        return error_response("Invalid JSON in request body", 400)
+    except Exception as e:
+        print(f"Check usage limit error: {str(e)}")
         return server_error_response("Internal server error")

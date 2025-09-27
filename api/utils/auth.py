@@ -17,6 +17,7 @@ class JWTManager:
         self.algorithm = 'HS256'
         self.access_token_expires = timedelta(hours=24)
         self.refresh_token_expires = timedelta(days=30)
+        self.verification_token_expires = timedelta(hours=24)
     
     def create_access_token(self, user_id: str, user_data: Dict[str, Any]) -> str:
         """Create an access token."""
@@ -37,6 +38,17 @@ class JWTManager:
             'exp': datetime.utcnow() + self.refresh_token_expires,
             'iat': datetime.utcnow(),
             'type': 'refresh'
+        }
+        
+        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
+    
+    def create_verification_token(self, user_id: str) -> str:
+        """Create an email verification token."""
+        payload = {
+            'user_id': user_id,
+            'exp': datetime.utcnow() + self.verification_token_expires,
+            'iat': datetime.utcnow(),
+            'type': 'verification'
         }
         
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
@@ -64,6 +76,15 @@ class JWTManager:
             'exp': payload.get('exp'),
             'iat': payload.get('iat')
         }
+    
+    def verify_verification_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Verify an email verification token."""
+        payload = self.verify_token(token)
+        
+        if not payload or payload.get('type') != 'verification':
+            return None
+        
+        return payload
 
 
 class PasswordManager:
@@ -115,6 +136,38 @@ def get_user_from_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         }
     
     return None
+
+
+def generate_tokens(user_id: str, user_data: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+    """Generate access and refresh tokens for a user."""
+    if user_data is None:
+        # If no user data provided, get from database
+        from utils.database import db
+        user_record = db.get_user(user_id)
+        if user_record:
+            from models.user import User
+            user = User(user_record)
+            user_data = user.to_public_dict()
+        else:
+            user_data = {}
+    
+    access_token = jwt_manager.create_access_token(user_id, user_data)
+    refresh_token = jwt_manager.create_refresh_token(user_id)
+    
+    return {
+        'access_token': access_token,
+        'refresh_token': refresh_token
+    }
+
+
+def hash_password(password: str) -> str:
+    """Helper function for password hashing."""
+    return password_manager.hash_password(password)
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Helper function for password verification."""
+    return password_manager.verify_password(password, hashed)
 
 
 # Global instances
