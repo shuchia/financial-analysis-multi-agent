@@ -118,7 +118,9 @@ class APIClient:
                 # Store tokens and user data
                 data = result['data']
                 st.session_state.access_token = data['access_token']
-                st.session_state.refresh_token = data['refresh_token']
+                # Only set refresh_token if it exists in the response
+                if 'refresh_token' in data:
+                    st.session_state.refresh_token = data['refresh_token']
                 st.session_state.user_data = data['user']
                 # Calculate token expiry (24 hours)
                 st.session_state.token_expires_at = (
@@ -150,7 +152,9 @@ class APIClient:
                 # Store tokens and user data
                 data = result['data']
                 st.session_state.access_token = data['access_token']
-                st.session_state.refresh_token = data['refresh_token']
+                # Only set refresh_token if it exists in the response
+                if 'refresh_token' in data:
+                    st.session_state.refresh_token = data['refresh_token']
                 st.session_state.user_data = data['user']
                 # Calculate token expiry (24 hours)
                 st.session_state.token_expires_at = (

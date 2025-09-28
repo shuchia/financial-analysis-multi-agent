@@ -179,7 +179,7 @@ def show_login_signup():
     with col2:
         # Logo and branding
         try:
-            st.image("app/static/images/investforge-logo.png", width=150, use_column_width=False)
+            st.image("app/static/images/investforge-logo.png", width=150)
         except:
             st.markdown("⚒️", unsafe_allow_html=True)
             
