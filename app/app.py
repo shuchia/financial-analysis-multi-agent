@@ -141,16 +141,56 @@ def process_url_params():
 
 def show_login_signup():
     """Display login/signup interface."""
+    
+    # Apply the same custom CSS for login page
+    st.markdown("""
+    <style>
+        /* Import Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        /* CSS Variables matching landing page */
+        :root {
+            --primary-color: #FF6B35;
+            --secondary-color: #004E89;
+            --accent-color: #1A759F;
+            --success-color: #00BA6D;
+            --bg-secondary: #F8F9FA;
+        }
+        
+        .stApp {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+        }
+        
+        .login-logo {
+            animation: logoFloat 3s ease-in-out infinite;
+        }
+        
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
+        # Logo and branding
+        try:
+            st.image("app/static/images/investforge-logo.png", width=150, use_column_width=False)
+        except:
+            st.markdown("⚒️", unsafe_allow_html=True)
+            
         st.markdown("""
-        <div style='text-align: center; padding: 2rem 0;'>
+        <div style='text-align: center; padding: 1rem 0;'>
             <h1 style='font-size: 3rem; background: linear-gradient(135deg, #FF6B35, #004E89);
-                       -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
-                ⚒️ InvestForge
+                       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                       font-weight: 700;'>
+                InvestForge
             </h1>
-            <p style='color: #666; font-size: 1.2rem;'>Forge Your Financial Future</p>
+            <p style='color: #7F8C8D; font-size: 1.2rem; font-weight: 500;'>Forge Your Financial Future with AI</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -306,10 +346,209 @@ def show_onboarding():
 
 def main_app():
     """Main application interface."""
+    
+    # Custom CSS to match landing page design
+    st.markdown("""
+    <style>
+        /* Import Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        /* CSS Variables matching landing page */
+        :root {
+            --primary-color: #FF6B35;
+            --secondary-color: #004E89;
+            --accent-color: #1A759F;
+            --success-color: #00BA6D;
+            --warning-color: #F5B800;
+            --danger-color: #E74C3C;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8F9FA;
+        }
+        
+        /* Global Styles */
+        .stApp {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        /* Header Styling */
+        header[data-testid="stHeader"] {
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Sidebar Styling */
+        section[data-testid="stSidebar"] {
+            background-color: var(--bg-secondary);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        section[data-testid="stSidebar"] .element-container {
+            padding: 0.5rem 0;
+        }
+        
+        /* Button Styling */
+        .stButton > button {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .stButton > button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 107, 53, 0.3);
+        }
+        
+        /* Primary Button Override */
+        .stButton > button[kind="primary"] {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        }
+        
+        /* Metric Styling */
+        div[data-testid="metric-container"] {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        div[data-testid="metric-container"] label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        /* Select Box Styling */
+        .stSelectbox > div > div {
+            background-color: var(--bg-primary);
+            border: 2px solid rgba(0, 78, 137, 0.2);
+            border-radius: 8px;
+        }
+        
+        .stSelectbox > div > div:hover {
+            border-color: var(--primary-color);
+        }
+        
+        /* Text Input Styling */
+        .stTextInput > div > div {
+            background-color: var(--bg-primary);
+            border: 2px solid rgba(0, 78, 137, 0.2);
+            border-radius: 8px;
+        }
+        
+        .stTextInput > div > div:focus-within {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+        
+        /* Tab Styling */
+        .stTabs [data-baseweb="tab-list"] {
+            background-color: var(--bg-secondary);
+            padding: 0.5rem;
+            border-radius: 12px;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            color: var(--text-secondary);
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+        }
+        
+        .stTabs [aria-selected="true"] {
+            background-color: white;
+            color: var(--primary-color);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Progress Bar */
+        .stProgress > div > div {
+            background-color: var(--primary-color);
+        }
+        
+        /* Info/Warning/Error boxes */
+        .stAlert {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Expander Styling */
+        .streamlit-expanderHeader {
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        /* Logo Container */
+        .logo-container {
+            text-align: center;
+            padding: 2rem 0;
+        }
+        
+        .logo-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 15px rgba(255, 107, 53, 0.3));
+            margin-bottom: 1rem;
+        }
+        
+        .brand-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Card Styling */
+        .feature-card {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+        
+        /* Hide Streamlit Branding */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+    </style>
+    """, unsafe_allow_html=True)
 
     # Sidebar
     with st.sidebar:
-        st.markdown(f"### ⚒️ InvestForge")
+        # Logo and branding
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            try:
+                st.image("app/static/images/investforge-logo.png", width=100)
+            except:
+                # Fallback if image not found
+                st.markdown("⚒️", unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div style="text-align: center; margin-top: -10px;">
+                <span class="brand-text">InvestForge</span>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
         st.markdown(f"**User:** {st.session_state.user_email}")
         st.markdown(f"**Plan:** {st.session_state.user_plan.title()}")
 
@@ -349,7 +588,20 @@ def main_app():
 
 def show_analysis_page():
     """Stock analysis page with real AI integration."""
-    st.title("📊 AI-Powered Stock Analysis")
+    
+    # Enhanced page header with branding
+    st.markdown("""
+    <div style='text-align: center; padding: 2rem 0 1rem 0;'>
+        <h1 style='font-size: 2.5rem; background: linear-gradient(135deg, #FF6B35, #1A759F);
+                   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                   font-weight: 700; margin-bottom: 0.5rem;'>
+            📊 AI-Powered Stock Analysis
+        </h1>
+        <p style='color: #7F8C8D; font-size: 1.1rem; margin: 0;'>
+            Get comprehensive investment insights powered by multi-agent AI
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Load usage on page load
     if 'usage_loaded' not in st.session_state:
