@@ -209,7 +209,8 @@ def show_login_signup():
                     demo = st.form_submit_button("Try Demo", use_container_width=True)
 
                 if submitted:
-                    if authenticate_user(email, password):
+                    success, error_message = authenticate_user(email, password)
+                    if success:
                         st.session_state.authenticated = True
                         st.session_state.user_email = email
                         if remember:
@@ -218,7 +219,7 @@ def show_login_signup():
                         load_user_preferences()
                         st.rerun()
                     else:
-                        st.error("Invalid credentials. Please try again.")
+                        st.error(error_message)
 
                 if demo:
                     st.session_state.demo_mode = True
@@ -673,10 +674,17 @@ def show_analysis_page():
 # Helper Functions
 # =====================================
 
-def authenticate_user(email: str, password: str) -> bool:
+def authenticate_user(email: str, password: str) -> tuple[bool, str]:
     """Authenticate user credentials using API."""
     result = api_client.login(email, password)
-    return result is not None
+    
+    if result is None:
+        return False, "Unable to connect to authentication service"
+    
+    if isinstance(result, dict) and result.get('error'):
+        return False, result.get('message', 'Authentication failed')
+    
+    return True, ""
 
 
 def create_user_account(email: str, password: str, plan: str) -> bool:

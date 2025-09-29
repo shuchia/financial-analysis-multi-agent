@@ -49,17 +49,26 @@ class APIClient:
         """Handle API response and errors."""
         try:
             if response.status_code == 401:
-                # Try to refresh token and retry
-                if self.refresh_token():
-                    return None  # Caller should retry
+                # For login attempts, don't try to refresh token
+                if hasattr(st.session_state, 'access_token') and st.session_state.access_token:
+                    # Try to refresh token and retry
+                    if self.refresh_token():
+                        return None  # Caller should retry
+                    else:
+                        # Clear session and redirect to login
+                        for key in ['access_token', 'refresh_token', 'user_data', 'token_expires_at']:
+                            if key in st.session_state:
+                                del st.session_state[key]
+                        st.error("Session expired. Please log in again.")
+                        st.session_state.page = 'login'
+                        st.rerun()
                 else:
-                    # Clear session and redirect to login
-                    for key in ['access_token', 'refresh_token', 'user_data', 'token_expires_at']:
-                        if key in st.session_state:
-                            del st.session_state[key]
-                    st.error("Session expired. Please log in again.")
-                    st.session_state.page = 'login'
-                    st.rerun()
+                    # This is a failed login attempt
+                    try:
+                        error_data = response.json()
+                        return error_data  # Return the error for the login handler to process
+                    except:
+                        return {'success': False, 'message': 'Invalid credentials'}
             
             # Handle specific error codes with better messages
             if response.status_code == 409:
@@ -135,7 +144,7 @@ class APIClient:
             return None
     
     def login(self, email: str, password: str) -> Optional[Dict[str, Any]]:
-        """Log in a user."""
+        """Log in a user. Returns user data on success, or error dict on failure."""
         try:
             response = requests.post(
                 f"{self.base_url}/auth/login",
@@ -161,12 +170,14 @@ class APIClient:
                     datetime.utcnow() + timedelta(hours=24)
                 ).isoformat()
                 return data
+            elif result and not result.get('success'):
+                # Return the error information
+                return {'error': True, 'message': result.get('message', 'Login failed')}
             
             return None
             
         except Exception as e:
-            st.error(f"Login failed: {str(e)}")
-            return None
+            return {'error': True, 'message': f"Connection error: {str(e)}"}
     
     def refresh_token(self) -> bool:
         """Refresh the access token."""
