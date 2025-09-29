@@ -226,6 +226,11 @@ def show_login_signup():
                     st.session_state.authenticated = True
                     st.session_state.user_email = "demo@investforge.io"
                     st.rerun()
+            
+            # Forgot password link
+            if st.button("Forgot Password?", type="secondary", use_container_width=True):
+                st.session_state.show_forgot_password = True
+                st.rerun()
 
         with tab2:
             with st.form("signup_form"):
@@ -278,6 +283,67 @@ def show_login_signup():
         with col3:
             if st.button("📧 Email Magic Link", use_container_width=True):
                 send_magic_link(email)
+
+
+# =====================================
+# Forgot Password Flow
+# =====================================
+
+def show_forgot_password():
+    """Display forgot password interface."""
+    
+    # Apply the same custom CSS
+    st.markdown("""
+    <style>
+        /* Import Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        .stApp {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+
+    with col2:
+        # Logo and branding
+        try:
+            st.image("app/static/images/investforge-logo.png", width=150)
+        except:
+            st.markdown("⚒️", unsafe_allow_html=True)
+            
+        st.markdown("""
+        <div style='text-align: center; padding: 1rem 0;'>
+            <h1 style='font-size: 2.5rem; font-weight: 700;'>Reset Your Password</h1>
+            <p style='color: #7F8C8D; font-size: 1.1rem;'>Enter your email to receive a password reset link</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.form("forgot_password_form"):
+            email = st.text_input("Email Address", placeholder="your@email.com")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                submit = st.form_submit_button("Send Reset Link", use_container_width=True, type="primary")
+            with col2:
+                cancel = st.form_submit_button("Back to Login", use_container_width=True)
+            
+            if submit and email:
+                # For now, show a placeholder message
+                # TODO: Implement actual password reset API call
+                st.success(f"If an account exists with {email}, you will receive a password reset link shortly.")
+                st.info("📧 Please check your email (including spam folder) for the reset link.")
+                st.info("🔗 The reset link will expire in 1 hour for security.")
+                
+            elif submit and not email:
+                st.error("Please enter your email address.")
+                
+            if cancel:
+                st.session_state.show_forgot_password = False
+                st.rerun()
 
 
 # =====================================
@@ -1397,7 +1463,10 @@ if __name__ == "__main__":
 
     # Show appropriate interface
     if not st.session_state.authenticated:
-        show_login_signup()
+        if st.session_state.get('show_forgot_password'):
+            show_forgot_password()
+        else:
+            show_login_signup()
     elif st.session_state.get('show_onboarding') and not st.session_state.onboarding_complete:
         show_onboarding()
     else:
