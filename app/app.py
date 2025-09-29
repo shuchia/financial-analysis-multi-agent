@@ -660,22 +660,9 @@ def show_analysis_page():
     with col2:
         analyze_button = st.button("🔍 Analyze", type="primary", use_container_width=True)
     
-    # Analysis options
-    with st.expander("⚙️ Analysis Options", expanded=False):
-        col1, col2 = st.columns(2)
-        with col1:
-            analysis_depth = st.selectbox(
-                "Analysis Depth",
-                ["Standard", "Comprehensive", "Quick"],
-                help="Choose the depth of analysis"
-            )
-        with col2:
-            include_competitors = st.checkbox("Include Competitor Analysis", value=True)
-            include_sentiment = st.checkbox("Include Sentiment Analysis", value=True)
-    
     # Run analysis
     if analyze_button and ticker:
-        run_ai_analysis(ticker, analysis_depth, include_competitors, include_sentiment)
+        run_ai_analysis(ticker)
     
     # Display stored results
     if f'analysis_result_{ticker}' in st.session_state:
@@ -846,7 +833,7 @@ def increment_usage(feature: str = 'analyses_count'):
 # AI Analysis Functions
 # =====================================
 
-def run_ai_analysis(ticker: str, depth: str, include_competitors: bool, include_sentiment: bool):
+def run_ai_analysis(ticker: str):
     """Run the actual AI crew analysis."""
     
     with ErrorBoundary("Failed to complete analysis"):
@@ -880,7 +867,7 @@ def run_ai_analysis(ticker: str, depth: str, include_competitors: bool, include_
                 # Track analysis start
                 user_id = st.session_state.user_data.get('user_id')
                 if user_id:
-                    api_client.track_analysis_event(user_id, ticker, depth)
+                    api_client.track_analysis_event(user_id, ticker, "standard")
                 
                 # Run the actual analysis
                 with st.spinner(f"AI agents working on {ticker} analysis..."):
