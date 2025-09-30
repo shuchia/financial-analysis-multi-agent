@@ -6,6 +6,7 @@ import os
 import boto3
 from typing import Dict, Any, Optional, List
 from boto3.dynamodb.conditions import Key, Attr
+from datetime import datetime
 
 
 class DatabaseClient:
@@ -252,7 +253,144 @@ class DatabaseClient:
         except Exception:
             return False
     
-    # Waitlist operations
+    # Enhanced user preferences operations
+    def get_user_preferences(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user preferences."""
+        user = self.get_user(user_id)
+        if user:
+            return user.get('preferences', {})
+        return None
+    
+    def update_user_preferences(self, user_id: str, preferences: Dict[str, Any]) -> bool:
+        """Update user preferences."""
+        return self.update_user(user_id, {'preferences': preferences})
+    
+    def get_preferences_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get user preferences by email."""
+        user = self.get_user_by_email(email)
+        if user:
+            return user.get('preferences', {})
+        return None
+    
+    def update_preferences_by_email(self, email: str, preferences: Dict[str, Any]) -> bool:
+        """Update user preferences by email."""
+        user = self.get_user_by_email(email)
+        if user:
+            return self.update_user(user['user_id'], {'preferences': preferences})
+        return False
+    
+    # Achievement operations
+    def get_user_achievements(self, user_id: str) -> Dict[str, Any]:
+        """Get user achievements."""
+        preferences = self.get_user_preferences(user_id)
+        if preferences:
+            return preferences.get('achievements', {'unlocked': [], 'progress': {}})
+        return {'unlocked': [], 'progress': {}}
+    
+    def unlock_achievement(self, user_id: str, achievement_id: str) -> bool:
+        """Unlock an achievement for a user."""
+        preferences = self.get_user_preferences(user_id) or {}
+        achievements = preferences.get('achievements', {'unlocked': [], 'progress': {}})
+        
+        if achievement_id not in achievements['unlocked']:
+            achievements['unlocked'].append(achievement_id)
+            achievements['progress'][achievement_id] = {
+                'unlocked_at': datetime.utcnow().isoformat()
+            }
+            
+            preferences['achievements'] = achievements
+            return self.update_user_preferences(user_id, preferences)
+        
+        return True  # Already unlocked
+    
+    def update_achievement_progress(self, user_id: str, achievement_id: str, progress_data: Dict[str, Any]) -> bool:
+        """Update progress for an achievement."""
+        preferences = self.get_user_preferences(user_id) or {}
+        achievements = preferences.get('achievements', {'unlocked': [], 'progress': {}})
+        
+        if achievement_id not in achievements['progress']:
+            achievements['progress'][achievement_id] = {}
+        
+        achievements['progress'][achievement_id].update(progress_data)
+        preferences['achievements'] = achievements
+        
+        return self.update_user_preferences(user_id, preferences)
+    
+    # Analytics operations for onboarding metrics
+    def get_onboarding_analytics(self, start_date: str, end_date: str) -> Dict[str, Any]:
+        """Get onboarding completion analytics."""
+        try:
+            # Get onboarding completion events
+            completion_events = self.get_analytics('onboarding_completed', start_date, end_date)
+            tutorial_events = self.get_analytics('tutorial_analysis_started', start_date, end_date)
+            achievement_events = self.get_analytics('achievement_unlocked', start_date, end_date)
+            
+            # Calculate metrics
+            total_completions = len(completion_events)
+            
+            # Age distribution
+            age_distribution = {}
+            for event in completion_events:
+                age_range = event.get('event_data', {}).get('age_range', 'Unknown')
+                age_distribution[age_range] = age_distribution.get(age_range, 0) + 1
+            
+            # Risk profile distribution
+            risk_distribution = {}
+            for event in completion_events:
+                risk_profile = event.get('event_data', {}).get('risk_profile', 'Unknown')
+                risk_distribution[risk_profile] = risk_distribution.get(risk_profile, 0) + 1
+            
+            # Tutorial completion rate
+            tutorial_starts = len(tutorial_events)
+            tutorial_completion_rate = (tutorial_starts / total_completions * 100) if total_completions > 0 else 0
+            
+            return {
+                'total_completions': total_completions,
+                'tutorial_starts': tutorial_starts,
+                'tutorial_completion_rate': tutorial_completion_rate,
+                'age_distribution': age_distribution,
+                'risk_distribution': risk_distribution,
+                'achievement_unlocks': len(achievement_events)
+            }
+        except Exception:
+            return {}
+    
+    def get_user_onboarding_metrics(self, user_id: str) -> Dict[str, Any]:
+        """Get onboarding metrics for a specific user."""
+        try:
+            # Get user events
+            response = self.analytics_table.scan(
+                FilterExpression=Attr('user_id').eq(user_id)
+            )
+            
+            events = response.get('Items', [])
+            
+            # Extract onboarding-related events
+            onboarding_events = [e for e in events if e.get('event_type') in [
+                'onboarding_completed', 'tutorial_analysis_started', 'achievement_unlocked'
+            ]]
+            
+            # Calculate completion time if available
+            onboarding_complete = next((e for e in onboarding_events if e.get('event_type') == 'onboarding_completed'), None)
+            tutorial_start = next((e for e in onboarding_events if e.get('event_type') == 'tutorial_analysis_started'), None)
+            
+            completion_time = None
+            if onboarding_complete and tutorial_start:
+                # Calculate time between onboarding completion and first tutorial
+                onboarding_time = datetime.fromisoformat(onboarding_complete['timestamp'])
+                tutorial_time = datetime.fromisoformat(tutorial_start['timestamp'])
+                completion_time = (tutorial_time - onboarding_time).total_seconds() / 60  # minutes
+            
+            return {
+                'onboarding_completed': onboarding_complete is not None,
+                'tutorial_started': tutorial_start is not None,
+                'completion_time_minutes': completion_time,
+                'total_events': len(onboarding_events)
+            }
+        except Exception:
+            return {}
+    
+    # Waitlist operations (removing duplicate)
     def add_to_waitlist(self, waitlist_data: Dict[str, Any]) -> bool:
         """Add email to waitlist."""
         try:

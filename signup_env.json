@@ -1,0 +1,8 @@
+{
+  "Variables": {
+    "DYNAMODB_TABLE_USERS": "investforge-users-simple",
+    "DYNAMODB_TABLE_ANALYTICS": "investforge-analytics",
+    "DYNAMODB_TABLE_USAGE": "investforge-usage",
+    "JWT_SECRET_KEY": "dev-secret-key-change-in-production"
+  }
+}

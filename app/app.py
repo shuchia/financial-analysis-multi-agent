@@ -351,60 +351,513 @@ def show_forgot_password():
 # =====================================
 
 def show_onboarding():
-    """Display onboarding flow for new users."""
-    st.markdown("## Welcome to InvestForge! 🎉")
-    st.markdown("Let's get you started on your investment journey.")
+    """Display enhanced onboarding flow for young investors."""
+    # Initialize session state for onboarding if not exists
+    if 'onboarding_step' not in st.session_state:
+        st.session_state.onboarding_step = 1
+    if 'onboarding_data' not in st.session_state:
+        st.session_state.onboarding_data = {}
 
-    # Progress bar
-    progress = st.progress(0)
+    # Header with motivational messaging
+    st.markdown("## 🚀 Welcome to Your Investment Journey!")
+    st.markdown("*Building wealth starts with a single step. Let's make it count!*")
+    
+    # Progress indicator
+    total_steps = 5
+    progress_value = (st.session_state.onboarding_step - 1) / (total_steps - 1)
+    st.progress(progress_value)
+    st.caption(f"Step {st.session_state.onboarding_step} of {total_steps}")
 
-    # Step 1: Investment Experience
-    with st.container():
-        st.markdown("### Step 1: Tell us about your experience")
-        experience = st.radio(
-            "How would you describe your investment experience?",
-            ["Complete beginner 🌱", "Some knowledge 📚", "Intermediate 📈", "Advanced 🚀"]
+    # Step 1: Demographics & Welcome
+    if st.session_state.onboarding_step == 1:
+        show_demographics_step()
+    
+    # Step 2: Scenario-Based Risk Assessment
+    elif st.session_state.onboarding_step == 2:
+        show_risk_scenarios_step()
+    
+    # Step 3: Investment Amount with Context
+    elif st.session_state.onboarding_step == 3:
+        show_investment_amount_step()
+    
+    # Step 4: First Analysis Tutorial
+    elif st.session_state.onboarding_step == 4:
+        show_first_analysis_tutorial()
+    
+    # Step 5: Action Plan & Achievement Setup
+    elif st.session_state.onboarding_step == 5:
+        show_action_plan_step()
+
+def show_demographics_step():
+    """Step 1: Collect demographics and primary investment goals."""
+    st.markdown("### 🌟 Tell us about yourself")
+    st.markdown("This helps us personalize your experience and provide age-appropriate guidance.")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Your age range:**")
+        age_range = st.selectbox(
+            "Choose your age group",
+            ["16-20 (High school/Early college)", "21-25 (College/Entry career)", 
+             "26-30 (Early career)", "31-35 (Establishing career)", "36+ (Experienced)"],
+            help="💡 Different life stages have different investment strategies"
         )
-        progress.progress(25)
-
-    # Step 2: Investment Goals
-    with st.container():
-        st.markdown("### Step 2: What are your goals?")
-        goals = st.multiselect(
-            "Select all that apply:",
-            ["Learn about investing", "Build long-term wealth", "Generate passive income",
-             "Save for retirement", "Short-term trading", "Understand my employer's stock"]
+        
+        st.markdown("**Your current income range:**")
+        income_range = st.selectbox(
+            "Choose your income bracket",
+            ["Student/No income", "$0-25k", "$25k-50k", "$50k-75k", "$75k+"],
+            help="💡 This helps us suggest appropriate investment amounts"
         )
-        progress.progress(50)
-
-    # Step 3: Risk Tolerance
-    with st.container():
-        st.markdown("### Step 3: Risk preference")
-        risk = st.slider(
-            "How much risk are you comfortable with?",
-            1, 10, 5,
-            help="1 = Very Conservative, 10 = Very Aggressive"
-        )
-        progress.progress(75)
-
-    # Step 4: Initial Amount
-    with st.container():
-        st.markdown("### Step 4: Starting amount")
-        amount = st.select_slider(
-            "How much are you planning to start with?",
-            options=["$0-100", "$100-500", "$500-1,000", "$1,000-5,000", "$5,000+"]
-        )
-        progress.progress(100)
-
-    col1, col2, col3 = st.columns([1, 1, 1])
+    
     with col2:
-        if st.button("Complete Setup", type="primary", use_container_width=True):
-            # Save preferences
-            save_user_preferences(experience, goals, risk, amount)
-            st.session_state.onboarding_complete = True
-            st.balloons()
-            st.success("Setup complete! Let's analyze your first stock.")
+        st.markdown("**What's your primary goal?**")
+        primary_goal = st.selectbox(
+            "Choose your main objective",
+            ["Learn investing basics", "Build emergency fund", "Save for a major purchase", 
+             "Long-term wealth building", "Retirement planning", "Generate side income"],
+            help="💡 Your goal shapes your investment strategy"
+        )
+        
+        st.markdown("**Investment timeline:**")
+        timeline = st.selectbox(
+            "When do you need this money?",
+            ["Learning only (no timeline)", "1-2 years", "3-5 years", "5-10 years", "10+ years"],
+            help="💡 Longer timelines allow for more growth-focused strategies"
+        )
+    
+    # Educational tip
+    st.info("💡 **Quick Tip:** Starting early is your biggest advantage! Even small amounts can grow significantly over time thanks to compound interest.")
+    
+    # Navigation
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("Continue to Risk Assessment", type="primary", use_container_width=True):
+            st.session_state.onboarding_data.update({
+                'age_range': age_range,
+                'income_range': income_range,
+                'primary_goal': primary_goal,
+                'timeline': timeline
+            })
+            st.session_state.onboarding_step = 2
             st.rerun()
+
+def show_risk_scenarios_step():
+    """Step 2: Scenario-based risk assessment with real-world examples."""
+    st.markdown("### 🎯 How do you handle uncertainty?")
+    st.markdown("Let's explore different scenarios to understand your comfort level with risk.")
+    
+    # Scenario 1: Market volatility
+    st.markdown("**Scenario 1: Market Roller Coaster 🎢**")
+    st.markdown("You invested $1,000 six months ago. The stock market has been volatile:")
+    
+    scenario1_options = [
+        "😰 I'd sell immediately to avoid further losses (-20% → -$200)",
+        "😐 I'd hold and hope it recovers soon (-20% → -$200)", 
+        "😊 I'd hold knowing markets recover long-term (-20% → -$200)",
+        "🚀 I'd buy more while prices are low! (-20% → -$200)"
+    ]
+    scenario1 = st.radio("Your $1,000 is now worth $800. What do you do?", scenario1_options, key="scenario1")
+    
+    # Scenario 2: Investment choice
+    st.markdown("**Scenario 2: Investment Decision 💰**")
+    st.markdown("You have $500 to invest and three options:")
+    
+    scenario2_options = [
+        "🏦 High-yield savings (guaranteed 4% per year)",
+        "📈 Broad market fund (historically 8-10%, but volatile)",
+        "🎲 Individual growth stocks (potentially 15%+, high risk)",
+        "🔄 Mix of all three for balance"
+    ]
+    scenario2 = st.radio("Which appeals to you most?", scenario2_options, key="scenario2")
+    
+    # Scenario 3: Time horizon
+    st.markdown("**Scenario 3: Timeline Reality Check ⏰**")
+    
+    age_range = st.session_state.onboarding_data.get('age_range', '')
+    if '16-20' in age_range or '21-25' in age_range:
+        st.markdown("Since you're young, you have **decades** to invest before retirement.")
+        scenario3_text = "With 40+ years until retirement, you can:"
+    else:
+        st.markdown("You have significant time for long-term investing.")
+        scenario3_text = "With your timeline, you can:"
+    
+    scenario3_options = [
+        "🐌 Play it safe with mostly bonds and savings",
+        "⚖️ Balance between growth and safety (60/40 stocks/bonds)",
+        "🚀 Focus on growth with mostly stocks",
+        "🤔 I'm not sure what's best for my situation"
+    ]
+    scenario3 = st.radio(scenario3_text, scenario3_options, key="scenario3")
+    
+    # Educational insight based on age
+    if '16-20' in age_range or '21-25' in age_range:
+        st.success("🎓 **Young Investor Advantage:** Your age is your superpower! Time lets you ride out market ups and downs while your investments grow.")
+    
+    # Navigation
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        if st.button("← Back", use_container_width=True):
+            st.session_state.onboarding_step = 1
+            st.rerun()
+    with col3:
+        if st.button("Continue →", type="primary", use_container_width=True):
+            # Calculate risk profile based on scenarios
+            risk_score = calculate_risk_score(scenario1, scenario2, scenario3)
+            st.session_state.onboarding_data.update({
+                'scenario1': scenario1,
+                'scenario2': scenario2, 
+                'scenario3': scenario3,
+                'risk_score': risk_score,
+                'risk_profile': get_risk_profile(risk_score)
+            })
+            st.session_state.onboarding_step = 3
+            st.rerun()
+
+def show_investment_amount_step():
+    """Step 3: Investment amount with contextual comparisons and guidance."""
+    st.markdown("### 💰 Let's talk money")
+    st.markdown("How much can you comfortably invest? Remember: only invest what you can afford to lose!")
+    
+    # Get user context
+    age_range = st.session_state.onboarding_data.get('age_range', '')
+    income_range = st.session_state.onboarding_data.get('income_range', '')
+    
+    # Contextual guidance based on income
+    if income_range == "Student/No income":
+        st.info("💡 **Student Tip:** Start small! Even $25-50 monthly helps you learn. Focus on paper trading or micro-investing apps first.")
+        amount_options = ["$0 (learning mode)", "$25-50", "$50-100", "$100-250", "$250+"]
+    elif "$0-25k" in income_range:
+        st.info("💡 **Starting Out:** Build your emergency fund first! Then start with whatever you're comfortable losing - even $50 is a great start.")
+        amount_options = ["$25-50", "$50-100", "$100-250", "$250-500", "$500+"]
+    elif "$25k-50k" in income_range:
+        st.info("💡 **Building Wealth:** Consider the 50/30/20 rule: 50% needs, 30% wants, 20% savings/investing.")
+        amount_options = ["$100-250", "$250-500", "$500-1,000", "$1,000-2,500", "$2,500+"]
+    else:
+        st.info("💡 **Growing Wealth:** You're in a strong position! Consider maximizing tax-advantaged accounts first.")
+        amount_options = ["$500-1,000", "$1,000-2,500", "$2,500-5,000", "$5,000-10,000", "$10,000+"]
+    
+    initial_amount = st.selectbox(
+        "Choose your starting investment amount:",
+        amount_options,
+        help="💡 You can always add more later as you get comfortable"
+    )
+    
+    # Contextual comparison
+    st.markdown("**💭 Putting this in perspective:**")
+    if "25-50" in initial_amount:
+        st.markdown("- About 1-2 restaurant meals")
+        st.markdown("- A streaming service subscription") 
+        st.markdown("- Perfect for learning without stress!")
+    elif "50-100" in initial_amount:
+        st.markdown("- A nice dinner out")
+        st.markdown("- A video game or two")
+        st.markdown("- Great starting point for hands-on learning")
+    elif "100-250" in initial_amount:
+        st.markdown("- A weekend shopping trip")
+        st.markdown("- A few tanks of gas")
+        st.markdown("- Solid foundation for your investment journey")
+    elif "250-500" in initial_amount:
+        st.markdown("- A weekend getaway")
+        st.markdown("- New phone or laptop upgrade")
+        st.markdown("- Meaningful start to wealth building")
+    
+    # Emergency fund check
+    st.markdown("**🏦 Quick financial health check:**")
+    has_emergency = st.checkbox(
+        "I have at least $500-1,000 saved for emergencies",
+        help="💡 Emergency funds should come before investing!"
+    )
+    
+    if not has_emergency and initial_amount not in ["$0 (learning mode)", "$25-50"]:
+        st.warning("⚠️ **Consider building an emergency fund first!** This protects your investments by preventing early withdrawals.")
+    
+    # Navigation
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        if st.button("← Back", use_container_width=True):
+            st.session_state.onboarding_step = 2
+            st.rerun()
+    with col3:
+        if st.button("Continue →", type="primary", use_container_width=True):
+            st.session_state.onboarding_data.update({
+                'initial_amount': initial_amount,
+                'has_emergency_fund': has_emergency
+            })
+            st.session_state.onboarding_step = 4
+            st.rerun()
+
+def show_first_analysis_tutorial():
+    """Step 4: Interactive tutorial for first stock analysis."""
+    st.markdown("### 📈 Your First Stock Analysis")
+    st.markdown("Let's walk through analyzing a real company together!")
+    
+    # Tutorial introduction
+    st.info("🎓 **Tutorial Mode:** We'll analyze a well-known company to show you how our AI works. You'll learn what to look for in any investment!")
+    
+    # Suggest beginner-friendly stocks based on user profile
+    age_range = st.session_state.onboarding_data.get('age_range', '')
+    primary_goal = st.session_state.onboarding_data.get('primary_goal', '')
+    
+    suggested_stocks = get_beginner_stock_suggestions(age_range, primary_goal)
+    
+    st.markdown("**🌟 Great starter companies to analyze:**")
+    for stock, reason in suggested_stocks.items():
+        st.markdown(f"- **{stock}**: {reason}")
+    
+    st.markdown("**Choose a company to analyze:**")
+    tutorial_stock = st.selectbox(
+        "Pick one for your first analysis:",
+        list(suggested_stocks.keys()),
+        help="💡 These are all well-established companies perfect for learning"
+    )
+    
+    # What they'll learn
+    st.markdown("**📚 In this analysis, you'll learn about:**")
+    learning_points = [
+        "📊 **Financial Health**: Is the company profitable and growing?",
+        "💰 **Stock Valuation**: Is the stock fairly priced?", 
+        "🎯 **Business Model**: How does the company make money?",
+        "📈 **Growth Potential**: What's the outlook for the future?",
+        "⚠️ **Risk Factors**: What could go wrong?"
+    ]
+    
+    for point in learning_points:
+        st.markdown(point)
+    
+    # Set expectations
+    st.success("🔍 **What to expect:** Our AI will analyze this company from multiple angles and explain everything in simple terms. This takes about 2-3 minutes.")
+    
+    # Navigation
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        if st.button("← Back", use_container_width=True):
+            st.session_state.onboarding_step = 3
+            st.rerun()
+    with col3:
+        if st.button("Start Analysis Tutorial", type="primary", use_container_width=True):
+            st.session_state.onboarding_data.update({
+                'tutorial_stock': tutorial_stock,
+                'suggested_stocks': suggested_stocks
+            })
+            st.session_state.onboarding_step = 5
+            st.rerun()
+
+def show_action_plan_step():
+    """Step 5: Generate personalized action plan and complete onboarding."""
+    st.markdown("### 🎯 Your Personalized Investment Plan")
+    
+    # Get user data
+    data = st.session_state.onboarding_data
+    age_range = data.get('age_range', '')
+    primary_goal = data.get('primary_goal', '')
+    timeline = data.get('timeline', '')
+    risk_profile = data.get('risk_profile', 'Moderate')
+    initial_amount = data.get('initial_amount', '')
+    
+    # Generate personalized recommendations
+    plan = generate_personalized_plan(data)
+    
+    st.markdown("**🌟 Based on your responses, here's your personalized roadmap:**")
+    
+    # Quick summary
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Your Profile", f"{age_range.split(' ')[0]} • {risk_profile}")
+        st.metric("Primary Goal", primary_goal)
+    with col2:
+        st.metric("Timeline", timeline)
+        st.metric("Starting Amount", initial_amount)
+    
+    # Personalized recommendations
+    st.markdown("**📋 Your Action Plan:**")
+    for i, action in enumerate(plan['actions'], 1):
+        st.markdown(f"{i}. {action}")
+    
+    # Achievement system preview
+    st.markdown("**🏆 Your Achievement Journey:**")
+    achievements = [
+        "🎓 **Knowledge Seeker**: Complete your first analysis (Ready to unlock!)",
+        "📈 **Market Explorer**: Analyze 5 different companies",
+        "🧠 **Wise Investor**: Create your first watchlist",
+        "🚀 **Portfolio Builder**: Track your investment performance",
+        "💎 **Long-term Thinker**: Hold an analysis for 30+ days"
+    ]
+    
+    for achievement in achievements:
+        st.markdown(achievement)
+    
+    # Next steps
+    st.success(f"🎉 **Ready to start!** Your first analysis of {data.get('tutorial_stock', 'a great company')} will unlock your first achievement.")
+    
+    # Save preferences
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🚀 Complete Setup & Start Analysis", type="primary", use_container_width=True):
+            # Save all onboarding data as user preferences
+            save_enhanced_user_preferences(st.session_state.onboarding_data)
+            st.session_state.onboarding_complete = True
+            st.session_state.first_analysis_stock = data.get('tutorial_stock', 'AAPL')
+            
+            # Track onboarding completion
+            api_client.track_event('onboarding_completed', {
+                'age_range': age_range,
+                'risk_profile': risk_profile,
+                'primary_goal': primary_goal,
+                'completion_time': datetime.utcnow().isoformat()
+            })
+            
+            st.balloons()
+            st.success("🎉 Setup complete! Starting your first analysis...")
+            st.rerun()
+    
+    # Back button
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col1:
+        if st.button("← Back"):
+            st.session_state.onboarding_step = 4
+            st.rerun()
+
+def calculate_risk_score(scenario1, scenario2, scenario3):
+    """Calculate risk tolerance score from scenario responses."""
+    score = 0
+    
+    # Scenario 1 scoring
+    if "sell immediately" in scenario1:
+        score += 1
+    elif "hold and hope" in scenario1:
+        score += 2
+    elif "hold knowing markets" in scenario1:
+        score += 3
+    elif "buy more" in scenario1:
+        score += 4
+    
+    # Scenario 2 scoring
+    if "High-yield savings" in scenario2:
+        score += 1
+    elif "Mix of all three" in scenario2:
+        score += 2
+    elif "Broad market fund" in scenario2:
+        score += 3
+    elif "Individual growth stocks" in scenario2:
+        score += 4
+    
+    # Scenario 3 scoring
+    if "Play it safe" in scenario3:
+        score += 1
+    elif "not sure" in scenario3:
+        score += 2
+    elif "Balance between" in scenario3:
+        score += 3
+    elif "Focus on growth" in scenario3:
+        score += 4
+    
+    return score
+
+def get_risk_profile(score):
+    """Convert risk score to profile description."""
+    if score <= 4:
+        return "Conservative"
+    elif score <= 7:
+        return "Moderate"
+    elif score <= 10:
+        return "Growth-Oriented"
+    else:
+        return "Aggressive"
+
+def get_beginner_stock_suggestions(age_range, primary_goal):
+    """Get beginner-friendly stock suggestions based on profile."""
+    suggestions = {
+        "Apple (AAPL)": "Tech giant you probably use daily - iPhone, Mac, iPad",
+        "Microsoft (MSFT)": "Powers most computers and cloud services worldwide", 
+        "Amazon (AMZN)": "E-commerce and cloud computing leader",
+        "Coca-Cola (KO)": "Classic dividend stock, over 130 years old",
+        "Johnson & Johnson (JNJ)": "Healthcare giant with steady growth"
+    }
+    
+    if "Learn" in primary_goal:
+        suggestions["Vanguard S&P 500 ETF (VOO)"] = "Owns pieces of 500 top US companies - perfect for beginners"
+    
+    return suggestions
+
+def generate_personalized_plan(data):
+    """Generate personalized investment action plan."""
+    age_range = data.get('age_range', '')
+    primary_goal = data.get('primary_goal', '')
+    risk_profile = data.get('risk_profile', 'Moderate')
+    
+    actions = []
+    
+    # Age-specific guidance
+    if '16-20' in age_range or '21-25' in age_range:
+        actions.append("🎓 Focus on learning and building good financial habits")
+        actions.append("💰 Start with index funds or ETFs for broad market exposure")
+        actions.append("⏰ Take advantage of your long investment timeline")
+    
+    # Goal-specific actions
+    if "Learn" in primary_goal:
+        actions.append("📚 Complete analysis tutorials and read educational content")
+        actions.append("📊 Practice with paper trading before using real money")
+    elif "emergency fund" in primary_goal:
+        actions.append("🏦 Prioritize high-yield savings for emergency fund")
+        actions.append("🎯 Invest only after securing 3-6 months of expenses")
+    elif "Long-term" in primary_goal:
+        actions.append("📈 Focus on diversified growth investments")
+        actions.append("🔄 Set up automatic monthly contributions")
+    
+    # Risk-specific guidance
+    if risk_profile == "Conservative":
+        actions.append("🛡️ Start with broad market ETFs and blue-chip stocks")
+    elif risk_profile == "Growth-Oriented":
+        actions.append("🚀 Consider growth stocks and technology companies")
+    
+    actions.append("📱 Use InvestForge to analyze companies before investing")
+    actions.append("🏆 Track your progress with our achievement system")
+    
+    return {"actions": actions}
+
+def save_enhanced_user_preferences(onboarding_data):
+    """Save enhanced preference structure to database."""
+    user_email = st.session_state.get('user_data', {}).get('email')
+    if not user_email:
+        return False
+    
+    # Transform onboarding data to preference structure
+    preferences = {
+        'demographics': {
+            'age_range': onboarding_data.get('age_range'),
+            'income_range': onboarding_data.get('income_range')
+        },
+        'investment_goals': {
+            'primary_goal': onboarding_data.get('primary_goal'),
+            'timeline': onboarding_data.get('timeline')
+        },
+        'risk_assessment': {
+            'risk_score': onboarding_data.get('risk_score'),
+            'risk_profile': onboarding_data.get('risk_profile'),
+            'scenario_responses': {
+                'scenario1': onboarding_data.get('scenario1'),
+                'scenario2': onboarding_data.get('scenario2'),
+                'scenario3': onboarding_data.get('scenario3')
+            }
+        },
+        'financial_status': {
+            'initial_amount': onboarding_data.get('initial_amount'),
+            'has_emergency_fund': onboarding_data.get('has_emergency_fund', False)
+        },
+        'tutorial_preferences': {
+            'tutorial_stock': onboarding_data.get('tutorial_stock'),
+            'suggested_stocks': onboarding_data.get('suggested_stocks', {})
+        },
+        'achievements': {
+            'unlocked': [],
+            'progress': {}
+        },
+        'onboarding_completed_at': datetime.utcnow().isoformat()
+    }
+    
+    return api_client.save_user_preferences(user_email, preferences)
 
 
 # =====================================
@@ -713,6 +1166,175 @@ def show_analysis_page():
                 initiate_payment('growth')
         return
     
+    # Check if this is a first-time user coming from onboarding
+    is_first_analysis = st.session_state.get('first_analysis_stock') is not None
+    tutorial_stock = st.session_state.get('first_analysis_stock', '')
+    
+    # Check if user just completed onboarding with enhanced preferences
+    user_preferences = st.session_state.get('user_preferences', {})
+    is_young_investor = False
+    if isinstance(user_preferences, dict):
+        demographics = user_preferences.get('demographics', {})
+        age_range = demographics.get('age_range', '')
+        is_young_investor = any(age in age_range for age in ['16-20', '21-25', '26-30'])
+    
+    # Show tutorial mode for first analysis
+    if is_first_analysis and tutorial_stock:
+        show_first_analysis_tutorial_interface(tutorial_stock)
+        return
+    
+    # Show beginner-friendly interface for young investors
+    if is_young_investor:
+        show_beginner_analysis_interface()
+    else:
+        show_standard_analysis_interface()
+
+def show_first_analysis_tutorial_interface(tutorial_stock):
+    """Show tutorial interface for first analysis."""
+    st.markdown("### 🎓 Your First Analysis Tutorial")
+    st.info(f"📚 **Tutorial Mode**: You're about to analyze {tutorial_stock}! We'll guide you through each step.")
+    
+    # Tutorial introduction
+    with st.expander("📖 What you'll learn in this analysis", expanded=True):
+        st.markdown("""
+        **This analysis will teach you:**
+        - 📊 **Company Fundamentals**: Revenue, profit, debt levels
+        - 💰 **Stock Valuation**: Is the stock fairly priced?
+        - 📈 **Growth Prospects**: Future outlook and potential
+        - ⚠️ **Risk Factors**: What could affect the stock price
+        - 🎯 **Investment Decision**: Should you buy, hold, or avoid?
+        
+        **Analysis time**: About 2-3 minutes
+        """)
+    
+    # Pre-filled ticker with tutorial stock
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        ticker = st.text_input(
+            "📈 Analyzing Company",
+            value=tutorial_stock,
+            disabled=True,
+            help=f"Tutorial analysis for {tutorial_stock} - you can analyze other stocks after this!"
+        )
+    
+    with col2:
+        tutorial_button = st.button("🎓 Start Tutorial Analysis", type="primary", use_container_width=True)
+    
+    # Educational preview
+    st.markdown("### 🔍 What we'll examine:")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        **📊 Financial Health**
+        - Revenue growth
+        - Profit margins
+        - Debt levels
+        """)
+    
+    with col2:
+        st.markdown("""
+        **💰 Valuation**
+        - Price-to-earnings ratio
+        - Compared to competitors
+        - Fair value estimate
+        """)
+    
+    with col3:
+        st.markdown("""
+        **🎯 Future Outlook**
+        - Growth potential
+        - Market trends
+        - Risk assessment
+        """)
+    
+    if tutorial_button:
+        # Track tutorial start
+        api_client.track_event('tutorial_analysis_started', {
+            'tutorial_stock': tutorial_stock,
+            'user_age_range': st.session_state.get('user_preferences', {}).get('demographics', {}).get('age_range', '')
+        })
+        
+        # Clear first analysis flag and run normal analysis
+        st.session_state.first_analysis_stock = None
+        st.session_state.tutorial_mode = True
+        run_ai_analysis_with_tutorial(tutorial_stock)
+    
+    # Display tutorial results if available
+    if f'analysis_result_{tutorial_stock}' in st.session_state:
+        display_tutorial_analysis_results(tutorial_stock)
+
+def show_beginner_analysis_interface():
+    """Show beginner-friendly analysis interface for young investors."""
+    st.markdown("### 🚀 Analyze Any Company")
+    
+    # Get user preferences for personalized suggestions
+    user_preferences = st.session_state.get('user_preferences', {})
+    primary_goal = user_preferences.get('investment_goals', {}).get('primary_goal', '')
+    
+    # Show personalized stock suggestions based on user profile
+    if primary_goal:
+        suggestions = get_personalized_stock_suggestions(user_preferences)
+        if suggestions:
+            st.markdown("**💡 Personalized suggestions based on your goals:**")
+            suggestion_cols = st.columns(len(suggestions))
+            for i, (symbol, reason) in enumerate(suggestions.items()):
+                with suggestion_cols[i]:
+                    if st.button(f"🎯 {symbol}", help=reason, use_container_width=True):
+                        st.session_state.suggested_ticker = symbol
+    
+    # Stock input with enhanced help
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        default_ticker = st.session_state.get('suggested_ticker', 'AAPL' if st.session_state.demo_mode else '')
+        ticker = st.text_input(
+            "Enter Stock Symbol",
+            value=default_ticker,
+            placeholder="e.g., AAPL, GOOGL, TSLA",
+            help="💡 Not sure what to analyze? Try the suggested stocks above!"
+        ).upper()
+        
+        # Clear suggested ticker after use
+        if 'suggested_ticker' in st.session_state:
+            del st.session_state.suggested_ticker
+    
+    with col2:
+        analyze_button = st.button("🔍 Analyze", type="primary", use_container_width=True)
+    
+    # Educational tips for beginners
+    with st.expander("🎓 New to stock analysis? Click here for tips!", expanded=False):
+        st.markdown("""
+        **Before you start:**
+        - 📚 **Learn first**: Only invest in companies you understand
+        - 💰 **Start small**: Use money you can afford to lose
+        - 🎯 **Diversify**: Don't put all eggs in one basket
+        - ⏰ **Think long-term**: Good companies grow over time
+        
+        **What our analysis shows:**
+        - **Financial health** - Is the company profitable?
+        - **Valuation** - Is the stock price fair?
+        - **Growth potential** - What's the future outlook?
+        - **Risks** - What could go wrong?
+        """)
+    
+    # Achievement progress for engaged users
+    achievements = st.session_state.get('user_preferences', {}).get('achievements', {})
+    if achievements.get('unlocked'):
+        st.markdown("### 🏆 Your Progress")
+        show_achievement_progress(achievements)
+    
+    # Run analysis
+    if analyze_button and ticker:
+        run_ai_analysis(ticker)
+    
+    # Display results
+    if ticker and f'analysis_result_{ticker}' in st.session_state:
+        display_analysis_results(ticker)
+
+def show_standard_analysis_interface():
+    """Show standard analysis interface for experienced users."""
     # Stock input
     col1, col2 = st.columns([3, 1])
     
@@ -732,8 +1354,85 @@ def show_analysis_page():
         run_ai_analysis(ticker)
     
     # Display stored results
-    if f'analysis_result_{ticker}' in st.session_state:
+    if ticker and f'analysis_result_{ticker}' in st.session_state:
         display_analysis_results(ticker)
+
+def get_personalized_stock_suggestions(user_preferences):
+    """Get personalized stock suggestions based on user profile."""
+    demographics = user_preferences.get('demographics', {})
+    goals = user_preferences.get('investment_goals', {})
+    risk_profile = user_preferences.get('risk_assessment', {}).get('risk_profile', 'Moderate')
+    
+    age_range = demographics.get('age_range', '')
+    primary_goal = goals.get('primary_goal', '')
+    
+    suggestions = {}
+    
+    # Age-based suggestions
+    if '16-20' in age_range or '21-25' in age_range:
+        suggestions["VOO"] = "Tracks S&P 500 - perfect first investment"
+        suggestions["AAPL"] = "Tech company you know and use daily"
+    
+    # Goal-based suggestions
+    if "Learn" in primary_goal:
+        suggestions["MSFT"] = "Stable tech giant - great for learning"
+        suggestions["JNJ"] = "Healthcare company with steady dividends"
+    elif "Long-term" in primary_goal:
+        suggestions["AMZN"] = "E-commerce and cloud leader"
+        suggestions["GOOGL"] = "Dominant in search and AI"
+    
+    # Risk-based suggestions
+    if risk_profile == "Conservative":
+        suggestions["KO"] = "Coca-Cola - reliable dividend stock"
+    elif risk_profile == "Growth-Oriented":
+        suggestions["TSLA"] = "Electric vehicle innovation"
+    
+    return dict(list(suggestions.items())[:4])  # Limit to 4 suggestions
+
+def show_achievement_progress(achievements):
+    """Show user achievement progress."""
+    unlocked = achievements.get('unlocked', [])
+    
+    achievement_badges = {
+        'first_analysis': '🎓 Knowledge Seeker',
+        'five_analyses': '📈 Market Explorer', 
+        'first_watchlist': '🧠 Wise Investor',
+        'portfolio_tracking': '🚀 Portfolio Builder',
+        'long_term_hold': '💎 Long-term Thinker'
+    }
+    
+    cols = st.columns(len(achievement_badges))
+    for i, (key, badge) in enumerate(achievement_badges.items()):
+        with cols[i]:
+            if key in unlocked:
+                st.markdown(f"✅ {badge}")
+            else:
+                st.markdown(f"⚪ {badge}")
+
+def run_ai_analysis_with_tutorial(ticker):
+    """Run analysis with tutorial explanations."""
+    st.session_state.tutorial_mode = True
+    run_ai_analysis(ticker)
+
+def display_tutorial_analysis_results(ticker):
+    """Display analysis results with tutorial explanations."""
+    if f'analysis_result_{ticker}' in st.session_state:
+        st.markdown("### 🎉 Tutorial Analysis Complete!")
+        st.success("🏆 **Achievement Unlocked: Knowledge Seeker** - You completed your first analysis!")
+        
+        # Track achievement
+        achievements = st.session_state.get('user_preferences', {}).get('achievements', {})
+        if 'unlocked' not in achievements:
+            achievements['unlocked'] = []
+        if 'first_analysis' not in achievements['unlocked']:
+            achievements['unlocked'].append('first_analysis')
+            api_client.track_event('achievement_unlocked', {
+                'achievement': 'first_analysis',
+                'tutorial_stock': ticker
+            })
+        
+        # Show tutorial-enhanced results
+        display_analysis_results(ticker, tutorial_mode=True)
 
 
 # =====================================
@@ -1120,7 +1819,7 @@ def initiate_apple_auth():
 # Display Functions
 # =====================================
 
-def display_analysis_results(ticker: str):
+def display_analysis_results(ticker: str, tutorial_mode: bool = False):
     """Display the analysis results in organized tabs."""
     result_data = st.session_state.get(f'analysis_result_{ticker}')
     if not result_data:
@@ -1130,16 +1829,35 @@ def display_analysis_results(ticker: str):
     timestamp = result_data['timestamp']
     st.caption(f"Analysis completed at {timestamp.strftime('%I:%M %p on %B %d, %Y')}")
     
-    # Create tabs for results
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "📈 Technical", "💰 Fundamental", "🤖 AI Insights"])
+    # Tutorial mode introduction
+    if tutorial_mode:
+        st.markdown("### 📚 Understanding Your Analysis")
+        st.info("💡 **Tutorial Mode**: Each section below teaches you something important about investing. Take your time to read through each tab!")
+    
+    # Create tabs for results with tutorial enhancements
+    if tutorial_mode:
+        tab1, tab2, tab3, tab4 = st.tabs([
+            "📊 Overview (Start Here!)", 
+            "📈 Technical Analysis", 
+            "💰 Company Finances", 
+            "🤖 AI Insights"
+        ])
+    else:
+        tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "📈 Technical", "💰 Fundamental", "🤖 AI Insights"])
     
     data = result_data['data']
     
     with tab1:
-        display_overview_tab(ticker, data)
+        if tutorial_mode:
+            display_tutorial_overview_tab(ticker, data)
+        else:
+            display_overview_tab(ticker, data)
     
     with tab2:
-        display_technical_tab(ticker, data)
+        if tutorial_mode:
+            display_tutorial_technical_tab(ticker, data)
+        else:
+            display_technical_tab(ticker, data)
     
     with tab3:
         display_fundamental_tab(ticker, data)
@@ -1391,6 +2109,182 @@ def display_ai_insights(ticker: str):
     """Display AI-generated insights (deprecated - use display_ai_insights_tab)."""
     display_ai_insights_tab(ticker, {})
 
+
+# =====================================
+# Tutorial Display Functions
+# =====================================
+
+def display_tutorial_overview_tab(ticker: str, data: Dict[str, Any]):
+    """Display overview with educational explanations for beginners."""
+    st.markdown("### 📊 Company Overview - What This Tells You")
+    
+    # Educational introduction
+    st.info("🎓 **Learning Goal**: Understand the basics of what makes a company valuable and how to read key metrics.")
+    
+    # Get real stock data
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        hist = stock.history(period="1mo")
+        
+        if not hist.empty:
+            current_price = hist['Close'].iloc[-1]
+            price_change = ((hist['Close'].iloc[-1] - hist['Close'].iloc[0]) / hist['Close'].iloc[0]) * 100
+        else:
+            current_price = data.get('overview', {}).get('current_price', 100)
+            price_change = data.get('overview', {}).get('price_change', 5.2)
+        
+        company_name = info.get('longName', f'{ticker} Corporation')
+        market_cap = info.get('marketCap', 0)
+        pe_ratio = info.get('trailingPE', 0)
+        
+    except:
+        # Fallback to mock data
+        current_price = data.get('overview', {}).get('current_price', 100)
+        price_change = data.get('overview', {}).get('price_change', 5.2)
+        company_name = f'{ticker} Corporation'
+        market_cap = data.get('overview', {}).get('market_cap', 1000000000)
+        pe_ratio = data.get('overview', {}).get('pe_ratio', 25)
+    
+    # Key metrics with educational explanations
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.metric(
+            label="📈 Current Stock Price",
+            value=f"${current_price:.2f}",
+            delta=f"{price_change:.1f}%"
+        )
+        st.caption("💡 **What this means**: The current price investors are willing to pay for one share of the company.")
+        
+        if market_cap:
+            market_cap_formatted = f"${market_cap/1e9:.1f}B" if market_cap > 1e9 else f"${market_cap/1e6:.0f}M"
+            st.metric("🏢 Market Cap", market_cap_formatted)
+            st.caption("💡 **What this means**: Total value of all company shares. Bigger usually means more stable.")
+    
+    with col2:
+        if pe_ratio and pe_ratio > 0:
+            st.metric("📊 P/E Ratio", f"{pe_ratio:.1f}")
+            if pe_ratio < 15:
+                st.caption("💡 **What this means**: Low P/E might mean the stock is undervalued or the company has issues.")
+            elif pe_ratio > 30:
+                st.caption("💡 **What this means**: High P/E might mean investors expect high growth or the stock is expensive.")
+            else:
+                st.caption("💡 **What this means**: Moderate P/E suggests reasonable valuation for current earnings.")
+        
+        # Add sector info if available
+        sector = info.get('sector', 'Technology') if 'info' in locals() else 'Technology'
+        st.metric("🏭 Industry", sector)
+        st.caption("💡 **What this means**: The business sector helps you understand what the company does.")
+    
+    # Educational summary
+    st.markdown("### 🧠 What You've Learned")
+    with st.expander("📚 Click to review key concepts", expanded=False):
+        st.markdown("""
+        **Stock Price**: What investors currently think one share is worth
+        **Market Cap**: Company's total value (price × number of shares)
+        **P/E Ratio**: How much investors pay for each dollar of company earnings
+        **Industry**: Understanding what business the company is in
+        
+        **Next Steps**: 
+        - 📈 Check Technical Analysis to see price trends
+        - 💰 Look at Company Finances to see if they make money
+        - 🤖 Read AI Insights for the big picture
+        """)
+
+def display_tutorial_technical_tab(ticker: str, data: Dict[str, Any]):
+    """Display technical analysis with educational explanations."""
+    st.markdown("### 📈 Technical Analysis - Reading Price Charts")
+    
+    st.info("🎓 **Learning Goal**: Understand how to read stock charts and identify trends.")
+    
+    # Get real price data for chart
+    try:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period="3mo")
+        
+        if not hist.empty:
+            # Create educational price chart
+            fig = go.Figure()
+            
+            fig.add_trace(go.Scatter(
+                x=hist.index,
+                y=hist['Close'],
+                mode='lines',
+                name='Stock Price',
+                line=dict(color='#FF6B35', width=2)
+            ))
+            
+            fig.update_layout(
+                title=f"{ticker} Stock Price Trend (Last 3 Months)",
+                xaxis_title="Date",
+                yaxis_title="Price ($)",
+                height=400,
+                showlegend=False
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Educational interpretation
+            current_price = hist['Close'].iloc[-1]
+            highest_price = hist['Close'].max()
+            lowest_price = hist['Close'].min()
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("📈 Current Price", f"${current_price:.2f}")
+            with col2:
+                st.metric("⬆️ 3-Month High", f"${highest_price:.2f}")
+            with col3:
+                st.metric("⬇️ 3-Month Low", f"${lowest_price:.2f}")
+            
+            # Trend analysis for beginners
+            if current_price > (lowest_price + highest_price) / 2:
+                st.success("📈 **Trend**: Stock is trading in the upper half of its recent range - this could indicate strength.")
+            else:
+                st.warning("📉 **Trend**: Stock is trading in the lower half of its recent range - this might indicate weakness.")
+    
+    except Exception as e:
+        st.error("Unable to load chart data. This happens sometimes with market data feeds.")
+    
+    # Educational content about technical analysis
+    st.markdown("### 🎯 Reading the Chart")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        **📊 What Charts Tell You:**
+        - **Upward trend**: Price is generally rising
+        - **Downward trend**: Price is generally falling
+        - **Sideways trend**: Price is moving in a range
+        """)
+    
+    with col2:
+        st.markdown("""
+        **🎓 Beginner Tips:**
+        - Don't panic over daily changes
+        - Look for overall direction over months
+        - Combine with company fundamentals
+        """)
+    
+    # Simple trend explanation
+    st.markdown("### 🧠 What You've Learned")
+    with st.expander("📚 Click to review technical analysis basics", expanded=False):
+        st.markdown("""
+        **Price Charts**: Show how the stock price has moved over time
+        **Trends**: The general direction of price movement
+        **Support/Resistance**: Price levels where the stock tends to bounce
+        
+        **Remember**: 
+        - Charts show what happened, not what will happen
+        - Use charts WITH fundamental analysis, not instead of it
+        - Short-term price moves can be very unpredictable
+        
+        **Next Steps**: 
+        - 💰 Check Company Finances to see if the business is healthy
+        - 🤖 Read AI Insights for professional analysis
+        """)
 
 def show_portfolio_page():
     """Portfolio management page."""

@@ -462,3 +462,161 @@ def check_usage_limit_handler(event: Dict[str, Any], context: Any) -> Dict[str, 
     except Exception as e:
         print(f"Check usage limit error: {str(e)}")
         return server_error_response("Internal server error")
+
+
+# Enhanced tracking functions for young investor features
+
+def track_onboarding_completed_event(user_id: str, age_range: str, risk_profile: str, primary_goal: str):
+    """Track onboarding completion event."""
+    event_data = {
+        'age_range': age_range,
+        'risk_profile': risk_profile,
+        'primary_goal': primary_goal,
+        'completion_timestamp': datetime.utcnow().isoformat()
+    }
+    
+    event_record = {
+        'event_type': 'onboarding_completed',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': user_id,
+        'event_data': event_data,
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)
+
+
+def track_tutorial_started_event(user_id: str, tutorial_stock: str, age_range: str = None):
+    """Track tutorial analysis started event."""
+    event_data = {
+        'tutorial_stock': tutorial_stock,
+        'age_range': age_range
+    }
+    
+    event_record = {
+        'event_type': 'tutorial_analysis_started',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': user_id,
+        'event_data': event_data,
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)
+
+
+def track_achievement_unlock_event(user_id: str, achievement_id: str):
+    """Track achievement unlock event."""
+    event_data = {
+        'achievement_id': achievement_id,
+        'unlock_timestamp': datetime.utcnow().isoformat()
+    }
+    
+    event_record = {
+        'event_type': 'achievement_unlocked',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': user_id,
+        'event_data': event_data,
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)
+
+
+def track_preferences_update_event(user_id: str, preferences_data: dict):
+    """Track preferences update event."""
+    # Extract key metrics without storing sensitive data
+    event_data = {
+        'has_demographics': 'demographics' in preferences_data,
+        'has_investment_goals': 'investment_goals' in preferences_data,
+        'has_risk_assessment': 'risk_assessment' in preferences_data,
+        'achievement_count': len(preferences_data.get('achievements', {}).get('unlocked', [])),
+        'update_timestamp': datetime.utcnow().isoformat()
+    }
+    
+    event_record = {
+        'event_type': 'preferences_updated',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': user_id,
+        'event_data': event_data,
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)
+
+
+def track_personalized_suggestion_event(user_id: str, suggestions: dict, selected_stock: str = None):
+    """Track personalized stock suggestion interaction."""
+    event_data = {
+        'suggestion_count': len(suggestions),
+        'suggestions': list(suggestions.keys()),
+        'selected_stock': selected_stock,
+        'interaction_timestamp': datetime.utcnow().isoformat()
+    }
+    
+    event_record = {
+        'event_type': 'personalized_suggestion',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': user_id,
+        'event_data': event_data,
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)
+
+
+def track_tutorial_tab_view_event(user_id: str, tab_name: str, tutorial_stock: str):
+    """Track tutorial tab viewing for educational analytics."""
+    event_data = {
+        'tab_name': tab_name,
+        'tutorial_stock': tutorial_stock,
+        'view_timestamp': datetime.utcnow().isoformat()
+    }
+    
+    event_record = {
+        'event_type': 'tutorial_tab_viewed',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': user_id,
+        'event_data': event_data,
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)
+
+
+def track_risk_scenario_response_event(user_id: str, scenario_responses: dict, risk_score: int, risk_profile: str):
+    """Track risk assessment scenario responses."""
+    event_data = {
+        'scenario_count': len(scenario_responses),
+        'risk_score': risk_score,
+        'risk_profile': risk_profile,
+        'assessment_timestamp': datetime.utcnow().isoformat()
+    }
+    
+    event_record = {
+        'event_type': 'risk_assessment_completed',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': user_id,
+        'event_data': event_data,
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)
+
+
+def track_beginner_interface_event(user_id: str, interface_type: str, action: str):
+    """Track beginner interface usage."""
+    event_data = {
+        'interface_type': interface_type,  # 'tutorial', 'beginner', 'standard'
+        'action': action,  # 'viewed', 'interacted', 'completed'
+        'timestamp': datetime.utcnow().isoformat()
+    }
+    
+    event_record = {
+        'event_type': 'beginner_interface_interaction',
+        'timestamp': datetime.utcnow().isoformat(),
+        'user_id': user_id,
+        'event_data': event_data,
+        'source': 'api'
+    }
+    
+    db.track_event(event_record)

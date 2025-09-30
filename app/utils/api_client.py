@@ -529,6 +529,221 @@ class APIClient:
             
         except Exception:
             return None
+    
+    # Enhanced preferences endpoints
+    
+    def get_enhanced_preferences(self) -> Optional[Dict[str, Any]]:
+        """Get enhanced user preferences."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/preferences/enhanced",
+                headers=self._get_headers(),
+                timeout=self.timeout
+            )
+            
+            result = self._handle_response(response)
+            if result and result.get('success'):
+                return result['data']
+            
+            return None
+            
+        except Exception as e:
+            st.error(f"Failed to get enhanced preferences: {str(e)}")
+            return None
+    
+    def save_enhanced_preferences(self, preferences: Dict[str, Any]) -> bool:
+        """Save enhanced user preferences."""
+        try:
+            response = requests.put(
+                f"{self.base_url}/preferences/enhanced",
+                headers=self._get_headers(),
+                json=preferences,
+                timeout=self.timeout
+            )
+            
+            result = self._handle_response(response)
+            return result is not None and result.get('success', False)
+            
+        except Exception as e:
+            st.error(f"Failed to save enhanced preferences: {str(e)}")
+            return False
+    
+    def get_user_achievements(self) -> Optional[Dict[str, Any]]:
+        """Get user achievements."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/achievements",
+                headers=self._get_headers(),
+                timeout=self.timeout
+            )
+            
+            result = self._handle_response(response)
+            if result and result.get('success'):
+                return result['data']
+            
+            return None
+            
+        except Exception as e:
+            st.error(f"Failed to get achievements: {str(e)}")
+            return None
+    
+    def unlock_achievement(self, achievement_id: str) -> bool:
+        """Unlock an achievement."""
+        try:
+            response = requests.post(
+                f"{self.base_url}/achievements/unlock",
+                headers=self._get_headers(),
+                json={'achievement_id': achievement_id},
+                timeout=self.timeout
+            )
+            
+            result = self._handle_response(response)
+            return result is not None and result.get('success', False)
+            
+        except Exception as e:
+            st.error(f"Failed to unlock achievement: {str(e)}")
+            return False
+    
+    def update_achievement_progress(self, achievement_id: str, progress_data: Dict[str, Any]) -> bool:
+        """Update achievement progress."""
+        try:
+            response = requests.put(
+                f"{self.base_url}/achievements/progress",
+                headers=self._get_headers(),
+                json={
+                    'achievement_id': achievement_id,
+                    'progress_data': progress_data
+                },
+                timeout=self.timeout
+            )
+            
+            result = self._handle_response(response)
+            return result is not None and result.get('success', False)
+            
+        except Exception as e:
+            st.error(f"Failed to update achievement progress: {str(e)}")
+            return False
+    
+    def get_onboarding_analytics(self, start_date: str = None, end_date: str = None) -> Optional[Dict[str, Any]]:
+        """Get onboarding analytics (admin only)."""
+        try:
+            params = {}
+            if start_date:
+                params['start_date'] = start_date
+            if end_date:
+                params['end_date'] = end_date
+            
+            response = requests.get(
+                f"{self.base_url}/analytics/onboarding",
+                headers=self._get_headers(),
+                params=params,
+                timeout=self.timeout
+            )
+            
+            result = self._handle_response(response)
+            if result and result.get('success'):
+                return result['data']
+            
+            return None
+            
+        except Exception as e:
+            st.error(f"Failed to get onboarding analytics: {str(e)}")
+            return None
+    
+    def get_user_onboarding_metrics(self) -> Optional[Dict[str, Any]]:
+        """Get onboarding metrics for current user."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/analytics/onboarding/me",
+                headers=self._get_headers(),
+                timeout=self.timeout
+            )
+            
+            result = self._handle_response(response)
+            if result and result.get('success'):
+                return result['data']
+            
+            return None
+            
+        except Exception as e:
+            st.error(f"Failed to get user onboarding metrics: {str(e)}")
+            return None
+    
+    # Enhanced analytics methods for young investor features
+    
+    def track_onboarding_completed(self, age_range: str, risk_profile: str, primary_goal: str) -> bool:
+        """Track onboarding completion event."""
+        user_id = st.session_state.get('user_data', {}).get('user_id')
+        if not user_id:
+            return False
+        
+        return self.track_event('onboarding_completed', {
+            'age_range': age_range,
+            'risk_profile': risk_profile,
+            'primary_goal': primary_goal,
+            'completion_time': datetime.now().isoformat()
+        })
+    
+    def track_tutorial_started(self, tutorial_stock: str, age_range: str = None) -> bool:
+        """Track tutorial analysis started event."""
+        user_id = st.session_state.get('user_data', {}).get('user_id')
+        if not user_id:
+            return False
+        
+        return self.track_event('tutorial_analysis_started', {
+            'tutorial_stock': tutorial_stock,
+            'age_range': age_range,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    def track_achievement_unlocked(self, achievement_id: str) -> bool:
+        """Track achievement unlock event."""
+        user_id = st.session_state.get('user_data', {}).get('user_id')
+        if not user_id:
+            return False
+        
+        return self.track_event('achievement_unlocked', {
+            'achievement_id': achievement_id,
+            'unlock_timestamp': datetime.now().isoformat()
+        })
+    
+    def track_personalized_suggestion(self, suggestions: Dict[str, str], selected_stock: str = None) -> bool:
+        """Track personalized suggestion interaction."""
+        user_id = st.session_state.get('user_data', {}).get('user_id')
+        if not user_id:
+            return False
+        
+        return self.track_event('personalized_suggestion', {
+            'suggestion_count': len(suggestions),
+            'suggestions': list(suggestions.keys()),
+            'selected_stock': selected_stock,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    def track_risk_assessment(self, scenario_responses: Dict[str, str], risk_score: int, risk_profile: str) -> bool:
+        """Track risk assessment completion."""
+        user_id = st.session_state.get('user_data', {}).get('user_id')
+        if not user_id:
+            return False
+        
+        return self.track_event('risk_assessment_completed', {
+            'scenario_count': len(scenario_responses),
+            'risk_score': risk_score,
+            'risk_profile': risk_profile,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    def track_beginner_interface(self, interface_type: str, action: str) -> bool:
+        """Track beginner interface usage."""
+        user_id = st.session_state.get('user_data', {}).get('user_id')
+        if not user_id:
+            return False
+        
+        return self.track_event('beginner_interface_interaction', {
+            'interface_type': interface_type,
+            'action': action,
+            'timestamp': datetime.now().isoformat()
+        })
 
 
 # Global API client instance
