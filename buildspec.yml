@@ -36,9 +36,15 @@ phases:
       - docker push $REPOSITORY_URI:latest
       - echo Writing image definitions file...
       - printf '[{"name":"financial-analysis-app","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - echo "Extracting exact package versions for future optimization..."
+      - docker run --rm $IMAGE_REPO_NAME:latest pip freeze > requirements-locked.txt
+      - echo "=== LOCKED REQUIREMENTS FOR FUTURE BUILDS ==="
+      - cat requirements-locked.txt
+      - echo "============================================="
       - echo Cleaning up intermediate images...
       - docker system prune -f
 
 artifacts:
   files:
     - imagedefinitions.json
+    - requirements-locked.txt
