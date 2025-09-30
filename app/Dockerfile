@@ -1,27 +1,62 @@
-# Production Dockerfile for Streamlit app
+# Multi-stage optimized Dockerfile for Streamlit app
 # Use AWS Public ECR instead of Docker Hub to avoid rate limits
-FROM public.ecr.aws/docker/library/python:3.11-slim
+
+# Stage 1: Build dependencies (cached layer)
+FROM public.ecr.aws/docker/library/python:3.11-slim as builder
+
+# Install system dependencies needed for building Python packages
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up pip for faster installs
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir wheel
+
+# Create virtual environment for dependencies
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy requirements first for better caching
+COPY requirements.txt /tmp/requirements.txt
+
+# Install Python dependencies in virtual environment
+# Split installation for better caching - install heavy ML deps first
+RUN pip install --no-cache-dir \
+    numpy==1.26.4 \
+    pandas==2.2.2 \
+    scipy==1.13.1
+
+# Install remaining dependencies
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Stage 2: Runtime (smaller final image)
+FROM public.ecr.aws/docker/library/python:3.11-slim as runtime
+
+# Install only runtime system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtual environment from builder stage
+COPY --from=builder /opt/venv /opt/venv
+
+# Set up environment
+ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHONPATH="/app"
+ENV PYTHONUNBUFFERED=1
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip3 install -r requirements.txt
+# Create non-root user
+RUN adduser --disabled-password --gecos '' streamlit-user
 
 # Copy application code
-COPY . .
+COPY --chown=streamlit-user:streamlit-user . .
 
-# Create non-root user
-RUN adduser --disabled-password --gecos '' streamlit-user && \
-    chown -R streamlit-user:streamlit-user /app
+# Switch to non-root user
 USER streamlit-user
 
 # Expose port 8080 for ALB
@@ -31,10 +66,11 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8080/app/_stcore/health || exit 1
 
-# Run Streamlit with explicit configuration
+# Run Streamlit with optimized configuration
 CMD ["streamlit", "run", "app.py", \
      "--server.port=8080", \
      "--server.address=0.0.0.0", \
      "--server.baseUrlPath=/app", \
      "--server.enableCORS=false", \
-     "--server.enableXsrfProtection=false"]
+     "--server.enableXsrfProtection=false", \
+     "--server.enableWebsocketCompression=false"]
