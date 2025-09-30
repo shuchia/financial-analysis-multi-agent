@@ -1,0 +1,23 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+  build:
+    commands:
+      - echo "Extracting package versions from existing ECR image..."
+      - echo "Pulling latest image from ECR..."
+      - docker pull $REPOSITORY_URI:latest
+      - echo "Extracting exact package versions..."
+      - docker run --rm $REPOSITORY_URI:latest pip freeze > requirements-locked.txt
+      - echo "=== EXTRACTED PACKAGE VERSIONS ==="
+      - cat requirements-locked.txt
+      - echo "=================================="
+      - echo "Package versions extracted successfully"
+
+artifacts:
+  files:
+    - requirements-locked.txt
