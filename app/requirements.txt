@@ -1,5 +1,5 @@
 # Core AI/ML dependencies with pinned versions for faster builds
-crewai==0.55.2
+crewai==0.70.1
 langchain==0.2.16
 boto3==1.35.9
 langchain-aws==0.1.17
@@ -20,7 +20,7 @@ plotly==5.17.0
 textblob==0.18.0
 
 # Technical analysis
-pandas-ta-classic==0.3.0
+pandas-ta-classic==0.3.15
 
 # Networking and auth
 requests==2.32.3
