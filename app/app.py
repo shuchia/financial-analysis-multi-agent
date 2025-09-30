@@ -1609,6 +1609,9 @@ def increment_usage(feature: str = 'analyses_count'):
 def run_ai_analysis(ticker: str):
     """Run the actual AI crew analysis."""
     
+    # Default analysis depth for this simplified analysis
+    depth = "Standard Analysis"
+    
     with ErrorBoundary("Failed to complete analysis"):
         # Track usage immediately (optimistic update)
         if st.session_state.user_plan == 'free' and not st.session_state.demo_mode:
