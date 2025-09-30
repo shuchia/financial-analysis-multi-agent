@@ -24,7 +24,7 @@ phases:
         docker build \
           --cache-from $REPOSITORY_URI:latest \
           --build-arg BUILDKIT_INLINE_CACHE=1 \
-          -t $IMAGE_REPO_NAME \
+          -t $IMAGE_REPO_NAME:latest \
           ./app
       - docker tag $IMAGE_REPO_NAME:latest $REPOSITORY_URI:$IMAGE_TAG
       - docker tag $IMAGE_REPO_NAME:latest $REPOSITORY_URI:latest
