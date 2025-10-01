@@ -15,6 +15,7 @@ from typing import Optional, Dict, Tuple, Any
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from utils.api_client import api_client
+from components.analysis import render_analysis_page
 import traceback
 import logging
 
@@ -1109,20 +1110,6 @@ def main_app():
 def show_analysis_page():
     """Stock analysis page with real AI integration."""
     
-    # Enhanced page header with branding
-    st.markdown("""
-    <div style='text-align: center; padding: 2rem 0 1rem 0;'>
-        <h1 style='font-size: 2.5rem; background: linear-gradient(135deg, #FF6B35, #1A759F);
-                   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                   font-weight: 700; margin-bottom: 0.5rem;'>
-            📊 AI-Powered Stock Analysis
-        </h1>
-        <p style='color: #7F8C8D; font-size: 1.1rem; margin: 0;'>
-            Get comprehensive investment insights powered by multi-agent AI
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
     # Load usage on page load
     if 'usage_loaded' not in st.session_state:
         load_user_usage()
@@ -1183,11 +1170,27 @@ def show_analysis_page():
         show_first_analysis_tutorial_interface(tutorial_stock)
         return
     
-    # Show beginner-friendly interface for young investors
-    if is_young_investor:
-        show_beginner_analysis_interface()
-    else:
-        show_standard_analysis_interface()
+    # Use the refactored component-based analysis page
+    # Create a mock user object for component compatibility
+    mock_user = {
+        'plan': st.session_state.get('user_plan', 'free'),
+        'usage': {
+            'analyses_count': st.session_state.get('analyses_count', 0)
+        }
+    }
+    
+    # Temporarily set session state for component
+    original_user_data = st.session_state.get('user_data')
+    st.session_state.user_data = mock_user
+    
+    try:
+        render_analysis_page()
+    finally:
+        # Restore original session state
+        if original_user_data is not None:
+            st.session_state.user_data = original_user_data
+        else:
+            st.session_state.pop('user_data', None)
 
 def show_first_analysis_tutorial_interface(tutorial_stock):
     """Show tutorial interface for first analysis."""

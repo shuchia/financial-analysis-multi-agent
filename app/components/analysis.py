@@ -18,20 +18,18 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from crew import create_crew, run_analysis
-from auth.session_manager import SessionManager
 from utils.metrics import track_analysis, track_feature_usage
 from utils.constants import PLANS
 
 
 def render_analysis_page():
     """Render the main analysis page with multi-agent crew integration."""
-    session_manager = SessionManager()
-    user = session_manager.get_current_user()
-    
-    if not user:
+    # Use Streamlit session state instead of SessionManager for compatibility with app.py
+    if 'user_data' not in st.session_state:
         st.error("Please log in to access analysis features.")
         return
     
+    user = st.session_state.user_data
     user_plan = user.get('plan', 'free')
     usage = user.get('usage', {})
     
@@ -219,11 +217,13 @@ def run_crew_analysis(symbol: str, analysis_depth: str, timeframe: str, options:
         
         # Track the analysis
         duration = time.time() - start_time
-        track_analysis(user['id'], symbol, analysis_depth, duration)
+        user_id = user.get('id', st.session_state.get('user_email', 'anonymous'))
+        track_analysis(user_id, symbol, analysis_depth, duration)
         
         # Update usage for free users
         if user.get('plan', 'free') == 'free':
-            session_manager.increment_usage('analyses_count')
+            # Update session state instead of using session manager
+            st.session_state.analyses_count = st.session_state.get('analyses_count', 0) + 1
         
         # Store results
         analysis_data = {
