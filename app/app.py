@@ -16,6 +16,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from utils.api_client import api_client
 from components.analysis import render_analysis_page
+from components.fractional_analysis import render_fractional_analysis_page
 import traceback
 import logging
 
@@ -1088,13 +1089,15 @@ def main_app():
         # Navigation
         page = st.selectbox(
             "Navigation",
-            ["📊 Analysis", "💼 Portfolio", "📈 Backtesting",
+            ["📊 Analysis", "💰 Fractional Shares", "💼 Portfolio", "📈 Backtesting",
              "🎯 Risk Assessment", "📚 Learn", "⚙️ Settings"]
         )
 
     # Main content area
     if page == "📊 Analysis":
         show_analysis_page()
+    elif page == "💰 Fractional Shares":
+        show_fractional_analysis_page()
     elif page == "💼 Portfolio":
         show_portfolio_page()
     elif page == "📈 Backtesting":
@@ -1105,6 +1108,40 @@ def main_app():
         show_education_page()
     elif page == "⚙️ Settings":
         show_settings_page()
+
+
+def show_fractional_analysis_page():
+    """Fractional share analysis page."""
+    
+    # Load usage on page load
+    if 'usage_loaded' not in st.session_state:
+        load_user_usage()
+        st.session_state.usage_loaded = True
+    
+    # Check for demo mode
+    if st.session_state.demo_mode:
+        st.info("🎮 Demo Mode: Explore fractional share features with sample data!")
+    
+    # Create a mock user object for component compatibility
+    mock_user = {
+        'plan': st.session_state.get('user_plan', 'free'),
+        'usage': {
+            'fractional_calculations_count': st.session_state.get('fractional_calculations_count', 0)
+        }
+    }
+    
+    # Temporarily set session state for component
+    original_user_data = st.session_state.get('user_data')
+    st.session_state.user_data = mock_user
+    
+    try:
+        render_fractional_analysis_page()
+    finally:
+        # Restore original session state
+        if original_user_data is not None:
+            st.session_state.user_data = original_user_data
+        else:
+            st.session_state.pop('user_data', None)
 
 
 def show_analysis_page():

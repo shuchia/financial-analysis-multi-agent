@@ -4,6 +4,7 @@ from tools.yf_fundamental_analysis_tool import yf_fundamental_analysis
 from tools.sentiment_analysis_tool import sentiment_analysis
 from tools.competitor_analysis_tool import competitor_analysis
 from tools.risk_assessment_tool import risk_assessment
+from tools.fractional_share_tool import calculate_fractional_shares, get_fractional_portfolio_suggestions
 import logging
 import time
 import os
@@ -68,7 +69,7 @@ def create_crew(stock_symbol, user_profile=None):
         role='Investment Strategist',
         goal='Develop a comprehensive investment strategy based on all available data',
         backstory="You're a renowned investment strategist known for creating tailored investment plans that balance risk and reward.",
-        tools=[],
+        tools=[calculate_fractional_shares, get_fractional_portfolio_suggestions],
         llm=llm
     )
     logger.debug("Investment Strategist agent created")
@@ -140,6 +141,24 @@ def create_crew(stock_symbol, user_profile=None):
     )
     logger.debug("Analysis task created")
 
+    # Determine if fractional shares should be considered based on user profile
+    income_range = user_profile.get('income_range', '50k-100k')
+    age_range = user_profile.get('age_range', '25-35')
+    is_young_investor = any(age in age_range for age in ['16-20', '21-25', '26-30'])
+    is_lower_income = any(income in income_range for income in ['under-25k', '25k-50k'])
+    
+    fractional_context = ""
+    if is_young_investor or is_lower_income or user_profile.get('experience') == 'beginner':
+        fractional_context = f"""
+        
+        IMPORTANT: Given this investor's profile, strongly consider fractional share investing options:
+        - Use the calculate_fractional_shares tool to determine exact fractional positions for different investment amounts
+        - Consider fractional shares if the stock price is high relative to their likely investment amount
+        - Use get_fractional_portfolio_suggestions tool to create diversified portfolios with small amounts
+        - Provide specific fractional share recommendations and calculations where appropriate
+        - Explain how fractional shares make expensive stocks accessible with small investments
+        """
+    
     strategy_task = Task(
         description=f"""Based on all the gathered information about {stock_symbol} , develop a personalized investment strategy for {stock_symbol} based on this specific investor profile:
         
@@ -156,6 +175,7 @@ def create_crew(stock_symbol, user_profile=None):
         - Are appropriate for {user_profile.get('timeline', 'medium-term')} time horizon
         - Consider {user_profile.get('income_range', '50k-100k')} capital constraints
         - Provide clear action steps for {user_profile.get('experience', 'beginner')} experience level
+        {fractional_context}
         
         Include specific position sizing, entry/exit strategies, and risk management tailored to this profile.""",
         agent=strategist,

@@ -12,10 +12,12 @@ PLANS = {
         'analyses_limit': 5,
         'backtests_limit': 2,
         'portfolio_optimizations_limit': 1,
+        'fractional_calculations_limit': 10,
         'features': [
             'Basic stock analysis',
             'Technical indicators',
             'Fundamental metrics',
+            'Fractional share calculator',
             'Community support'
         ]
     },
@@ -25,9 +27,11 @@ PLANS = {
         'analyses_limit': -1,  # Unlimited
         'backtests_limit': -1,
         'portfolio_optimizations_limit': -1,
+        'fractional_calculations_limit': -1,  # Unlimited
         'features': [
             'Everything in Free',
             'Unlimited analyses',
+            'Unlimited fractional calculations',
             'Portfolio optimization',
             'Strategy backtesting',
             'Risk simulations',
@@ -40,9 +44,11 @@ PLANS = {
         'analyses_limit': -1,
         'backtests_limit': -1,
         'portfolio_optimizations_limit': -1,
+        'fractional_calculations_limit': -1,  # Unlimited
         'features': [
             'Everything in Growth',
             'Advanced AI insights',
+            'Advanced fractional portfolio tools',
             'Custom indicators',
             'API access',
             'White-label reports',
@@ -57,18 +63,21 @@ USAGE_LIMITS = {
         'analyses_per_month': 5,
         'backtests_per_month': 2,
         'portfolio_optimizations_per_month': 1,
+        'fractional_calculations_per_month': 10,
         'api_calls_per_day': 0
     },
     'growth': {
         'analyses_per_month': -1,  # Unlimited
         'backtests_per_month': -1,
         'portfolio_optimizations_per_month': -1,
+        'fractional_calculations_per_month': -1,  # Unlimited
         'api_calls_per_day': 100
     },
     'pro': {
         'analyses_per_month': -1,
         'backtests_per_month': -1,
         'portfolio_optimizations_per_month': -1,
+        'fractional_calculations_per_month': -1,  # Unlimited
         'api_calls_per_day': 1000
     }
 }
