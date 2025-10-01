@@ -129,8 +129,7 @@ def render_analysis_page():
                     'include_strategy': include_strategy,
                     'compare_symbols': compare_symbols
                 },
-                user=user,
-                session_manager=session_manager
+                user=user
             )
     
     with analysis_col2:
@@ -147,7 +146,7 @@ def render_analysis_page():
         )
 
 
-def run_crew_analysis(symbol: str, analysis_depth: str, timeframe: str, options: Dict, user: Dict, session_manager):
+def run_crew_analysis(symbol: str, analysis_depth: str, timeframe: str, options: Dict, user: Dict):
     """Execute the multi-agent crew analysis."""
     
     start_time = time.time()
@@ -170,7 +169,7 @@ def run_crew_analysis(symbol: str, analysis_depth: str, timeframe: str, options:
             agents_to_use = ["researcher", "analyst", "sentiment_analyst", "strategist"]
         else:  # Quantitative Analysis
             # Use the advanced quantitative crew
-            return run_quantitative_analysis(symbol, options, user, session_manager)
+            return run_quantitative_analysis(symbol, options, user)
         
         # Phase 2: Data gathering
         status_text.text("📊 Agent 1: Gathering market data...")
@@ -252,7 +251,7 @@ def run_crew_analysis(symbol: str, analysis_depth: str, timeframe: str, options:
         st.error("Please try again or contact support if the issue persists.")
 
 
-def run_quantitative_analysis(symbol: str, options: Dict, user: Dict, session_manager):
+def run_quantitative_analysis(symbol: str, options: Dict, user: Dict):
     """Run advanced quantitative analysis using the quant crew."""
     try:
         # Import the quantitative crew
@@ -297,7 +296,7 @@ def run_quantitative_analysis(symbol: str, options: Dict, user: Dict, session_ma
     except ImportError:
         st.warning("Quantitative analysis crew not available. Running standard analysis instead.")
         # Fallback to standard analysis
-        run_crew_analysis(symbol, "Deep Analysis", "Medium-term", options, user, session_manager)
+        run_crew_analysis(symbol, "Deep Analysis", "Medium-term", options, user)
     except Exception as e:
         st.error(f"Quantitative analysis failed: {str(e)}")
 

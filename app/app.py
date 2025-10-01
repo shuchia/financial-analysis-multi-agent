@@ -173,6 +173,53 @@ def show_login_signup():
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
         }
+        
+        /* Style input fields to match landing page */
+        .stTextInput > div > div > input {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        .stTextInput > div > div > input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+            outline: none;
+        }
+        
+        /* Style buttons to match landing page */
+        .stButton > button {
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            padding: 12px 24px;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        
+        .stButton > button[kind="primary"] {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+        }
+        
+        .stButton > button[kind="primary"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+        }
+        
+        /* Style form containers */
+        .stForm {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin: 1rem 0;
+        }
     </style>
     """, unsafe_allow_html=True)
     
@@ -240,13 +287,8 @@ def show_login_signup():
                 password = st.text_input("Password", type="password")
                 confirm_password = st.text_input("Confirm Password", type="password")
 
-                # Plan selection
-                plan = st.radio(
-                    "Choose Your Plan",
-                    ["Free - Start Learning", "Growth ($4.99/mo) - Most Popular", "Pro ($9.99/mo) - Advanced"],
-                    index=0 if st.session_state.user_plan == 'free' else
-                    1 if st.session_state.user_plan == 'growth' else 2
-                )
+                # Default to free plan (no selection needed)
+                plan = "Free - Start Learning"
 
                 terms = st.checkbox("I agree to the Terms of Service and Privacy Policy")
 
@@ -272,19 +314,7 @@ def show_login_signup():
                                 st.rerun()
                             # Note: Error messages are now handled by the API client
 
-        # Social login options
-        st.markdown("---")
-        st.markdown("Or continue with:")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("🔍 Google", use_container_width=True):
-                initiate_google_auth()
-        with col2:
-            if st.button("🍎 Apple", use_container_width=True):
-                initiate_apple_auth()
-        with col3:
-            if st.button("📧 Email Magic Link", use_container_width=True):
-                send_magic_link(email)
+        # Social login options removed for cleaner experience
 
 
 # =====================================
@@ -1712,6 +1742,9 @@ def run_ai_analysis(ticker: str):
                     'raw_result': result
                 }
                 
+                # Also add raw_result to data for tutorial access
+                analysis_data['raw_result'] = result
+                
                 # Add to history
                 st.session_state.analysis_history.append({
                     'ticker': ticker,
@@ -2181,11 +2214,21 @@ def display_ai_insights(ticker: str):
 # =====================================
 
 def display_tutorial_overview_tab(ticker: str, data: Dict[str, Any]):
-    """Display overview with educational explanations for beginners."""
+    """Display overview with educational explanations for beginners using actual analysis data."""
     st.markdown("### 📊 Company Overview - What This Tells You")
     
     # Educational introduction
     st.info("🎓 **Learning Goal**: Understand the basics of what makes a company valuable and how to read key metrics.")
+    
+    # First show the actual AI crew analysis if available
+    if 'raw_result' in data and data['raw_result']:
+        st.markdown("#### 🤖 AI Analysis Summary")
+        if hasattr(data['raw_result'], 'tasks_output') and data['raw_result'].tasks_output:
+            # Show the research task output (first task)
+            research_output = str(data['raw_result'].tasks_output[0])
+            st.markdown(research_output[:1000] + "..." if len(research_output) > 1000 else research_output)
+        
+        st.markdown("---")
     
     # Get real stock data
     try:
@@ -2259,10 +2302,24 @@ def display_tutorial_overview_tab(ticker: str, data: Dict[str, Any]):
         """)
 
 def display_tutorial_technical_tab(ticker: str, data: Dict[str, Any]):
-    """Display technical analysis with educational explanations."""
+    """Display technical analysis with educational explanations using actual analysis data."""
     st.markdown("### 📈 Technical Analysis - Reading Price Charts")
     
     st.info("🎓 **Learning Goal**: Understand how to read stock charts and identify trends.")
+    
+    # First show the actual AI crew analysis if available
+    if 'raw_result' in data and data['raw_result']:
+        st.markdown("#### 🤖 AI Technical Analysis")
+        if hasattr(data['raw_result'], 'tasks_output') and len(data['raw_result'].tasks_output) > 0:
+            # Show relevant technical analysis from research output
+            research_output = str(data['raw_result'].tasks_output[0])
+            # Extract technical-related sections
+            if "technical" in research_output.lower() or "chart" in research_output.lower() or "trend" in research_output.lower():
+                st.markdown(research_output[:800] + "..." if len(research_output) > 800 else research_output)
+            else:
+                st.markdown("Technical analysis data is included in the comprehensive research above.")
+        
+        st.markdown("---")
     
     # Get real price data for chart
     try:
