@@ -9,7 +9,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import time
 import json
 
@@ -207,8 +207,11 @@ def run_crew_analysis(symbol: str, analysis_depth: str, timeframe: str, options:
         status_text.text("🚀 Running multi-agent analysis...")
         progress_bar.progress(90)
         
-        # Run the actual crew analysis
-        result = run_analysis(symbol)
+        # Extract user profile for personalized analysis
+        user_profile = extract_user_profile_for_crew(user)
+        
+        # Run the actual crew analysis with user profile
+        result = run_analysis(symbol, user_profile)
         
         # Phase 8: Complete
         progress_bar.progress(100)
@@ -380,9 +383,20 @@ def display_crew_results(result, symbol: str, analysis_data: Dict):
     with tab4:
         st.markdown("### 📈 Technical Analysis")
         
-        # Technical analysis section
-        st.info("Technical indicators and chart analysis would be displayed here.")
-        # This would integrate with the technical analysis tools
+        # Display technical analysis from research task output
+        if hasattr(result, 'tasks_output') and len(result.tasks_output) > 0:
+            research_output = str(result.tasks_output[0])  # Research task includes technical analysis
+            
+            # Extract technical analysis sections from research output
+            if "technical" in research_output.lower() or "chart" in research_output.lower():
+                st.markdown(research_output)
+            else:
+                st.markdown("Technical analysis data is included in the Research Report section.")
+                
+            # Add quick stats for visual context
+            display_quick_stats(symbol)
+        else:
+            st.info("Technical analysis data not available in this analysis level.")
     
     with tab5:
         st.markdown("### 🎯 Investment Strategy")
@@ -394,15 +408,11 @@ def display_crew_results(result, symbol: str, analysis_data: Dict):
         else:
             st.info("Investment strategy not included in this analysis level.")
         
-        # Add action items
+        # Generate dynamic action items based on analysis results
         st.markdown("#### 📝 Action Items")
-        st.markdown("""
-        - [ ] Review fundamental metrics
-        - [ ] Monitor technical indicators
-        - [ ] Track sentiment changes
-        - [ ] Set up price alerts
-        - [ ] Consider position sizing
-        """)
+        action_items = generate_action_items_from_analysis(result, analysis_data)
+        for item in action_items:
+            st.markdown(f"- [ ] {item}")
 
 
 def display_quantitative_results(result, symbol: str):
@@ -421,15 +431,27 @@ def display_quantitative_results(result, symbol: str):
     
     with tab2:
         st.markdown("### ⚠️ Risk Assessment")
-        st.info("Risk metrics and VaR calculations would be displayed here.")
+        # Extract risk assessment from quantitative analysis output
+        if result and "risk" in str(result).lower():
+            st.markdown(str(result))
+        else:
+            st.info("Risk metrics not available in this quantitative analysis.")
     
     with tab3:
         st.markdown("### 📈 Strategy Backtesting")
-        st.info("Backtesting results and performance metrics would be displayed here.")
+        # Extract backtesting from quantitative analysis output
+        if result and ("backtest" in str(result).lower() or "performance" in str(result).lower()):
+            st.markdown(str(result))
+        else:
+            st.info("Backtesting results not available in this analysis.")
     
     with tab4:
         st.markdown("### 🎯 Investment Strategy")
-        st.info("Quantitative strategy recommendations would be displayed here.")
+        # Display quantitative strategy recommendations
+        if result:
+            st.markdown(str(result))
+        else:
+            st.info("Strategy recommendations not available.")
 
 
 def display_quick_stats(symbol: str):
@@ -503,6 +525,76 @@ def get_agent_name_from_task(task_index: int, analysis_depth: str) -> str:
             return "💼 Financial Analyst"
     
     return agent_names.get(task_index, f"Agent {task_index + 1}")
+
+
+def generate_action_items_from_analysis(result, analysis_data: Dict) -> List[str]:
+    """
+    Generate dynamic action items based on crew analysis results.
+    
+    Args:
+        result: Crew analysis result
+        analysis_data: Analysis metadata
+        
+    Returns:
+        List of action items tailored to the analysis
+    """
+    action_items = []
+    
+    # Extract key information from crew outputs
+    has_strategy = False
+    has_risk_assessment = False
+    has_sentiment = False
+    
+    if hasattr(result, 'tasks_output') and result.tasks_output:
+        for i, task_output in enumerate(result.tasks_output):
+            output_str = str(task_output).lower()
+            
+            # Check for strategy recommendations
+            if i == len(result.tasks_output) - 1:  # Last task is usually strategy
+                has_strategy = True
+                if "buy" in output_str or "strong buy" in output_str:
+                    action_items.append("Consider initiating a position based on positive AI assessment")
+                elif "sell" in output_str or "avoid" in output_str:
+                    action_items.append("Exercise caution - AI analysis suggests potential risks")
+                else:
+                    action_items.append("Review the investment strategy recommendations carefully")
+            
+            # Check for risk information
+            if "risk" in output_str or "volatility" in output_str:
+                has_risk_assessment = True
+                action_items.append("Assess the risk metrics against your risk tolerance")
+            
+            # Check for sentiment information
+            if "sentiment" in output_str or "news" in output_str:
+                has_sentiment = True
+                action_items.append("Monitor ongoing news and sentiment changes")
+    
+    # Add standard action items based on analysis depth
+    analysis_depth = analysis_data.get('analysis_depth', 'Standard Analysis')
+    
+    if analysis_depth in ['Deep Analysis', 'Quantitative Analysis']:
+        action_items.append("Review the comprehensive technical and fundamental metrics")
+        action_items.append("Consider position sizing based on the detailed risk assessment")
+    
+    # Add action items based on user profile if available
+    options = analysis_data.get('options', {})
+    if options.get('include_competitors'):
+        action_items.append("Compare with competitor analysis to validate investment thesis")
+    
+    # Default action items if none generated
+    if not action_items:
+        action_items = [
+            "Review the key metrics highlighted in the analysis",
+            "Consider your personal risk tolerance and investment timeline",
+            "Monitor the stock's performance over the coming weeks",
+            "Set up price alerts at key support and resistance levels"
+        ]
+    
+    # Add essential final items
+    action_items.append("Consult with a financial advisor if needed")
+    action_items.append("Never invest more than you can afford to lose")
+    
+    return action_items
 
 
 def create_analysis_chart(symbol: str, period: str = "1y"):
@@ -591,3 +683,68 @@ def create_analysis_chart(symbol: str, period: str = "1y"):
         
     except Exception as e:
         st.error(f"Unable to create chart: {str(e)}")
+
+
+def extract_user_profile_for_crew(user: Dict) -> Dict[str, str]:
+    """
+    Extract user profile data from session state for crew personalization.
+    
+    Args:
+        user: User data dictionary
+        
+    Returns:
+        Dictionary with standardized user profile for crew agents
+    """
+    # Get user preferences from session state
+    user_preferences = st.session_state.get('user_preferences', {})
+    
+    # Extract demographics
+    demographics = user_preferences.get('demographics', {})
+    age_range = demographics.get('age_range', '')
+    income_range = demographics.get('income_range', '')
+    
+    # Extract investment goals
+    investment_goals = user_preferences.get('investment_goals', {})
+    primary_goal = investment_goals.get('primary_goal', '')
+    timeline = investment_goals.get('timeline', '')
+    
+    # Extract risk assessment
+    risk_assessment = user_preferences.get('risk_assessment', {})
+    risk_profile = risk_assessment.get('risk_profile', '')
+    
+    # Extract experience level (if available from other sources)
+    experience = user_preferences.get('experience_level', 'beginner')
+    
+    # Map to standardized format for crew agents
+    profile = {
+        'age_range': age_range or '25-35',
+        'income_range': income_range or '50k-100k', 
+        'primary_goal': primary_goal or 'wealth_building',
+        'timeline': timeline or '5-10 years',
+        'risk_profile': risk_profile.lower() if risk_profile else 'moderate',
+        'experience': experience
+    }
+    
+    # Map goal values to consistent format
+    goal_mapping = {
+        'First Investment': 'first_investment',
+        'Retirement Planning': 'retirement_planning', 
+        'Wealth Building': 'wealth_building',
+        'Passive Income': 'passive_income',
+        'Education': 'education'
+    }
+    
+    if profile['primary_goal'] in goal_mapping:
+        profile['primary_goal'] = goal_mapping[profile['primary_goal']]
+    
+    # Map risk profile to consistent format
+    risk_mapping = {
+        'Conservative': 'conservative',
+        'Moderate': 'moderate', 
+        'Aggressive': 'aggressive'
+    }
+    
+    if profile['risk_profile'].title() in risk_mapping:
+        profile['risk_profile'] = risk_mapping[profile['risk_profile'].title()]
+    
+    return profile

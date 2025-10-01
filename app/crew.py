@@ -8,12 +8,23 @@ import logging
 import time
 import os
 
-def create_crew(stock_symbol):
+def create_crew(stock_symbol, user_profile=None):
     # Configure logging
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
     
-    logger.info(f"Creating crew for stock symbol: {stock_symbol}")
+    # Set default user profile if none provided
+    if user_profile is None:
+        user_profile = {
+            'age_range': '25-35',
+            'income_range': '50k-100k',
+            'primary_goal': 'wealth_building',
+            'timeline': '5-10 years',
+            'risk_profile': 'moderate',
+            'experience': 'beginner'
+        }
+    
+    logger.info(f"Creating crew for stock symbol: {stock_symbol} with user profile: {user_profile.get('age_range', 'unknown')} years old, {user_profile.get('experience', 'unknown')} experience")
     
     # Initialize AWS Bedrock LLM using CrewAI's LLM class
     # In ECS Fargate, credentials are automatically obtained from the task role
@@ -66,33 +77,89 @@ def create_crew(stock_symbol):
     logger.info("Creating tasks...")
     
     research_task = Task(
-        description=f"Research {stock_symbol} using advanced technical and fundamental analysis tools. Provide a comprehensive summary of key metrics, including chart patterns, financial ratios, and competitor analysis.",
+        description=f"""Research {stock_symbol} for a {user_profile.get('age_range', '25-35')} year old investor with {user_profile.get('experience', 'beginner')} experience level using advanced technical and fundamental analysis tools.
+        
+        Primary investment goal: {user_profile.get('primary_goal', 'wealth_building')}
+        Investment timeline: {user_profile.get('timeline', '5-10 years')}
+        Income range: {user_profile.get('income_range', '50k-100k')}
+        
+        Focus your research on:
+        - Key metrics most relevant to {user_profile.get('primary_goal', 'wealth_building')} goals
+        - Financial ratios appropriate for {user_profile.get('timeline', 'medium-term')} investment horizon
+        - Competitor analysis within their likely portfolio size range
+        - Technical patterns suitable for {user_profile.get('experience', 'beginner')} level understanding
+        
+        Adjust explanation complexity for {user_profile.get('experience', 'beginner')} investor level.""",
         agent=researcher,
-        expected_output="A comprehensive research report with technical analysis, fundamental metrics, chart patterns, and competitor analysis data",
+        expected_output=f"A comprehensive research report with technical analysis, fundamental metrics, chart patterns, and competitor analysis data tailored for {user_profile.get('experience', 'beginner')} investors focused on {user_profile.get('primary_goal', 'wealth_building')} with clear explanations and relevant metrics",
         max_retries=1
     )
     logger.debug("Research task created")
 
     sentiment_task = Task(
-        description=f"Analyze the market sentiment for {stock_symbol} using news and social media data. Evaluate how current sentiment might affect the stock's performance.",
+        description=f"""Analyze market sentiment for {stock_symbol} using news and social media data. Evaluate how current sentiment might affect the stock's performance considering the investor profile:
+        
+        Investor characteristics:
+        - Age range: {user_profile.get('age_range', '25-35')}
+        - Risk tolerance: {user_profile.get('risk_profile', 'moderate')}
+        - Investment timeline: {user_profile.get('timeline', '5-10 years')}
+        - Primary goal: {user_profile.get('primary_goal', 'wealth_building')}
+        
+        Focus sentiment analysis on:
+        - News and events most relevant to {user_profile.get('timeline', 'medium-term')} investors
+        - Sentiment factors that align with {user_profile.get('risk_profile', 'moderate')} risk tolerance
+        - Social media trends relevant to {user_profile.get('age_range', '25-35')} demographic
+        - Market emotion impacts on {user_profile.get('primary_goal', 'wealth_building')} strategies
+        
+        Filter out noise and focus on sentiment drivers that matter for this investor profile.""",
         agent=sentiment_analyst,
-        expected_output="A sentiment analysis report with news sentiment scores, social media trends, and impact assessment on stock performance",
+        expected_output=f"Sentiment analysis report with news sentiment scores, social media trends, and impact assessment on stock performance focused on factors relevant to {user_profile.get('risk_profile', 'moderate')} risk {user_profile.get('timeline', 'medium-term')} investors pursuing {user_profile.get('primary_goal', 'wealth_building')}",
         max_retries=1
     )
     logger.debug("Sentiment task created")
 
     analysis_task = Task(
-        description=f"Synthesize the research data and sentiment analysis for {stock_symbol}. Conduct a thorough risk assessment and provide a detailed analysis of the stock's potential.",
+        description=f"""Synthesize research and sentiment data for {stock_symbol} tailored to this investor profile:
+        
+        Investor Profile:
+        - Age: {user_profile.get('age_range', '25-35')} | Experience: {user_profile.get('experience', 'beginner')}
+        - Income: {user_profile.get('income_range', '50k-100k')} | Risk tolerance: {user_profile.get('risk_profile', 'moderate')}
+        - Goal: {user_profile.get('primary_goal', 'wealth_building')} | Timeline: {user_profile.get('timeline', '5-10 years')}
+        
+        Tailor your analysis to:
+        - Risk assessment appropriate for {user_profile.get('risk_profile', 'moderate')} risk tolerance
+        - Financial metrics most important for {user_profile.get('primary_goal', 'wealth_building')} objectives
+        - Valuation analysis suitable for {user_profile.get('timeline', 'medium-term')} holding period
+        - Position sizing recommendations based on {user_profile.get('income_range', '50k-100k')} income level
+        - Explanation style appropriate for {user_profile.get('experience', 'beginner')} experience level
+        
+        Emphasize analysis points most relevant to their investment profile and goals.""",
         agent=analyst,
-        expected_output="A comprehensive financial analysis report with risk assessment, stock potential evaluation, and synthesis of all research data",
+        expected_output=f" A comprehensive financial analysis report with risk assessment, stock potential evaluation, and synthesis of all research data  customized for {user_profile.get('experience', 'beginner')} {user_profile.get('risk_profile', 'moderate')}-risk investor focused on {user_profile.get('primary_goal', 'wealth_building')}",
         max_retries=1
     )
     logger.debug("Analysis task created")
 
     strategy_task = Task(
-        description=f"Based on all the gathered information about {stock_symbol}, develop a comprehensive investment strategy. Consider various scenarios and provide actionable recommendations for different investor profiles.",
+        description=f"""Based on all the gathered information about {stock_symbol} , develop a personalized investment strategy for {stock_symbol} based on this specific investor profile:
+        
+        Target Investor:
+        - Demographics: {user_profile.get('age_range', '25-35')} years old, {user_profile.get('income_range', '50k-100k')} income
+        - Investment experience: {user_profile.get('experience', 'beginner')} level
+        - Risk profile: {user_profile.get('risk_profile', 'moderate')} risk tolerance
+        - Primary goal: {user_profile.get('primary_goal', 'wealth_building')}
+        - Investment timeline: {user_profile.get('timeline', '5-10 years')}
+        
+        Create strategy recommendations that:
+        - Align with {user_profile.get('primary_goal', 'wealth_building')} investment objectives
+        - Match {user_profile.get('risk_profile', 'moderate')} risk comfort level
+        - Are appropriate for {user_profile.get('timeline', 'medium-term')} time horizon
+        - Consider {user_profile.get('income_range', '50k-100k')} capital constraints
+        - Provide clear action steps for {user_profile.get('experience', 'beginner')} experience level
+        
+        Include specific position sizing, entry/exit strategies, and risk management tailored to this profile.""",
         agent=strategist,
-        expected_output="A detailed investment strategy with actionable recommendations, risk-reward scenarios, and tailored advice for different investor profiles",
+        expected_output=f"Personalized investment strategy for {user_profile.get('age_range', '25-35')} year old {user_profile.get('experience', 'beginner')} investor pursuing {user_profile.get('primary_goal', 'wealth_building')} with actionable steps, risk-reward scenarios and tailored advice",
         max_retries=1
     )
     logger.debug("Strategy task created")
@@ -108,14 +175,14 @@ def create_crew(stock_symbol):
 
     return crew
 
-def run_analysis(stock_symbol):
+def run_analysis(stock_symbol, user_profile=None):
     logger = logging.getLogger(__name__)
     
-    logger.info(f"Starting analysis for {stock_symbol}")
+    logger.info(f"Starting analysis for {stock_symbol} with user profile: {user_profile.get('age_range', 'unknown') if user_profile else 'default'}")
     start_time = time.time()
     
     try:
-        crew = create_crew(stock_symbol)
+        crew = create_crew(stock_symbol, user_profile)
         logger.info("Initiating crew kickoff...")
         
         # Track individual task progress

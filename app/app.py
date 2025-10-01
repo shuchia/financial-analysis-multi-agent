@@ -1645,9 +1645,12 @@ def run_ai_analysis(ticker: str):
                 if user_id:
                     api_client.track_analysis_event(user_id, ticker, "standard")
                 
-                # Run the actual analysis
+                # Extract user profile for personalized analysis
+                user_profile = extract_user_profile_for_tutorial(ticker)
+                
+                # Run the actual analysis with user profile
                 with st.spinner(f"AI agents working on {ticker} analysis..."):
-                    result = run_analysis(ticker)
+                    result = run_analysis(ticker, user_profile)
                 
                 # Phase 3: Process results
                 status_text.text("📝 Processing analysis results...")
@@ -1992,57 +1995,68 @@ def display_technical_tab(ticker: str, data: Dict[str, Any]):
 def display_fundamental_tab(ticker: str, data: Dict[str, Any]):
     """Display fundamental analysis results."""
     
-    st.markdown("### Fundamental Analysis")
+    st.markdown("### 💰 Company Finances")
     
-    # Check if we have real crew analysis data
+    # Check if we have real crew analysis data first
     if 'analysis' in data and data['analysis']:
+        st.markdown("#### 🤖 AI Financial Analysis")
         st.markdown(data['analysis'])
-    else:
-        try:
-            # Get real fundamental data
-            stock = yf.Ticker(ticker)
-            info = stock.info
+        st.markdown("---")
+    
+    # Also check for full crew result that might contain fundamental analysis
+    if 'full_result' in data and data['full_result']:
+        result_text = str(data['full_result']).lower()
+        if any(term in result_text for term in ['revenue', 'profit', 'margin', 'financial', 'earnings']):
+            st.markdown("#### 📊 Detailed Financial Assessment")
+            st.markdown(data['full_result'])
+            st.markdown("---")
+    
+    # Show supplementary financial metrics from yfinance
+    st.markdown("#### 📈 Key Financial Metrics")
+    try:
+        # Get real fundamental data
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Financial Metrics")
+            metrics = {
+                "Revenue (TTM)": info.get('totalRevenue', 0),
+                "Profit Margin": info.get('profitMargins', 0),
+                "Operating Margin": info.get('operatingMargins', 0),
+                "ROE": info.get('returnOnEquity', 0),
+                "ROA": info.get('returnOnAssets', 0)
+            }
             
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("#### Financial Metrics")
-                metrics = {
-                    "Revenue (TTM)": info.get('totalRevenue', 0),
-                    "Profit Margin": info.get('profitMargins', 0),
-                    "Operating Margin": info.get('operatingMargins', 0),
-                    "ROE": info.get('returnOnEquity', 0),
-                    "ROA": info.get('returnOnAssets', 0)
-                }
-                
-                for metric, value in metrics.items():
-                    if value:
-                        if "Margin" in metric or "ROE" in metric or "ROA" in metric:
-                            st.write(f"**{metric}:** {value:.2%}")
-                        else:
-                            st.write(f"**{metric}:** ${value/1e9:.2f}B")
+            for metric, value in metrics.items():
+                if value:
+                    if "Margin" in metric or "ROE" in metric or "ROA" in metric:
+                        st.write(f"**{metric}:** {value:.2%}")
                     else:
-                        st.write(f"**{metric}:** N/A")
+                        st.write(f"**{metric}:** ${value/1e9:.2f}B")
+                else:
+                    st.write(f"**{metric}:** N/A")
+        
+        with col2:
+            st.markdown("#### Valuation Ratios")
+            ratios = {
+                "P/E Ratio": info.get('trailingPE', 0),
+                "Forward P/E": info.get('forwardPE', 0),
+                "P/B Ratio": info.get('priceToBook', 0),
+                "PEG Ratio": info.get('pegRatio', 0),
+                "EV/EBITDA": info.get('enterpriseToEbitda', 0)
+            }
             
-            with col2:
-                st.markdown("#### Valuation Ratios")
-                ratios = {
-                    "P/E Ratio": info.get('trailingPE', 0),
-                    "Forward P/E": info.get('forwardPE', 0),
-                    "P/B Ratio": info.get('priceToBook', 0),
-                    "PEG Ratio": info.get('pegRatio', 0),
-                    "EV/EBITDA": info.get('enterpriseToEbitda', 0)
-                }
-                
-                for ratio, value in ratios.items():
-                    if value:
-                        st.write(f"**{ratio}:** {value:.2f}")
-                    else:
-                        st.write(f"**{ratio}:** N/A")
-                        
-        except Exception as e:
-            logger.error(f"Error displaying fundamentals: {e}")
-            st.info("Fundamental data analysis in progress...")
+            for ratio, value in ratios.items():
+                if value:
+                    st.write(f"**{ratio}:** {value:.2f}")
+                else:
+                    st.write(f"**{ratio}:** N/A")
+                    
+    except Exception as e:
+        st.info("Fundamental data analysis in progress...")
 
 
 def display_ai_insights_tab(ticker: str, data: Dict[str, Any]):
@@ -2063,33 +2077,42 @@ def display_ai_insights_tab(ticker: str, data: Dict[str, Any]):
     if 'full_result' in data and data['full_result'] and not data.get('strategy'):
         st.markdown(data['full_result'])
     
-    # Add investment recommendation section
+    # Add dynamic investment recommendation section based on crew analysis
     st.markdown("#### 🎯 Investment Recommendation")
     
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.info("""
-        **Short-term (1-3 months)**
-        • Signal: HOLD
-        • Target: $158
-        • Stop Loss: $145
-        """)
-    
-    with col2:
-        st.success("""
-        **Medium-term (3-12 months)**
-        • Signal: BUY
-        • Target: $175
-        • Stop Loss: $140
-        """)
-    
-    with col3:
-        st.success("""
-        **Long-term (1+ years)**
-        • Signal: STRONG BUY
-        • Target: $200+
-        • Risk: Moderate
-        """)
+    # Extract recommendations from crew data if available
+    if 'strategy' in data and data['strategy']:
+        strategy_text = str(data['strategy']).lower()
+        
+        # Analyze strategy output for recommendations
+        if 'buy' in strategy_text and 'strong' in strategy_text:
+            recommendation = "STRONG BUY"
+            color = "success"
+        elif 'buy' in strategy_text:
+            recommendation = "BUY"  
+            color = "success"
+        elif 'hold' in strategy_text:
+            recommendation = "HOLD"
+            color = "info"
+        elif 'sell' in strategy_text or 'avoid' in strategy_text:
+            recommendation = "AVOID"
+            color = "warning"
+        else:
+            recommendation = "ANALYZE FURTHER"
+            color = "info"
+        
+        if color == "success":
+            st.success(f"**AI Recommendation:** {recommendation}")
+        elif color == "warning":
+            st.warning(f"**AI Recommendation:** {recommendation}")
+        else:
+            st.info(f"**AI Recommendation:** {recommendation}")
+            
+        # Display strategy summary
+        st.markdown("**Strategy Summary:**")
+        st.markdown(data['strategy'])
+    else:
+        st.info("**Investment recommendations are based on the AI crew analysis above. Please review all sections before making investment decisions.**")
 
 
 # Deprecated functions for backwards compatibility
@@ -2348,6 +2371,73 @@ def show_settings_page():
 
 
 # =====================================
+def extract_user_profile_for_tutorial(ticker: str) -> Dict[str, str]:
+    """
+    Extract user profile data from session state for tutorial analysis.
+    Uses the same logic as the main analysis page for consistency.
+    
+    Args:
+        ticker: Stock ticker symbol (for potential future use)
+        
+    Returns:
+        Dictionary with standardized user profile for crew agents
+    """
+    # Get user preferences from session state
+    user_preferences = st.session_state.get('user_preferences', {})
+    
+    # Extract demographics
+    demographics = user_preferences.get('demographics', {})
+    age_range = demographics.get('age_range', '')
+    income_range = demographics.get('income_range', '')
+    
+    # Extract investment goals
+    investment_goals = user_preferences.get('investment_goals', {})
+    primary_goal = investment_goals.get('primary_goal', '')
+    timeline = investment_goals.get('timeline', '')
+    
+    # Extract risk assessment
+    risk_assessment = user_preferences.get('risk_assessment', {})
+    risk_profile = risk_assessment.get('risk_profile', '')
+    
+    # Extract experience level (tutorial users are typically beginners)
+    experience = user_preferences.get('experience_level', 'beginner')
+    
+    # Map to standardized format for crew agents
+    # Use user's actual profile data, with tutorial-appropriate defaults only when missing
+    profile = {
+        'age_range': age_range or '23-30',  # Use actual user age, not tutorial assumption
+        'income_range': income_range or '50k-100k',  # Use actual user income
+        'primary_goal': primary_goal or 'first_investment',  # Tutorial is educational, so default to first investment
+        'timeline': timeline or '5-10 years',  # Use actual user timeline
+        'risk_profile': risk_profile.lower() if risk_profile else 'moderate',  # Use actual user risk tolerance
+        'experience': 'beginner'  # Tutorial mode always treats as beginner for explanation style
+    }
+    
+    # Map goal values to consistent format
+    goal_mapping = {
+        'First Investment': 'first_investment',
+        'Retirement Planning': 'retirement_planning', 
+        'Wealth Building': 'wealth_building',
+        'Passive Income': 'passive_income',
+        'Education': 'education'
+    }
+    
+    if profile['primary_goal'] in goal_mapping:
+        profile['primary_goal'] = goal_mapping[profile['primary_goal']]
+    
+    # Map risk profile to consistent format
+    risk_mapping = {
+        'Conservative': 'conservative',
+        'Moderate': 'moderate', 
+        'Aggressive': 'aggressive'
+    }
+    
+    if profile['risk_profile'].title() in risk_mapping:
+        profile['risk_profile'] = risk_mapping[profile['risk_profile'].title()]
+    
+    return profile
+
+
 # Main Execution
 # =====================================
 
