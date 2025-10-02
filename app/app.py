@@ -276,10 +276,10 @@ def show_login_signup():
                     st.session_state.user_email = "demo@investforge.io"
                     st.rerun()
             
-            # Forgot password link
-            if st.button("Forgot Password?", type="secondary", use_container_width=True):
-                st.session_state.show_forgot_password = True
-                st.rerun()
+        # Forgot password link (moved outside tab to avoid form context issues)
+        if st.button("Forgot Password?", type="secondary", use_container_width=True):
+            st.session_state.show_forgot_password = True
+            st.rerun()
 
         with tab2:
             with st.form("signup_form"):
@@ -429,6 +429,18 @@ def get_investment_amount_options(age_range: str) -> list:
 
 def show_onboarding():
     """Display streamlined single-screen onboarding flow."""
+    
+    # Check if we should show results instead of form
+    if st.session_state.get('show_onboarding_results', False) and st.session_state.get('onboarding_data'):
+        # Process and show results
+        data = st.session_state.onboarding_data
+        process_streamlined_onboarding(data['age_range'], data['timeline'], 
+                                     data['emergency_fund'], data['initial_investment'], 
+                                     data['loss_reaction'])
+        # Clear the flags
+        st.session_state.show_onboarding_results = False
+        st.session_state.onboarding_data = None
+        return
     
     # Custom CSS for improved styling
     st.markdown("""
@@ -586,7 +598,15 @@ def show_onboarding():
             
             if submitted:
                 # Process the streamlined onboarding
-                process_streamlined_onboarding(age_range, timeline, emergency_fund, initial_investment, loss_reaction)
+                st.session_state.onboarding_data = {
+                    'age_range': age_range,
+                    'timeline': timeline,
+                    'emergency_fund': emergency_fund,
+                    'initial_investment': initial_investment,
+                    'loss_reaction': loss_reaction
+                }
+                st.session_state.show_onboarding_results = True
+                st.rerun()
 
 
 def process_streamlined_onboarding(age_range: str, timeline: str, emergency_fund: str, initial_investment: str, loss_reaction: str):
@@ -624,8 +644,10 @@ def process_streamlined_onboarding(age_range: str, timeline: str, emergency_fund
     st.session_state.user_preferences = user_preferences
     st.session_state.show_onboarding = False
     
-    # Show results and save preferences
+    # Save preferences
     save_user_preferences_to_api(user_preferences)
+    
+    # Show results inline (outside form context now)
     show_onboarding_results(risk_profile, primary_goal)
 
 

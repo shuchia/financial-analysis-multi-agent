@@ -147,6 +147,16 @@ functions:
             method: POST
           authorizer: auth
             
+  # User preferences endpoints
+  user_preferences:
+    handler: handlers/users.handle_preferences
+    events:
+      - alb:
+          priority: 21
+          conditions:
+            path: ${self:custom.albBasePath}/users/preferences
+            method: POST
+            
   # Payment endpoints
   create_checkout_session:
     handler: handlers/payments.create_checkout_session

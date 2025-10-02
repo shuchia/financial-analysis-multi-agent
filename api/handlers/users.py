@@ -262,3 +262,47 @@ def get_user_plan_limits(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     except Exception as e:
         print(f"Get plan limits error: {str(e)}")
         return server_error_response("Internal server error")
+
+
+def handle_preferences(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Handle user preferences operations (get/save)."""
+    try:
+        # Parse request body
+        body = json.loads(event.get('body', '{}'))
+        email = body.get('email')
+        action = body.get('action', 'get')
+        
+        if not email:
+            return validation_error_response({"email": "Email is required"})
+        
+        # Get user by email
+        user_data = db.get_user_by_email(email)
+        if not user_data:
+            return not_found_response("User not found")
+        
+        user_id = user_data.get('user_id')
+        
+        if action == 'get':
+            # Get preferences
+            preferences = user_data.get('preferences', {})
+            return success_response(
+                data=preferences,
+                message="Preferences retrieved successfully"
+            )
+        else:
+            # Save preferences
+            preferences = body.get('preferences', {})
+            
+            # Update user preferences in database
+            db.update_user(user_id, {'preferences': preferences})
+            
+            return success_response(
+                data=preferences,
+                message="Preferences saved successfully"
+            )
+            
+    except json.JSONDecodeError:
+        return validation_error_response({"body": "Invalid JSON"})
+    except Exception as e:
+        print(f"Handle preferences error: {str(e)}")
+        return server_error_response("Internal server error")
