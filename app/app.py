@@ -382,43 +382,484 @@ def show_forgot_password():
 # Onboarding Flow
 # =====================================
 
+def get_investment_amount_options(age_range: str) -> list:
+    """Return investment amount options based on age range (as proxy for income/capacity)."""
+    
+    # Base amounts that work for most people
+    base_options = [
+        "$25 - Just getting started",
+        "$50 - Small but steady start", 
+        "$100 - Beginner friendly",
+        "$250 - Ready to learn",
+        "$500 - Serious about investing",
+        "$1,000 - Confident starter",
+        "$2,500 - Experienced beginner",
+        "$5,000 - Substantial commitment",
+        "$10,000+ - Experienced investor"
+    ]
+    
+    # Adjust options based on age (younger = smaller suggested amounts)
+    if "16-20" in age_range or "21-25" in age_range:
+        # College/early career - emphasize smaller amounts
+        return [
+            "$10 - Perfect for learning",
+            "$25 - Great starting point",
+            "$50 - Building habits", 
+            "$100 - Solid foundation",
+            "$250 - Getting serious",
+            "$500 - Strong commitment",
+            "$1,000 - Advanced starter",
+            "$2,500+ - High confidence"
+        ]
+    elif "26-30" in age_range or "31-35" in age_range:
+        # Career building - moderate amounts
+        return base_options
+    else:
+        # 36+ Established career - can handle larger amounts
+        return [
+            "$100 - Conservative start",
+            "$250 - Testing the waters",
+            "$500 - Steady approach", 
+            "$1,000 - Confident beginner",
+            "$2,500 - Serious investor",
+            "$5,000 - Substantial start",
+            "$10,000 - Major commitment",
+            "$25,000+ - Experienced investor"
+        ]
+
 def show_onboarding():
-    """Display enhanced onboarding flow for young investors."""
-    # Initialize session state for onboarding if not exists
-    if 'onboarding_step' not in st.session_state:
-        st.session_state.onboarding_step = 1
-    if 'onboarding_data' not in st.session_state:
-        st.session_state.onboarding_data = {}
+    """Display streamlined single-screen onboarding flow."""
+    
+    # Custom CSS for improved styling
+    st.markdown("""
+    <style>
+        /* Import Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        /* Onboarding specific styles */
+        .onboarding-container {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin: 1rem 0;
+        }
+        
+        .onboarding-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .question-group {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border: 2px solid #e9ecef;
+        }
+        
+        .question-group:hover {
+            border-color: #FF6B35;
+            transition: border-color 0.3s ease;
+        }
+        
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Use InvestForge logo from landing page
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        # Logo and branding
+        try:
+            st.image("app/static/images/investforge-logo.png", width=120)
+        except:
+            st.markdown("⚒️", unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class='onboarding-header'>
+            <h1 style='font-size: 2.5rem; background: linear-gradient(135deg, #FF6B35, #004E89);
+                       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                       font-weight: 700; margin-bottom: 0.5rem;'>
+                Welcome to InvestForge! 🚀
+            </h1>
+            <p style='color: #7F8C8D; font-size: 1.1rem; font-weight: 500;'>
+                Let's personalize your experience in 30 seconds
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Single form with all questions
+        with st.form("streamlined_onboarding"):
+            # Question 1: Age + Timeline Combo
+            st.markdown("### 🎯 I'm investing for...")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                age_range = st.selectbox(
+                    "My age:",
+                    [
+                        "16-20 (High school/Early college)",
+                        "21-25 (College/Entry career)", 
+                        "26-30 (Early career)",
+                        "31-35 (Establishing career)",
+                        "36+ (Experienced)"
+                    ],
+                    index=2,  # Default to 26-30
+                    help="Your age helps determine your investment capacity"
+                )
+            
+            with col2:
+                timeline = st.selectbox(
+                    "Investment timeline:",
+                    [
+                        "Learning only (no timeline)",
+                        "1-2 years",
+                        "3-5 years", 
+                        "5-10 years",
+                        "10+ years"
+                    ],
+                    index=2,  # Default to 3-5 years
+                    help="How long before you need this money"
+                )
+            
+            st.markdown("---")
+            
+            # Question 2: Emergency Fund Status  
+            st.markdown("### 💰 My emergency savings situation:")
+            emergency_fund = st.radio(
+                "Current emergency fund status:",
+                [
+                    "I'm set (3+ months expenses saved)",
+                    "Getting there (1-3 months saved)", 
+                    "Just starting (less than 1 month)",
+                    "I'll build it while investing"
+                ],
+                index=1,  # Default to "Getting there"
+                help="Emergency funds help you avoid panic selling during market downturns"
+            )
+            
+            st.markdown("---")
+            
+            # Question 3: Initial Investment Amount
+            st.markdown("### 💰 How much can you comfortably invest to start?")
+            
+            # Get dynamic amount options based on age (as proxy for income)
+            amount_options = get_investment_amount_options(age_range)
+            
+            initial_investment = st.selectbox(
+                "Choose your starting investment amount:",
+                amount_options,
+                index=1,  # Default to second option
+                help="💡 Remember: only invest what you can afford to lose. You can always add more later!"
+            )
+            
+            st.markdown("---")
+            
+            # Question 4: Loss Reaction Test
+            st.markdown("### 📉 If I invested $100 and it dropped to $70 next month, I'd probably:")
+            loss_reaction = st.radio(
+                "My likely reaction:",
+                [
+                    "Buy more - it's on sale!",
+                    "Hold and wait it out", 
+                    "Worry but hold on",
+                    "Sell before I lose more"
+                ],
+                index=1,  # Default to "Hold and wait it out"
+                help="This helps us understand your natural response to market volatility"
+            )
+            
+            st.markdown("---")
+            
+            # Submit button
+            submitted = st.form_submit_button(
+                "🚀 Start Investing", 
+                type="primary", 
+                use_container_width=True
+            )
+            
+            if submitted:
+                # Process the streamlined onboarding
+                process_streamlined_onboarding(age_range, timeline, emergency_fund, initial_investment, loss_reaction)
 
-    # Header with motivational messaging
-    st.markdown("## 🚀 Welcome to Your Investment Journey!")
-    st.markdown("*Building wealth starts with a single step. Let's make it count!*")
-    
-    # Progress indicator
-    total_steps = 5
-    progress_value = (st.session_state.onboarding_step - 1) / (total_steps - 1)
-    st.progress(progress_value)
-    st.caption(f"Step {st.session_state.onboarding_step} of {total_steps}")
 
-    # Step 1: Demographics & Welcome
-    if st.session_state.onboarding_step == 1:
-        show_demographics_step()
+def process_streamlined_onboarding(age_range: str, timeline: str, emergency_fund: str, initial_investment: str, loss_reaction: str):
+    """Process the streamlined 4-question onboarding and calculate risk profile."""
     
-    # Step 2: Scenario-Based Risk Assessment
-    elif st.session_state.onboarding_step == 2:
-        show_risk_scenarios_step()
+    # Calculate risk tolerance using the optimized algorithm
+    risk_profile = calculate_risk_tolerance_fast(age_range, timeline, emergency_fund, loss_reaction)
     
-    # Step 3: Investment Amount with Context
-    elif st.session_state.onboarding_step == 3:
-        show_investment_amount_step()
+    # Infer primary goal based on age and timeline
+    primary_goal = infer_investment_goal(age_range, timeline)
     
-    # Step 4: First Analysis Tutorial
-    elif st.session_state.onboarding_step == 4:
-        show_first_analysis_tutorial()
+    # Create comprehensive user preferences structure
+    user_preferences = {
+        'demographics': {
+            'age_range': age_range,
+            'income_range': infer_income_range(age_range),  # Infer based on age
+        },
+        'investment_goals': {
+            'primary_goal': primary_goal,
+            'timeline': timeline,
+            'initial_investment_amount': initial_investment,
+        },
+        'risk_assessment': {
+            'risk_profile': risk_profile['category'].lower(),
+            'risk_score': risk_profile['score'],
+            'emergency_fund_status': emergency_fund,
+            'loss_reaction': loss_reaction,
+        },
+        'onboarding_complete': True,
+        'onboarding_date': datetime.now().isoformat(),
+        'onboarding_version': 'streamlined_v1'
+    }
     
-    # Step 5: Action Plan & Achievement Setup
-    elif st.session_state.onboarding_step == 5:
-        show_action_plan_step()
+    # Store in session state
+    st.session_state.user_preferences = user_preferences
+    st.session_state.show_onboarding = False
+    
+    # Show results and save preferences
+    save_user_preferences_to_api(user_preferences)
+    show_onboarding_results(risk_profile, primary_goal)
+
+
+def calculate_risk_tolerance_fast(age_range: str, timeline: str, emergency_fund: str, loss_reaction: str) -> dict:
+    """
+    Fast risk tolerance calculation from just 3 questions.
+    Returns risk score 0-1 and category with investment recommendations.
+    """
+    
+    # Base score from age + timeline matrix (highest predictive power)
+    age_timeline_matrix = {
+        # (age_range, timeline): base_score
+        ("16-20 (High school/Early college)", "Learning only (no timeline)"): 0.4,
+        ("16-20 (High school/Early college)", "1-2 years"): 0.3,
+        ("16-20 (High school/Early college)", "3-5 years"): 0.7,
+        ("16-20 (High school/Early college)", "5-10 years"): 0.8,
+        ("16-20 (High school/Early college)", "10+ years"): 0.9,
+        
+        ("21-25 (College/Entry career)", "Learning only (no timeline)"): 0.35,
+        ("21-25 (College/Entry career)", "1-2 years"): 0.3,
+        ("21-25 (College/Entry career)", "3-5 years"): 0.65,
+        ("21-25 (College/Entry career)", "5-10 years"): 0.75,
+        ("21-25 (College/Entry career)", "10+ years"): 0.85,
+        
+        ("26-30 (Early career)", "Learning only (no timeline)"): 0.3,
+        ("26-30 (Early career)", "1-2 years"): 0.25,
+        ("26-30 (Early career)", "3-5 years"): 0.55,
+        ("26-30 (Early career)", "5-10 years"): 0.65,
+        ("26-30 (Early career)", "10+ years"): 0.75,
+        
+        ("31-35 (Establishing career)", "Learning only (no timeline)"): 0.25,
+        ("31-35 (Establishing career)", "1-2 years"): 0.2,
+        ("31-35 (Establishing career)", "3-5 years"): 0.45,
+        ("31-35 (Establishing career)", "5-10 years"): 0.55,
+        ("31-35 (Establishing career)", "10+ years"): 0.65,
+        
+        ("36+ (Experienced)", "Learning only (no timeline)"): 0.2,
+        ("36+ (Experienced)", "1-2 years"): 0.15,
+        ("36+ (Experienced)", "3-5 years"): 0.35,
+        ("36+ (Experienced)", "5-10 years"): 0.45,
+        ("36+ (Experienced)", "10+ years"): 0.55,
+    }
+    
+    base_score = age_timeline_matrix.get((age_range, timeline), 0.5)
+    
+    # Emergency fund modifier (multiplicative - most important)
+    emergency_modifiers = {
+        "I'm set (3+ months expenses saved)": 1.0,      # No change - they're prepared
+        "Getting there (1-3 months saved)": 0.85,      # Reduce risk by 15%
+        "Just starting (less than 1 month)": 0.65,     # Reduce risk by 35%
+        "I'll build it while investing": 0.5           # Reduce risk by 50%
+    }
+    
+    # Loss reaction modifier (additive - behavioral indicator)
+    loss_modifiers = {
+        "Buy more - it's on sale!": +0.2,       # Increase risk tolerance
+        "Hold and wait it out": 0,              # Neutral - as expected
+        "Worry but hold on": -0.1,              # Slightly decrease
+        "Sell before I lose more": -0.3         # Significantly decrease
+    }
+    
+    # Calculate final score
+    final_score = base_score * emergency_modifiers[emergency_fund]
+    final_score += loss_modifiers[loss_reaction]
+    
+    # Bound between 0.1 and 0.9
+    final_score = max(0.1, min(0.9, final_score))
+    
+    # Categorize and provide recommendations
+    if final_score < 0.33:
+        return {
+            "score": final_score,
+            "category": "Conservative",
+            "allocation": {"stocks": 30, "bonds": 50, "cash": 20},
+            "products": ["VOO (S&P 500)", "BND (Bond Index)", "High-yield savings"],
+            "description": "Focus on capital preservation with modest growth"
+        }
+    elif final_score < 0.67:
+        return {
+            "score": final_score,
+            "category": "Moderate", 
+            "allocation": {"stocks": 60, "bonds": 30, "cash": 10},
+            "products": ["VTI (Total Market)", "VOO (S&P 500)", "Some individual stocks"],
+            "description": "Balanced approach between growth and stability"
+        }
+    else:
+        return {
+            "score": final_score,
+            "category": "Growth-Focused",
+            "allocation": {"stocks": 80, "bonds": 15, "cash": 5},
+            "products": ["QQQ (Tech Growth)", "VTI (Total Market)", "Individual growth stocks"],
+            "description": "Aggressive growth with higher volatility tolerance"
+        }
+
+
+def infer_investment_goal(age_range: str, timeline: str) -> str:
+    """
+    Infer investment goal based on age and timeline combination.
+    Uses demographic patterns to predict most likely goal.
+    """
+    
+    # Goal inference matrix
+    goal_matrix = {
+        # Learning and short-term goals
+        ("16-20 (High school/Early college)", "Learning only (no timeline)"): "first_investment",
+        ("16-20 (High school/Early college)", "1-2 years"): "first_investment",
+        ("21-25 (College/Entry career)", "Learning only (no timeline)"): "first_investment", 
+        ("21-25 (College/Entry career)", "1-2 years"): "emergency_fund",
+        ("26-30 (Early career)", "Learning only (no timeline)"): "wealth_building",
+        ("26-30 (Early career)", "1-2 years"): "emergency_fund",
+        ("31-35 (Establishing career)", "Learning only (no timeline)"): "wealth_building",
+        ("31-35 (Establishing career)", "1-2 years"): "major_purchase",
+        ("36+ (Experienced)", "Learning only (no timeline)"): "wealth_building",
+        ("36+ (Experienced)", "1-2 years"): "major_purchase",
+        
+        # Medium-term goals  
+        ("16-20 (High school/Early college)", "3-5 years"): "wealth_building",
+        ("16-20 (High school/Early college)", "5-10 years"): "wealth_building",
+        ("21-25 (College/Entry career)", "3-5 years"): "wealth_building", 
+        ("21-25 (College/Entry career)", "5-10 years"): "wealth_building",
+        ("26-30 (Early career)", "3-5 years"): "wealth_building",
+        ("26-30 (Early career)", "5-10 years"): "wealth_building",
+        ("31-35 (Establishing career)", "3-5 years"): "wealth_building",
+        ("31-35 (Establishing career)", "5-10 years"): "retirement_planning",
+        ("36+ (Experienced)", "3-5 years"): "wealth_building",
+        ("36+ (Experienced)", "5-10 years"): "retirement_planning",
+        
+        # Long-term goals
+        ("16-20 (High school/Early college)", "10+ years"): "retirement_planning",
+        ("21-25 (College/Entry career)", "10+ years"): "retirement_planning", 
+        ("26-30 (Early career)", "10+ years"): "retirement_planning",
+        ("31-35 (Establishing career)", "10+ years"): "retirement_planning",
+        ("36+ (Experienced)", "10+ years"): "retirement_planning",
+    }
+    
+    return goal_matrix.get((age_range, timeline), "wealth_building")
+
+
+def infer_income_range(age_range: str) -> str:
+    """Infer likely income range based on age (demographic averages)."""
+    income_map = {
+        "16-20 (High school/Early college)": "10k-25k",    # Part-time, allowance
+        "21-25 (College/Entry career)": "25k-50k",         # Entry level, college
+        "26-30 (Early career)": "50k-75k",                 # Early career
+        "31-35 (Establishing career)": "75k-100k",         # Established career  
+        "36+ (Experienced)": "100k+"                       # Peak earning years
+    }
+    return income_map.get(age_range, "50k-75k")
+
+
+def show_onboarding_results(risk_profile: dict, primary_goal: str):
+    """Display onboarding results with personalized recommendations."""
+    
+    st.success("🎉 **Profile Complete!** Your personalized investment plan is ready.")
+    
+    # Display risk profile results
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.markdown(f"### 🎯 Your Investment Profile: **{risk_profile['category']}**")
+        st.markdown(f"*{risk_profile['description']}*")
+        
+        st.markdown("#### 📊 Recommended Asset Allocation")
+        allocation = risk_profile['allocation']
+        
+        # Create a simple text-based visualization
+        st.markdown(f"""
+        - **Stocks**: {allocation['stocks']}% 📈
+        - **Bonds**: {allocation['bonds']}% 🏦  
+        - **Cash**: {allocation['cash']}% 💵
+        """)
+        
+        st.markdown("#### 🛒 Recommended Products")
+        for product in risk_profile['products']:
+            st.markdown(f"• {product}")
+    
+    with col2:
+        st.markdown("#### 🎯 Inferred Goal")
+        goal_display = {
+            "emergency_fund": "🚨 Emergency Fund",
+            "first_investment": "🌱 First Investment", 
+            "major_purchase": "🏠 Major Purchase",
+            "wealth_building": "💰 Wealth Building",
+            "retirement_planning": "🏖️ Retirement Planning"
+        }
+        st.info(goal_display.get(primary_goal, "💰 Wealth Building"))
+        
+        st.markdown("#### 📈 Risk Score")
+        st.metric("Risk Tolerance", f"{risk_profile['score']:.2f}")
+    
+    # Continue button
+    if st.button("🚀 Start Analyzing Stocks", type="primary", use_container_width=True):
+        st.session_state.show_onboarding = False
+        st.rerun()
+
+
+def save_user_preferences_to_api(preferences: dict):
+    """Save user preferences to the API backend."""
+    try:
+        user_email = st.session_state.get('user_email')
+        if user_email and not st.session_state.get('demo_mode', False):
+            # Use the existing API client to save preferences
+            success = api_client.save_user_preferences(user_email, preferences)
+            if success:
+                # Extract user ID for tracking (if available)
+                user_id = st.session_state.get('user_data', {}).get('id', user_email)
+                
+                # Map new comprehensive structure to legacy tracking format for backward compatibility
+                legacy_format = {
+                    'experience': map_age_to_experience(preferences.get('demographics', {}).get('age_range', '')),
+                    'risk_tolerance': preferences.get('risk_assessment', {}).get('risk_profile', ''),
+                    'initial_amount': preferences.get('investment_goals', {}).get('initial_investment_amount', ''),
+                    'timestamp': preferences.get('onboarding_date', datetime.now().isoformat())
+                }
+                
+                # Track preferences event for analytics
+                api_client.track_preferences_event(user_id, legacy_format)
+                api_client.increment_feature_usage(user_id, 'onboarding_completed', 1)
+        else:
+            st.warning("⚠️ Preferences saved locally but couldn't sync to server")
+    except Exception as e:
+        # Silent fail - preferences are still saved in session state
+        pass
+
+
+def map_age_to_experience(age_range: str) -> str:
+    """Map age range to experience level for backward compatibility."""
+    if "16-20" in age_range or "21-25" in age_range:
+        return "beginner"
+    elif "26-30" in age_range or "31-35" in age_range:
+        return "intermediate"
+    else:
+        return "experienced"
+
 
 def show_demographics_step():
     """Step 1: Collect demographics and primary investment goals."""
