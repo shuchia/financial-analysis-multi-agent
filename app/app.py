@@ -109,6 +109,8 @@ def init_session_state():
         st.session_state.show_portfolio_generation = False
     if 'show_portfolio_results' not in st.session_state:
         st.session_state.show_portfolio_results = False
+    if 'debug_mode' not in st.session_state:
+        st.session_state.debug_mode = True  # Temporarily enable debug mode
 
 
 # =====================================
@@ -3192,16 +3194,26 @@ if __name__ == "__main__":
     process_url_params()
 
     # Show appropriate interface
+    # Debug: Show current state
+    if st.session_state.get('debug_mode', False):
+        st.sidebar.write("Debug State:")
+        st.sidebar.write(f"authenticated: {st.session_state.get('authenticated', False)}")
+        st.sidebar.write(f"show_onboarding: {st.session_state.get('show_onboarding', False)}")
+        st.sidebar.write(f"onboarding_complete: {st.session_state.get('onboarding_complete', False)}")
+        st.sidebar.write(f"show_portfolio_generation: {st.session_state.get('show_portfolio_generation', False)}")
+        st.sidebar.write(f"show_portfolio_results: {st.session_state.get('show_portfolio_results', False)}")
+    
     if not st.session_state.authenticated:
         if st.session_state.get('show_forgot_password'):
             show_forgot_password()
         else:
             show_login_signup()
-    elif st.session_state.get('show_onboarding') and not st.session_state.onboarding_complete:
-        show_onboarding()
-    elif st.session_state.get('show_portfolio_generation'):
+    elif st.session_state.get('show_portfolio_generation', False):
+        # Check portfolio generation FIRST before onboarding
         generate_portfolio_with_progress()
-    elif st.session_state.get('show_portfolio_results'):
+    elif st.session_state.get('show_portfolio_results', False):
         show_portfolio_results()
+    elif st.session_state.get('show_onboarding', False):
+        show_onboarding()
     else:
         main_app()
