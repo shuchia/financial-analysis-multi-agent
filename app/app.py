@@ -105,6 +105,8 @@ def init_session_state():
         st.session_state.monthly_usage = {}
     if 'analysis_history' not in st.session_state:
         st.session_state.analysis_history = []
+    if 'show_onboarding' not in st.session_state:
+        st.session_state.show_onboarding = False
     if 'show_portfolio_generation' not in st.session_state:
         st.session_state.show_portfolio_generation = False
     if 'show_portfolio_results' not in st.session_state:
