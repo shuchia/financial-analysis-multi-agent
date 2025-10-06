@@ -646,7 +646,7 @@ def process_streamlined_onboarding(age_range: str, timeline: str, emergency_fund
     
     # Store in session state
     st.session_state.user_preferences = user_preferences
-    st.session_state.show_onboarding = False
+    # Don't clear show_onboarding here - let the button handlers do it
     
     # Save preferences
     save_user_preferences_to_api(user_preferences)
@@ -848,6 +848,7 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
     with col1:
         if st.button("💼 Generate My Portfolio", type="primary", use_container_width=True):
             st.session_state.show_portfolio_generation = True
+            st.session_state.show_onboarding = False
             st.rerun()
     
     with col2:
