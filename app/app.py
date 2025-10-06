@@ -646,6 +646,7 @@ def process_streamlined_onboarding(age_range: str, timeline: str, emergency_fund
     
     # Store in session state
     st.session_state.user_preferences = user_preferences
+    st.session_state.onboarding_complete = True
     # Don't clear show_onboarding here - let the button handlers do it
     
     # Save preferences
