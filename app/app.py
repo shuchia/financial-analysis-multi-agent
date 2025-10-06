@@ -105,6 +105,10 @@ def init_session_state():
         st.session_state.monthly_usage = {}
     if 'analysis_history' not in st.session_state:
         st.session_state.analysis_history = []
+    if 'show_portfolio_generation' not in st.session_state:
+        st.session_state.show_portfolio_generation = False
+    if 'show_portfolio_results' not in st.session_state:
+        st.session_state.show_portfolio_results = False
 
 
 # =====================================
@@ -838,10 +842,187 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
         st.markdown("#### 📈 Risk Score")
         st.metric("Risk Tolerance", f"{risk_profile['score']:.2f}")
     
-    # Continue button
-    if st.button("🚀 Start Analyzing Stocks", type="primary", use_container_width=True):
-        st.session_state.show_onboarding = False
+    # Action buttons
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("💼 Generate My Portfolio", type="primary", use_container_width=True):
+            st.session_state.show_portfolio_generation = True
+            st.rerun()
+    
+    with col2:
+        if st.button("📊 Analyze Stocks", type="secondary", use_container_width=True):
+            st.session_state.show_onboarding = False
+            st.rerun()
+
+
+def generate_portfolio_with_progress():
+    """Generate portfolio with progress tracking."""
+    import portfoliocrew
+    from datetime import datetime
+    
+    st.markdown("## 💼 Generating Your Personalized Portfolio")
+    
+    # Initialize progress tracking
+    progress_placeholder = st.empty()
+    status_placeholder = st.empty()
+    progress_bar = st.progress(0)
+    
+    try:
+        # Get user preferences
+        user_preferences = st.session_state.get('user_preferences', {})
+        
+        # Extract investment amount from preferences
+        investment_amount_str = user_preferences.get('investment_goals', {}).get('initial_investment_amount', '$100 - Beginner friendly')
+        # Extract numeric amount (e.g., "$1,000 - Confident starter" -> 1000)
+        amount_match = investment_amount_str.split(' ')[0].replace('$', '').replace(',', '').replace('+', '')
+        try:
+            investment_amount = float(amount_match)
+        except:
+            investment_amount = 100.0  # Default fallback
+        
+        # Prepare user profile for crew
+        user_profile = {
+            'age_range': user_preferences.get('demographics', {}).get('age_range', '26-30'),
+            'income_range': user_preferences.get('demographics', {}).get('income_range', '50k-75k'),
+            'primary_goal': user_preferences.get('investment_goals', {}).get('primary_goal', 'wealth_building'),
+            'timeline': user_preferences.get('investment_goals', {}).get('timeline', '5-10 years'),
+            'risk_profile': user_preferences.get('risk_assessment', {}).get('risk_profile', 'moderate'),
+            'risk_score': user_preferences.get('risk_assessment', {}).get('risk_score', 0.5),
+            'emergency_fund_status': user_preferences.get('risk_assessment', {}).get('emergency_fund_status', 'Getting there'),
+            'loss_reaction': user_preferences.get('risk_assessment', {}).get('loss_reaction', 'Hold and wait it out')
+        }
+        
+        # Progress updates
+        status_placeholder.write("🔄 Initializing portfolio analysis...")
+        progress_bar.progress(10)
+        
+        # Initialize crew
+        status_placeholder.write("🤖 Setting up AI portfolio strategist...")
+        progress_bar.progress(20)
+        
+        # Create portfolio
+        status_placeholder.write(f"💡 Analyzing best investments for ${investment_amount:,.0f}...")
+        progress_bar.progress(40)
+        
+        # Call portfolio crew
+        result = portfoliocrew.create_portfolio(
+            amount=f"${investment_amount:,.0f}",
+            user_profile=user_profile
+        )
+        
+        progress_bar.progress(80)
+        status_placeholder.write("✨ Finalizing your personalized portfolio...")
+        
+        # Store results in session state
+        st.session_state.portfolio_result = {
+            'result': result,
+            'investment_amount': investment_amount,
+            'generated_at': datetime.now().isoformat(),
+            'user_profile': user_profile
+        }
+        
+        progress_bar.progress(100)
+        
+        # Show success animation
+        st.balloons()
+        status_placeholder.success("✅ Portfolio generated successfully!")
+        
+        # Clear progress indicators after a moment
+        import time
+        time.sleep(1)
+        progress_placeholder.empty()
+        status_placeholder.empty()
+        progress_bar.empty()
+        
+        # Navigate to portfolio results
+        st.session_state.show_portfolio_generation = False
+        st.session_state.show_portfolio_results = True
         st.rerun()
+        
+    except Exception as e:
+        status_placeholder.error(f"❌ Error generating portfolio: {str(e)}")
+        st.error("Failed to generate portfolio. Please try again.")
+        if st.button("🔄 Retry", type="primary"):
+            st.session_state.show_portfolio_generation = False
+            st.rerun()
+
+
+def show_portfolio_results():
+    """Display the generated portfolio results."""
+    if 'portfolio_result' not in st.session_state:
+        st.error("No portfolio results found. Please generate a portfolio first.")
+        if st.button("🔄 Generate Portfolio", type="primary"):
+            st.session_state.show_portfolio_results = False
+            st.session_state.show_portfolio_generation = True
+            st.rerun()
+        return
+    
+    portfolio_data = st.session_state.portfolio_result
+    result = portfolio_data['result']
+    investment_amount = portfolio_data['investment_amount']
+    
+    # Header
+    st.markdown("## 🎯 Your Personalized Investment Portfolio")
+    st.success(f"Portfolio optimized for ${investment_amount:,.0f} investment")
+    
+    # Display portfolio summary
+    if hasattr(result, 'tasks_output') and result.tasks_output:
+        # Parse the result - assuming it's in the first task output
+        portfolio_output = result.tasks_output[0].raw if result.tasks_output else "No portfolio data"
+        
+        # Display the portfolio
+        st.markdown("### 📊 Recommended Portfolio Allocation")
+        st.markdown(portfolio_output)
+        
+        # Action buttons
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("💾 Save Portfolio", type="primary", use_container_width=True):
+                # Save portfolio to user preferences
+                if 'user_preferences' in st.session_state:
+                    st.session_state.user_preferences['portfolio'] = {
+                        'allocation': portfolio_output,
+                        'amount': investment_amount,
+                        'generated_at': portfolio_data['generated_at']
+                    }
+                    save_user_preferences_to_api(st.session_state.user_preferences)
+                st.success("✅ Portfolio saved to your profile!")
+        
+        with col2:
+            if st.button("🔄 Regenerate", type="secondary", use_container_width=True):
+                st.session_state.show_portfolio_results = False
+                st.session_state.show_portfolio_generation = True
+                st.rerun()
+        
+        with col3:
+            if st.button("📈 Start Investing", type="primary", use_container_width=True):
+                st.session_state.show_portfolio_results = False
+                st.session_state.show_onboarding = False
+                st.rerun()
+    else:
+        st.error("Unable to parse portfolio results.")
+        if st.button("🔄 Try Again", type="primary"):
+            st.session_state.show_portfolio_results = False
+            st.session_state.show_portfolio_generation = True
+            st.rerun()
+    
+    # Additional information
+    with st.expander("ℹ️ Understanding Your Portfolio"):
+        st.markdown("""
+        **Why this portfolio?**
+        - Matched to your risk tolerance and timeline
+        - Diversified across asset classes
+        - Optimized for your investment amount
+        - Suitable for your experience level
+        
+        **Next Steps:**
+        1. Open a brokerage account if you haven't already
+        2. Start with the recommended allocation
+        3. Review and rebalance quarterly
+        4. Continue learning about each investment
+        """)
 
 
 def save_user_preferences_to_api(preferences: dict):
@@ -3016,5 +3197,9 @@ if __name__ == "__main__":
             show_login_signup()
     elif st.session_state.get('show_onboarding') and not st.session_state.onboarding_complete:
         show_onboarding()
+    elif st.session_state.get('show_portfolio_generation'):
+        generate_portfolio_with_progress()
+    elif st.session_state.get('show_portfolio_results'):
+        show_portfolio_results()
     else:
         main_app()
