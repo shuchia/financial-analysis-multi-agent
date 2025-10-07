@@ -111,6 +111,8 @@ def init_session_state():
         st.session_state.show_portfolio_generation = False
     if 'show_portfolio_results' not in st.session_state:
         st.session_state.show_portfolio_results = False
+    if 'show_main_app' not in st.session_state:
+        st.session_state.show_main_app = False
     if 'debug_mode' not in st.session_state:
         st.session_state.debug_mode = True  # Re-enable debug mode to troubleshoot navigation
 
@@ -813,6 +815,11 @@ def infer_income_range(age_range: str) -> str:
 def show_onboarding_results(risk_profile: dict, primary_goal: str):
     """Display onboarding results with personalized recommendations."""
     
+    # Check for portfolio generation button click FIRST before displaying anything
+    # This ensures the button handler executes before page content changes
+    if st.session_state.get('debug_mode', False):
+        st.sidebar.write("🔍 Checking for portfolio generation button click...")
+    
     st.success("🎉 **Profile Complete!** Your personalized investment plan is ready.")
     
     # Display risk profile results
@@ -881,7 +888,26 @@ def generate_portfolio_with_progress():
     import portfoliocrew
     from datetime import datetime
     
-    st.markdown("## 💼 Generating Your Personalized Portfolio")
+    # Add navigation menu
+    st.markdown("## 🎯 InvestForge Portfolio Creator")
+    
+    # Simple navigation
+    col1, col2, col3 = st.columns([1, 1, 2])
+    with col1:
+        if st.button("📊 Analyze Stocks", use_container_width=True):
+            # Switch to stock analysis mode
+            st.session_state.show_portfolio_generation = False
+            st.session_state.show_main_app = True
+            st.rerun()
+    with col2:
+        if st.button("🔄 Regenerate Portfolio", use_container_width=True):
+            # Clear any existing results to force regeneration
+            if 'portfolio_result' in st.session_state:
+                del st.session_state.portfolio_result
+            st.rerun()
+    
+    st.markdown("---")
+    st.markdown("### 💼 Your Personalized Portfolio")
     
     # Initialize progress tracking
     progress_placeholder = st.empty()
@@ -3218,6 +3244,7 @@ if __name__ == "__main__":
         st.sidebar.write(f"onboarding_complete: {st.session_state.get('onboarding_complete', False)}")
         st.sidebar.write(f"show_portfolio_generation: {st.session_state.get('show_portfolio_generation', False)}")
         st.sidebar.write(f"show_portfolio_results: {st.session_state.get('show_portfolio_results', False)}")
+        st.sidebar.write(f"show_main_app: {st.session_state.get('show_main_app', False)}")
         st.sidebar.write("---")
         st.sidebar.write("🔄 Navigation Flow:")
         if not st.session_state.get('authenticated', False):
@@ -3228,8 +3255,10 @@ if __name__ == "__main__":
             st.sidebar.write("➡️ WILL GO TO: Portfolio Results")
         elif st.session_state.get('show_onboarding', False):
             st.sidebar.write("➡️ WILL GO TO: Onboarding")
+        elif st.session_state.get('show_main_app', False):
+            st.sidebar.write("➡️ WILL GO TO: Stock Analysis")
         else:
-            st.sidebar.write("➡️ WILL GO TO: Main App (Stock Analysis) ⚠️")
+            st.sidebar.write("➡️ WILL GO TO: Portfolio Generation (Default) ✅")
     
     if not st.session_state.authenticated:
         if st.session_state.get('show_forgot_password'):
@@ -3243,5 +3272,9 @@ if __name__ == "__main__":
         show_portfolio_results()
     elif st.session_state.get('show_onboarding', False):
         show_onboarding()
-    else:
+    elif st.session_state.get('show_main_app', False):
+        # User explicitly wants stock analysis
         main_app()
+    else:
+        # Default to portfolio generation instead of stock analysis
+        generate_portfolio_with_progress()
