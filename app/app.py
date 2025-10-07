@@ -651,7 +651,6 @@ def process_streamlined_onboarding(age_range: str, timeline: str, emergency_fund
     # Store in session state
     st.session_state.user_preferences = user_preferences
     st.session_state.onboarding_complete = True
-    # Don't clear show_onboarding here - let the button handlers do it
     
     # Save preferences
     save_user_preferences_to_api(user_preferences)
@@ -853,9 +852,19 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
     # Center the button
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("💼 Generate My Portfolio", type="primary", use_container_width=True):
+        if st.button("💼 Generate My Portfolio", type="primary", use_container_width=True, key="generate_portfolio_btn"):
+            # Debug: Log button click
+            if st.session_state.get('debug_mode', False):
+                st.sidebar.write("🔥 BUTTON CLICKED: Generate My Portfolio")
+            
             st.session_state.show_portfolio_generation = True
             st.session_state.show_onboarding = False
+            
+            # Debug: Show new state
+            if st.session_state.get('debug_mode', False):
+                st.sidebar.write(f"🔄 Set show_portfolio_generation = {st.session_state.show_portfolio_generation}")
+                st.sidebar.write(f"🔄 Set show_onboarding = {st.session_state.show_onboarding}")
+            
             st.rerun()
     
     # Add informational text about stock analysis
