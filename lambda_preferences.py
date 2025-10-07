@@ -130,9 +130,18 @@ def lambda_handler(event, context):
             
             # Update user preferences
             try:
-                # Convert risk_score to Decimal if it exists
-                if 'risk_score' in preferences:
-                    preferences['risk_score'] = Decimal(str(preferences['risk_score']))
+                # Convert all float values to Decimal recursively
+                def convert_floats_to_decimal(obj):
+                    if isinstance(obj, float):
+                        return Decimal(str(obj))
+                    elif isinstance(obj, dict):
+                        return {k: convert_floats_to_decimal(v) for k, v in obj.items()}
+                    elif isinstance(obj, list):
+                        return [convert_floats_to_decimal(v) for v in obj]
+                    return obj
+                
+                # Convert all floats in preferences to Decimal
+                preferences = convert_floats_to_decimal(preferences)
                 
                 table.update_item(
                     Key={'email': email},
