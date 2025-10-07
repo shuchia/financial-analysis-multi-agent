@@ -657,6 +657,10 @@ def process_streamlined_onboarding(age_range: str, timeline: str, emergency_fund
     
     # Show results inline (outside form context now)
     show_onboarding_results(risk_profile, primary_goal)
+    
+    # Clear onboarding flag so user can proceed with portfolio generation
+    # This ensures the debug state shows show_onboarding: False
+    st.session_state.show_onboarding = False
 
 
 def calculate_risk_tolerance_fast(age_range: str, timeline: str, emergency_fund: str, loss_reaction: str) -> dict:
