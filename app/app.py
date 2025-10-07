@@ -112,7 +112,7 @@ def init_session_state():
     if 'show_portfolio_results' not in st.session_state:
         st.session_state.show_portfolio_results = False
     if 'debug_mode' not in st.session_state:
-        st.session_state.debug_mode = True  # Temporarily enable debug mode
+        st.session_state.debug_mode = True  # Re-enable debug mode to troubleshoot navigation
 
 
 # =====================================
@@ -847,19 +847,20 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
         st.markdown("#### 📈 Risk Score")
         st.metric("Risk Tolerance", f"{risk_profile['score']:.2f}")
     
-    # Action buttons
-    col1, col2 = st.columns(2)
+    # Action button - simplified to only portfolio generation
+    st.markdown("---")
     
-    with col1:
+    # Center the button
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
         if st.button("💼 Generate My Portfolio", type="primary", use_container_width=True):
             st.session_state.show_portfolio_generation = True
             st.session_state.show_onboarding = False
             st.rerun()
     
-    with col2:
-        if st.button("📊 Analyze Stocks", type="secondary", use_container_width=True):
-            st.session_state.show_onboarding = False
-            st.rerun()
+    # Add informational text about stock analysis
+    st.markdown("---")
+    st.info("💡 **Tip**: After generating your portfolio, you can analyze individual stocks in the main application interface!")
 
 
 def generate_portfolio_with_progress():
@@ -3198,12 +3199,24 @@ if __name__ == "__main__":
     # Show appropriate interface
     # Debug: Show current state
     if st.session_state.get('debug_mode', False):
-        st.sidebar.write("Debug State:")
+        st.sidebar.write("🐛 Debug State:")
         st.sidebar.write(f"authenticated: {st.session_state.get('authenticated', False)}")
         st.sidebar.write(f"show_onboarding: {st.session_state.get('show_onboarding', False)}")
         st.sidebar.write(f"onboarding_complete: {st.session_state.get('onboarding_complete', False)}")
         st.sidebar.write(f"show_portfolio_generation: {st.session_state.get('show_portfolio_generation', False)}")
         st.sidebar.write(f"show_portfolio_results: {st.session_state.get('show_portfolio_results', False)}")
+        st.sidebar.write("---")
+        st.sidebar.write("🔄 Navigation Flow:")
+        if not st.session_state.get('authenticated', False):
+            st.sidebar.write("➡️ WILL GO TO: Authentication")
+        elif st.session_state.get('show_portfolio_generation', False):
+            st.sidebar.write("➡️ WILL GO TO: Portfolio Generation ✅")
+        elif st.session_state.get('show_portfolio_results', False):
+            st.sidebar.write("➡️ WILL GO TO: Portfolio Results")
+        elif st.session_state.get('show_onboarding', False):
+            st.sidebar.write("➡️ WILL GO TO: Onboarding")
+        else:
+            st.sidebar.write("➡️ WILL GO TO: Main App (Stock Analysis) ⚠️")
     
     if not st.session_state.authenticated:
         if st.session_state.get('show_forgot_password'):
