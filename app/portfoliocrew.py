@@ -61,13 +61,26 @@ def create_crew(amount,user_profile=None):
         description=f""" Create a diversified portfolio for this investor: PROFILE: - Age: {user_profile.get('age_range', '25-35')} - Risk tolerance: 
                              {user_profile.get('risk_profile', 'moderate')} {user_profile.get('risk_score')}- Amount: ${amount} - Timeline: {user_profile.get('timeline', '5-10 years')} - 
                              Goal: {user_profile.get('primary_goal', 'wealth_building')} - Emergency Fund: {user_profile.get('emergency_fund_status', 'Getting there')} 
-                             REQUIREMENTS: 1. Suggest {get_position_count(amount)} positions maximum 2. Use primarily ETFs for diversification 
-                             3. Can include 1-2 individual stocks if amount > $500 4. Match risk tolerance exactly SPECIFY FOR EACH HOLDING: - 
-                             Ticker symbol - Allocation percentage - Category (Core/Satellite/Stock) - Investment thesis (one line) RISK GUIDELINES: - 
-                             Conservative: 60% bonds, 40% stocks - Moderate: 30% bonds, 70% stocks - Aggressive: 10% bonds, 90% stocks 
-                             OUTPUT FORMAT: Return a portfolio with specific tickers and allocations. Example: VOO: 40% - 
-                             Core US equity exposure VXUS: 20% - International diversification BND: 30% - Fixed income stability QQQ: 
-                             10% - Tech growth exposure Expected Annual Return: X-Y% Portfolio Risk: Low/Medium/High """,
+                             REQUIREMENTS:
+            1. Suggest specific ETFs/stocks with exact percentages
+            2. Match the risk tolerance (don't exceed it)
+            3. For ${amount}, suggest {get_position_count(amount)} positions maximum
+            4. Include dollar amounts for each holding
+            5. Provide brief reasoning for each pick
+            6. Use only ETFs and stocks available for fractional shares
+            7. Minimize fees - prioritize low-cost index funds
+            8. Consider tax efficiency if applicable
+            9. Ensure proper diversification for the amount
+            
+            OUTPUT FORMAT:
+            Provide a clear portfolio with:
+            - Each holding (ticker symbol)
+            - Percentage allocation
+            - Dollar amount
+            - One-line reasoning
+            - Expected annual return range
+            - Key risks to watch
+            """,
         agent=strategist,
         expected_output="Portfolio with specific tickers and percentages",
         max_retries=1
