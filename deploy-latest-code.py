@@ -44,8 +44,15 @@ def create_runtime_update_task():
         cd /tmp
         git clone https://github.com/shuchia/financial-analysis-multi-agent.git repo
         
-        # Copy latest app code
-        cp -r /tmp/repo/app/* /app/
+        # Copy latest app code from root directory
+        cp /tmp/repo/app.py /app/
+        cp -r /tmp/repo/components /app/
+        cp -r /tmp/repo/tools /app/
+        cp -r /tmp/repo/utils /app/
+        cp -r /tmp/repo/auth /app/
+        cp -r /tmp/repo/static /app/
+        cp /tmp/repo/crew.py /app/
+        cp /tmp/repo/requirements.txt /app/
         
         # Ensure requirements are up to date
         pip install -r /app/requirements.txt

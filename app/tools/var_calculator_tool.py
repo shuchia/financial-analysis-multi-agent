@@ -1,3 +1,11 @@
+import numpy as np
+import pandas as pd
+import yfinance as yf
+from scipy.stats import norm
+from datetime import datetime, timedelta
+from typing import List, Dict
+from langchain.tools import BaseTool
+
 class VaRCalculatorTool(BaseTool):
     name: str = "var_calculator"
     description: str = """

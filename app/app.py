@@ -19,6 +19,13 @@ from components.analysis import render_analysis_page
 from components.fractional_analysis import render_fractional_analysis_page
 import traceback
 import logging
+from utils.portfolio_parser import parse_portfolio_output, validate_portfolio_data
+from tools.risk_assessment_tool import risk_assessment
+from tools.portfolio_optimization_tool import PortfolioOptimizationTool
+from quant_crew import QuantitativeAnalysisCrew
+import asyncio
+import threading
+import portfoliocrew
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -885,8 +892,6 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
 
 def generate_portfolio_with_progress():
     """Generate portfolio with progress tracking."""
-    import portfoliocrew
-    from datetime import datetime
     
     # Add navigation menu
     st.markdown("## 🎯 InvestForge Portfolio Creator")
@@ -995,7 +1000,7 @@ def generate_portfolio_with_progress():
 
 
 def show_portfolio_results():
-    """Display the generated portfolio results."""
+    """Display the generated portfolio results with progressive enhancements."""
     if 'portfolio_result' not in st.session_state:
         st.error("No portfolio results found. Please generate a portfolio first.")
         if st.button("🔄 Generate Portfolio", type="primary"):
@@ -1007,19 +1012,59 @@ def show_portfolio_results():
     portfolio_data = st.session_state.portfolio_result
     result = portfolio_data['result']
     investment_amount = portfolio_data['investment_amount']
+    user_profile = portfolio_data.get('user_profile', {})
     
     # Header
     st.markdown("## 🎯 Your Personalized Investment Portfolio")
     st.success(f"Portfolio optimized for ${investment_amount:,.0f} investment")
     
-    # Display portfolio summary
-    if hasattr(result, 'tasks_output') and result.tasks_output:
-        # Parse the result - assuming it's in the first task output
-        portfolio_output = result.tasks_output[0].raw if result.tasks_output else "No portfolio data"
-        
-        # Display the portfolio
-        st.markdown("### 📊 Recommended Portfolio Allocation")
-        st.markdown(portfolio_output)
+    # Create tabs for different views
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Portfolio", "📈 Risk Analysis", "⚡ Optimization", "📚 Education"])
+    
+    with tab1:
+        # Display portfolio summary
+        if hasattr(result, 'tasks_output') and result.tasks_output:
+            # Parse the result
+            portfolio_output = result.tasks_output[0].raw if result.tasks_output else "No portfolio data"
+            
+            # Parse portfolio to structured data
+            structured_portfolio = parse_portfolio_output(result, investment_amount)
+            st.session_state.structured_portfolio = structured_portfolio
+            
+            # Display the portfolio
+            st.markdown("### 📊 Recommended Portfolio Allocation")
+            
+            # Show structured view if parsing succeeded
+            if structured_portfolio['tickers']:
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    # Portfolio allocation table
+                    portfolio_df = pd.DataFrame({
+                        'Ticker': structured_portfolio['tickers'],
+                        'Allocation %': [f"{w*100:.1f}%" for w in structured_portfolio['weights']],
+                        'Amount': [f"${a:,.2f}" for a in structured_portfolio['amounts']]
+                    })
+                    st.dataframe(portfolio_df, use_container_width=True)
+                
+                with col2:
+                    # Pie chart
+                    fig = go.Figure(data=[go.Pie(
+                        labels=structured_portfolio['tickers'],
+                        values=[w*100 for w in structured_portfolio['weights']],
+                        hole=.3
+                    )])
+                    fig.update_layout(
+                        title="Allocation",
+                        showlegend=True,
+                        height=300,
+                        margin=dict(l=0, r=0, t=30, b=0)
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+            
+            # Show raw output as well
+            with st.expander("📝 Detailed Recommendations"):
+                st.markdown(portfolio_output)
         
         # Action buttons
         col1, col2, col3 = st.columns(3)
@@ -1043,32 +1088,294 @@ def show_portfolio_results():
                 st.rerun()
         
         with col3:
-            if st.button("📈 Start Investing", type="primary", use_container_width=True):
+            if st.button("📈 Analyze Stocks", type="primary", use_container_width=True):
                 st.session_state.show_portfolio_results = False
-                st.session_state.show_onboarding = False
+                st.session_state.show_main_app = True
                 st.rerun()
-    else:
+    
+    with tab2:
+        st.markdown("### 📈 Portfolio Risk Analysis")
+        
+        if 'structured_portfolio' in st.session_state and st.session_state.structured_portfolio['tickers']:
+            structured = st.session_state.structured_portfolio
+            
+            # Check if risk analysis already completed
+            if 'portfolio_risk_analysis' not in st.session_state:
+                with st.spinner("🔄 Analyzing portfolio risk with AI crew..."):
+                    try:
+                        # Initialize quantitative analysis crew
+                        quant_crew = QuantitativeAnalysisCrew()
+                        
+                        # Run risk analysis using AI crew
+                        risk_results = quant_crew.analyze_portfolio_risk(
+                            tickers=structured['tickers'],
+                            weights=structured['weights'],
+                            user_profile=user_profile,
+                            investment_amount=investment_amount
+                        )
+                        
+                        st.session_state.portfolio_risk_analysis = risk_results
+                        st.session_state.portfolio_risk_crew_result = risk_results
+                    except Exception as e:
+                        st.error(f"AI Risk analysis failed: {str(e)}")
+                        # Fallback to direct tool call
+                        try:
+                            portfolio_for_risk = {
+                                'tickers': structured['tickers'],
+                                'weights': structured['weights'],
+                                'user_profile': user_profile,
+                                'total_amount': investment_amount
+                            }
+                            risk_results = risk_assessment(portfolio=portfolio_for_risk, period="1y")
+                            st.session_state.portfolio_risk_analysis = risk_results
+                        except Exception as e2:
+                            st.error(f"Fallback risk analysis also failed: {str(e2)}")
+                            risk_results = None
+            else:
+                risk_results = st.session_state.portfolio_risk_analysis
+            
+            # Display AI crew risk analysis if available
+            if 'portfolio_risk_crew_result' in st.session_state:
+                st.markdown("#### 🤖 AI Risk Analyst Assessment")
+                crew_risk_result = st.session_state.portfolio_risk_crew_result
+                
+                if hasattr(crew_risk_result, 'tasks_output') and crew_risk_result.tasks_output:
+                    crew_output = crew_risk_result.tasks_output[0].raw
+                    st.markdown("##### Quantitative Risk Analysis Report:")
+                    st.markdown(crew_output)
+                else:
+                    st.markdown(str(crew_risk_result))
+                
+                st.markdown("---")
+            
+            if risk_results:
+                st.markdown("#### 📊 Risk Metrics Dashboard")
+                # Display risk metrics
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric(
+                        "Portfolio Beta",
+                        f"{risk_results['portfolio_metrics']['beta']:.2f}",
+                        help="Market sensitivity (1.0 = market average)"
+                    )
+                
+                with col2:
+                    st.metric(
+                        "Sharpe Ratio",
+                        f"{risk_results['portfolio_metrics']['sharpe_ratio']:.2f}",
+                        help="Risk-adjusted returns"
+                    )
+                
+                with col3:
+                    st.metric(
+                        "Annual Volatility",
+                        f"{risk_results['portfolio_metrics']['annual_volatility']:.1f}%",
+                        help="Expected portfolio fluctuation"
+                    )
+                
+                with col4:
+                    st.metric(
+                        "Max Drawdown",
+                        f"{risk_results['portfolio_metrics']['max_drawdown']:.1f}%",
+                        help="Worst historical decline"
+                    )
+                
+                # Risk alignment
+                st.markdown("#### Risk Profile Alignment")
+                alignment = risk_results['risk_alignment']
+                if alignment['portfolio_risk_level'] == 'aligned':
+                    st.success(f"✅ Portfolio matches your {alignment['user_profile']} risk profile")
+                else:
+                    st.warning(f"⚠️ Portfolio is {alignment['portfolio_risk_level'].replace('_', ' ')}")
+                    if alignment['adjustment_recommendation']:
+                        st.info(f"💡 {alignment['adjustment_recommendation']}")
+                
+                # Value at Risk
+                with st.expander("💰 Value at Risk (VaR)"):
+                    st.markdown(f"**95% VaR**: {risk_results['value_at_risk_interpretation']['95%']}")
+                    st.markdown(f"**99% VaR**: {risk_results['value_at_risk_interpretation']['99%']}")
+                
+                # Risk contributions
+                with st.expander("📊 Individual Stock Risk Contributions"):
+                    risk_df = pd.DataFrame([
+                        {
+                            'Ticker': ticker,
+                            'Weight': f"{data['weight']*100:.1f}%",
+                            'Volatility': f"{data['volatility']*100:.1f}%",
+                            'Risk Contribution': f"{data['percentage_of_risk']:.1f}%"
+                        }
+                        for ticker, data in risk_results['risk_contributions'].items()
+                    ])
+                    st.dataframe(risk_df, use_container_width=True)
+        else:
+            st.info("📊 Risk analysis will appear here once portfolio is parsed")
+    
+    with tab3:
+        st.markdown("### ⚡ Portfolio Optimization")
+        
+        if 'structured_portfolio' in st.session_state and st.session_state.structured_portfolio['tickers']:
+            structured = st.session_state.structured_portfolio
+            
+            if st.button("🔧 Run Portfolio Optimization", type="primary"):
+                with st.spinner("🔄 Optimizing portfolio allocation with AI crew..."):
+                    try:
+                        # Initialize quantitative analysis crew
+                        quant_crew = QuantitativeAnalysisCrew()
+                        
+                        # Run optimization using AI crew
+                        opt_crew_result = quant_crew.optimize_portfolio(
+                            tickers=structured['tickers'],
+                            current_weights=structured['weights'],
+                            user_profile=user_profile,
+                            investment_amount=investment_amount
+                        )
+                        
+                        st.session_state.portfolio_optimization_crew = opt_crew_result
+                        st.success("✅ AI Portfolio optimization completed!")
+                        
+                    except Exception as e:
+                        st.error(f"AI Optimization failed: {str(e)}")
+                        st.info("🔄 Falling back to direct optimization tool...")
+                        
+                        # Fallback to direct tool call only if AI crew fails
+                        try:
+                            opt_tool = PortfolioOptimizationTool()
+                            opt_results = opt_tool._run(
+                                tickers=structured['tickers'],
+                                current_weights=structured['weights'],
+                                optimization_mode="enhance",
+                                user_risk_profile=user_profile,
+                                investment_amount=investment_amount
+                            )
+                            st.session_state.portfolio_optimization = opt_results
+                            st.success("✅ Fallback optimization completed!")
+                        except Exception as e2:
+                            st.error(f"Fallback optimization also failed: {str(e2)}")
+            
+            # Display optimization results (prioritize AI crew results)
+            if 'portfolio_optimization_crew' in st.session_state:
+                st.markdown("#### 🤖 AI Crew Optimization Results")
+                opt_crew_result = st.session_state.portfolio_optimization_crew
+                
+                # Extract and display AI crew results
+                if hasattr(opt_crew_result, 'tasks_output') and opt_crew_result.tasks_output:
+                    crew_output = opt_crew_result.tasks_output[0].raw
+                    st.markdown("##### AI Portfolio Manager Recommendations:")
+                    st.markdown(crew_output)
+                else:
+                    st.markdown(str(opt_crew_result))
+                
+                st.markdown("---")
+            
+            if 'portfolio_optimization' in st.session_state:
+                opt_results = st.session_state.portfolio_optimization
+                st.markdown("#### 📊 Quantitative Optimization Metrics")
+                
+                # Show comparison
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("#### Current Portfolio")
+                    current = opt_results['current_portfolio']
+                    st.metric("Expected Return", f"{current['expected_return']*100:.1f}%")
+                    st.metric("Volatility", f"{current['volatility']*100:.1f}%")
+                    st.metric("Sharpe Ratio", f"{current['sharpe_ratio']:.2f}")
+                
+                with col2:
+                    st.markdown("#### Optimized Portfolio")
+                    enhanced = opt_results['enhanced_portfolio']
+                    improvements = opt_results['improvements']
+                    
+                    st.metric(
+                        "Expected Return", 
+                        f"{enhanced['expected_return']*100:.1f}%",
+                        f"{improvements['return_increase']:.1f}%"
+                    )
+                    st.metric(
+                        "Volatility", 
+                        f"{enhanced['volatility']*100:.1f}%",
+                        f"{improvements['risk_change']:.1f}%"
+                    )
+                    st.metric(
+                        "Sharpe Ratio", 
+                        f"{enhanced['sharpe_ratio']:.2f}",
+                        f"{improvements['sharpe_increase']:.2f}"
+                    )
+                
+                # Show recommendations
+                if opt_results.get('recommendations'):
+                    st.markdown("#### 💡 Optimization Recommendations")
+                    for rec in opt_results['recommendations']:
+                        if rec['action'] == 'increase':
+                            st.success(f"📈 **{rec['ticker']}**: Increase by {rec['percentage_change']:.1f}% (${rec['dollar_amount']:,.2f})")
+                        else:
+                            st.warning(f"📉 **{rec['ticker']}**: Decrease by {abs(rec['percentage_change']):.1f}% (${rec['dollar_amount']:,.2f})")
+                
+                if st.button("✅ Apply Optimized Allocation", type="primary"):
+                    st.info("🚧 Feature coming soon: Apply optimization and rebalance portfolio")
+        else:
+            st.info("⚡ Optimization options will appear here once portfolio is analyzed")
+    
+    with tab4:
+        st.markdown("### 📚 Investment Education")
+        
+        # Check if education content exists
+        if hasattr(result, 'tasks_output') and len(result.tasks_output) > 1:
+            education_content = result.tasks_output[1].raw if len(result.tasks_output) > 1 else None
+            if education_content:
+                st.markdown(education_content)
+        else:
+            # Trigger education generation if not available
+            if st.button("📖 Generate Educational Content", type="primary"):
+                with st.spinner("🎓 Creating personalized education content..."):
+                    try:
+                        if 'structured_portfolio' in st.session_state:
+                            # Get the portfolio output for education
+                            portfolio_output = result.tasks_output[0].raw if hasattr(result, 'tasks_output') and result.tasks_output else "Portfolio data"
+                            
+                            education_result = portfoliocrew.create_education(
+                                amount=f"${investment_amount:,.0f}",
+                                portfolio=portfolio_output,
+                                user_profile=user_profile
+                            )
+                            if education_result:
+                                # Extract content from the education result
+                                if isinstance(education_result, dict) and 'content' in education_result:
+                                    education_content = education_result['content']
+                                    if hasattr(education_content, 'tasks_output') and education_content.tasks_output:
+                                        st.markdown(education_content.tasks_output[0].raw)
+                                    else:
+                                        st.markdown(str(education_content))
+                                else:
+                                    st.markdown(str(education_result))
+                                st.session_state.education_content = education_result
+                    except Exception as e:
+                        st.error(f"Failed to generate education content: {str(e)}")
+        
+        # Generic education content
+        with st.expander("ℹ️ Understanding Your Portfolio"):
+            st.markdown("""
+            **Why this portfolio?**
+            - Matched to your risk tolerance and timeline
+            - Diversified across asset classes
+            - Optimized for your investment amount
+            - Suitable for your experience level
+            
+            **Next Steps:**
+            1. Open a brokerage account if you haven't already
+            2. Start with the recommended allocation
+            3. Review and rebalance quarterly
+            4. Continue learning about each investment
+            """)
+    
+    # Handle case where portfolio results can't be parsed (moved outside tab structure)
+    if not (hasattr(result, 'tasks_output') and result.tasks_output):
         st.error("Unable to parse portfolio results.")
         if st.button("🔄 Try Again", type="primary"):
             st.session_state.show_portfolio_results = False
             st.session_state.show_portfolio_generation = True
             st.rerun()
-    
-    # Additional information
-    with st.expander("ℹ️ Understanding Your Portfolio"):
-        st.markdown("""
-        **Why this portfolio?**
-        - Matched to your risk tolerance and timeline
-        - Diversified across asset classes
-        - Optimized for your investment amount
-        - Suitable for your experience level
-        
-        **Next Steps:**
-        1. Open a brokerage account if you haven't already
-        2. Start with the recommended allocation
-        3. Review and rebalance quarterly
-        4. Continue learning about each investment
-        """)
 
 
 def save_user_preferences_to_api(preferences: dict):

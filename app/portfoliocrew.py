@@ -9,7 +9,7 @@ import logging
 import time
 import os
 
-def create_crew(amount,user_profile=None):
+def create_initial_crew(amount,user_profile=None):
     # Configure logging
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
@@ -54,8 +54,9 @@ def create_crew(amount,user_profile=None):
     )
     logger.debug("Portfolio Strategist agent created")
 
+
     # Define Tasks
-    logger.info("Creating tasks...")
+    logger.info("Creating portfolio task...")
     
     portfolio_task = Task(
         description=f""" Create a diversified portfolio for this investor: PROFILE: - Age: {user_profile.get('age_range', '25-35')} - Risk tolerance: 
@@ -86,36 +87,81 @@ def create_crew(amount,user_profile=None):
         max_retries=1
     )
     logger.debug("Portfolio task created")
-
-    market_analysis_task = Task(
-        description=f"""
-                    Analyze current market conditions for portfolio creation:
-                    1. Overall market sentiment (bullish/bearish/neutral)
-                    2. Sector performance and trends
-                    3. Interest rate environment
-                    4. Volatility levels (VIX)
-                    5. Recommended asset classes for current conditions
-
-                    Consider this is for a {user_profile.get('age_range', '25-35')} year old 
-                    with {user_profile.get('risk_profile', 'moderate')} risk tolerance.
-                    """,
-        agent=strategist,
-        expected_output="Market analysis with conditions affecting portfolio allocation",
-        max_retries=1
-    )
-    logger.debug("Market analysis task created")
-
-
     # Create Crew
     logger.info("Creating portfolio crew with sequential process...")
-    crew = Crew(
-        agents=[ strategist],
+    portfolio_creation_crew = Crew(
+        agents=[strategist],
         tasks=[portfolio_task],
         process=Process.sequential
     )
     logger.info("Portfolio Crew created successfully")
 
-    return crew
+    return portfolio_creation_crew
+
+def create_education_crew(amount, portfolio,user_profile=None):
+
+    # Initialize AWS Bedrock LLM using CrewAI's LLM class
+    # In ECS Fargate, credentials are automatically obtained from the task role
+    llm = LLM(
+        model="anthropic.claude-3-haiku-20240307-v1:0",
+        region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
+    )
+    # Configure logging
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
+
+    logger.debug("AWS Bedrock LLM initialized successfully")
+
+    education_specialist = Agent(
+        role='Investment Educator',
+        goal='Educate beginner investors about their portfolios and investment concepts',
+        backstory="""You are a patient and knowledgeable investment educator who specializes
+                    in teaching beginners. You explain complex investment concepts in simple, relatable terms
+                    using everyday analogies. You never use jargon without explaining it first. You're
+                    enthusiastic about helping young people start their investment journey and always
+                    celebrate small victories. You provide actionable education tied to their specific
+                    portfolio.""",
+        tools=[],  # No tools needed, just explanation
+        llm=llm,
+        verbose=True
+    )
+    education_task = Task(description=f"""
+            Create educational content for this beginner investor:
+            
+            THEIR PORTFOLIO:
+            {portfolio}
+            
+            INVESTOR BACKGROUND:
+            - Age: {user_profile.get('age_range', '25-35')}
+            - Experience: Beginner
+            - Goal: {user_profile.get('primary_goal', 'wealth_building')}
+            
+            EDUCATIONAL CONTENT NEEDED:
+            1. Explain what each ETF is and why it's included
+            2. Describe how the portfolio works together
+            3. Explain key concepts (diversification, rebalancing, etc.)
+            4. Provide 3 important things to monitor
+            5. Suggest next learning steps
+            6. Include encouraging message about starting investing
+            
+            Use simple language and relatable analogies. Make it exciting!
+            Remember this might be their first investment ever.
+            """,
+            agent=education_specialist,
+            expected_output="Comprehensive educational guide tailored to the portfolio"
+                          )
+    logger.debug("Education task created")
+    # Create Crew
+    logger.info("Creating portfolio crew with sequential process...")
+    education_crew = Crew(
+        agents=[education_specialist],
+        tasks=[education_task],
+        process=Process.sequential
+    )
+    logger.info("Education Crew created successfully")
+
+    return education_crew
+
 
 def get_position_count(amount):
     # Convert amount string to number if needed
@@ -146,25 +192,25 @@ def create_portfolio(amount, user_profile=None):
     start_time = time.time()
     
     try:
-        crew = create_crew(amount, user_profile)
-        logger.info("Initiating crew kickoff...")
+        portfolio_creation_crew = create_initial_crew(amount, user_profile)
+        logger.info("Initiating initial crew kickoff...")
         
         # Track individual task progress
         logger.debug("=== CREW EXECUTION STARTED ===")
-        logger.debug(f"Total agents: {len(crew.agents)}")
-        logger.debug(f"Total tasks: {len(crew.tasks)}")
+        logger.debug(f"Total agents: {len(portfolio_creation_crew.agents)}")
+        logger.debug(f"Total tasks: {len(portfolio_creation_crew.tasks)}")
         
-        for i, task in enumerate(crew.tasks, 1):
-            logger.debug(f"Task {i}/{len(crew.tasks)}: {task.description[:100]}...")
+        for i, task in enumerate(portfolio_creation_crew.tasks, 1):
+            logger.debug(f"Task {i}/{len(portfolio_creation_crew.tasks)}: {task.description[:100]}...")
             logger.debug(f"Assigned to agent: {task.agent.role}")
         
         logger.info("Beginning sequential task execution...")
-        result = crew.kickoff()
+        result = portfolio_creation_crew.kickoff()
         
         end_time = time.time()
         execution_time = end_time - start_time
         logger.info(f"=== CREW EXECUTION COMPLETED ===")
-        logger.info(f"Analysis completed successfully in {execution_time:.2f} seconds")
+        logger.info(f"Initial portfolio completed successfully in {execution_time:.2f} seconds")
         logger.debug(f"Result type: {type(result)}")
         logger.debug(f"Result content: {result}")
         
@@ -176,10 +222,78 @@ def create_portfolio(amount, user_profile=None):
         if hasattr(result, 'tasks_output') and not result.tasks_output:
             logger.error("Result tasks_output is empty")
             raise ValueError("Invalid response from LLM call - None or empty")
-        
-        return result
+    except Exception as e:
+        logger.error(f"Error during analysis: {str(e)}")
+        logger.error(f"Analysis failed after {time.time() - start_time:.2f} seconds")
+        raise
+    return result
+
+def create_education(amount, portfolio, user_profile=None):
+    logger = logging.getLogger(__name__)
+    start_time = time.time()
+    try:
+        education_crew = create_education_crew(amount, portfolio,user_profile)
+        logger.info("Initiating education crew kickoff...")
+        # Track individual task progress
+        logger.debug("=== CREW EXECUTION STARTED ===")
+        logger.debug(f"Total agents: {len(education_crew.agents)}")
+        logger.debug(f"Total tasks: {len(education_crew.tasks)}")
+
+        for i, task in enumerate(education_crew.tasks, 1):
+            logger.debug(f"Task {i}/{len(education_crew.tasks)}: {task.description[:100]}...")
+            logger.debug(f"Assigned to agent: {task.agent.role}")
+
+        logger.info("Beginning sequential task execution...")
+        education_content = education_crew.kickoff()
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+        logger.info(f"=== CREW EXECUTION COMPLETED ===")
+        logger.info(f"Education specialist completed successfully in {execution_time:.2f} seconds")
+        logger.debug(f"Result type: {type(education_content)}")
+        logger.debug(f"Result content: {education_content}")
+
+        # Validate result is not None or empty
+        if education_content is None:
+            logger.error("Result is None")
+            raise ValueError("Invalid response from LLM call - None or empty")
+
+        if hasattr(education_content, 'tasks_output') and not education_content.tasks_output:
+            logger.error("Result tasks_output is empty")
+            raise ValueError("Invalid response from LLM call - None or empty")
         
     except Exception as e:
         logger.error(f"Error during analysis: {str(e)}")
         logger.error(f"Analysis failed after {time.time() - start_time:.2f} seconds")
         raise
+    return {
+            'content': education_content,
+            'key_concepts':extract_key_concepts(education_content),
+            'action_items': extract_action_items(education_content)
+        }
+
+def extract_key_concepts(education_content: str) -> list:
+    """
+    Extract key concepts from education content
+    """
+    concepts = []
+    keywords = ['diversification', 'rebalancing', 'risk', 'return', 'ETF', 'allocation']
+
+    for keyword in keywords:
+        if keyword.lower() in str(education_content).lower():
+            concepts.append(keyword)
+
+    return concepts
+
+
+def extract_action_items(education_content: str) -> list:
+    """
+    Extract action items from education content
+    """
+    # Simplified extraction
+    return [
+        "Review portfolio quarterly",
+        "Set up automatic investing",
+        "Continue learning about investing",
+        "Monitor but don't panic during volatility"
+    ]

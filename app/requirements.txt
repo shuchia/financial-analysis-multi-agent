@@ -29,3 +29,4 @@ pyjwt>=2.8.0
 # Redis and environment
 redis>=5.0.0
 python-dotenv>=1.0.0
+

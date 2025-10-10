@@ -3,15 +3,11 @@ Stock analysis component for InvestForge - integrates with existing crew system.
 """
 
 import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, List
+from datetime import datetime
+from typing import Dict, Any, List
 import time
-import json
 
 # Import existing crew systems
 import sys
@@ -255,7 +251,7 @@ def run_quantitative_analysis(symbol: str, options: Dict, user: Dict):
     """Run advanced quantitative analysis using the quant crew."""
     try:
         # Import the quantitative crew
-        from quant_crew import QuantitativeAnalysisCrew
+        from app.quant_crew import QuantitativeAnalysisCrew
         
         status_text = st.empty()
         progress_bar = st.progress(0)

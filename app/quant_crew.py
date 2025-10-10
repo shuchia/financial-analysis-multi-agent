@@ -1,0 +1,306 @@
+# =====================================
+# File: quant_crew.py
+# Enhanced crew configuration with quantitative analysis
+# =====================================
+
+from crewai import Agent, Crew, Task, LLM
+import os
+from tools.portfolio_optimization_tool import PortfolioOptimizationTool
+from tools.var_calculator_tool import VaRCalculatorTool
+# Import existing tools
+from tools.yf_tech_analysis_tool import yf_tech_analysis
+from tools.yf_fundamental_analysis_tool import yf_fundamental_analysis
+
+# For now, use only the tools we know work
+# TODO: Fix the other tools when needed
+MonteCarloSimulationTool = None
+BacktestingTool = None  
+PairsTradingTool = None
+OptionsPricingTool = None
+
+
+class QuantitativeAnalysisCrew:
+    """Enhanced crew with quantitative analysis capabilities."""
+
+    def __init__(self):
+        # Initialize LLM - use same setup as portfoliocrew.py
+        self.llm = LLM(
+            model="anthropic.claude-3-haiku-20240307-v1:0",
+            region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
+        )
+
+        # Initialize core tools (always available)
+        self.portfolio_opt_tool = PortfolioOptimizationTool()
+        self.var_tool = VaRCalculatorTool()
+        self.tech_tool = yf_tech_analysis
+        self.fundamental_tool = yf_fundamental_analysis
+        
+        # Initialize optional tools if available
+        self.monte_carlo_tool = MonteCarloSimulationTool() if MonteCarloSimulationTool else None
+        self.backtesting_tool = BacktestingTool() if BacktestingTool else None
+        self.pairs_trading_tool = PairsTradingTool() if PairsTradingTool else None
+        self.options_tool = OptionsPricingTool() if OptionsPricingTool else None
+
+    def create_agents(self):
+        """Create specialized agents for quantitative analysis."""
+
+        # Quantitative Portfolio Manager
+        self.portfolio_manager = Agent(
+            role="Quantitative Portfolio Manager",
+            goal="Optimize portfolio allocation using Modern Portfolio Theory and advanced risk metrics",
+            backstory="""You are a seasoned quantitative portfolio manager with expertise in 
+            MPT, risk management, and portfolio optimization. You use mathematical models 
+            to create efficient portfolios that maximize returns for given risk levels.""",
+            verbose=True,
+            allow_delegation=False,
+            tools=[self.portfolio_opt_tool, self.var_tool],
+            llm=self.llm
+        )
+
+        # Risk Analyst
+        risk_tools = [self.var_tool]
+        if self.monte_carlo_tool:
+            risk_tools.append(self.monte_carlo_tool)
+            
+        self.risk_analyst = Agent(
+            role="Quantitative Risk Analyst",
+            goal="Analyze and quantify portfolio risk using VaR, Monte Carlo, and stress testing",
+            backstory="""You are a risk management expert specializing in quantitative risk 
+            assessment. You use statistical methods and simulations to measure potential losses 
+            and help investors understand their risk exposure.""",
+            verbose=True,
+            allow_delegation=False,
+            tools=risk_tools,
+            llm=self.llm
+        )
+
+        # Algorithmic Trader (only create if tools are available)
+        algo_tools = [self.tech_tool]
+        if self.backtesting_tool:
+            algo_tools.append(self.backtesting_tool)
+        if self.pairs_trading_tool:
+            algo_tools.append(self.pairs_trading_tool)
+            
+        self.algo_trader = Agent(
+            role="Algorithmic Trading Strategist",
+            goal="Develop and backtest systematic trading strategies",
+            backstory="""You are an algorithmic trading expert who develops, tests, and 
+            validates trading strategies using historical data. You identify profitable 
+            trading opportunities using quantitative methods.""",
+            verbose=True,
+            allow_delegation=False,
+            tools=algo_tools,
+            llm=self.llm
+        )
+
+        # Derivatives Specialist (only create if options tool is available)
+        if self.options_tool:
+            self.derivatives_specialist = Agent(
+                role="Options and Derivatives Analyst",
+                goal="Analyze options strategies and calculate fair values using pricing models",
+                backstory="""You are a derivatives expert specializing in options pricing, 
+                Greeks analysis, and hedging strategies. You help investors understand and 
+                utilize options for both speculation and risk management.""",
+                verbose=True,
+                allow_delegation=False,
+                tools=[self.options_tool],
+                llm=self.llm
+            )
+        else:
+            self.derivatives_specialist = None
+
+        # Return only available agents
+        agents = [self.portfolio_manager, self.risk_analyst, self.algo_trader]
+        if self.derivatives_specialist:
+            agents.append(self.derivatives_specialist)
+        return agents
+
+    def create_tasks(self, user_input):
+        """Create tasks based on user input."""
+
+        tasks = []
+
+        # Parse user input to determine task type
+        input_lower = user_input.lower()
+
+        # Portfolio Optimization Task
+        if "portfolio" in input_lower or "optimize" in input_lower:
+            tasks.append(Task(
+                description=f"""Analyze and optimize portfolio allocation for: {user_input}
+                1. Calculate efficient frontier
+                2. Find maximum Sharpe ratio portfolio
+                3. Determine minimum variance portfolio
+                4. Provide allocation recommendations
+                5. Include correlation analysis""",
+                agent=self.portfolio_manager,
+                expected_output="Detailed portfolio optimization report with weights and metrics"
+            ))
+
+        # Risk Analysis Task
+        if "risk" in input_lower or "var" in input_lower:
+            tasks.append(Task(
+                description=f"""Perform comprehensive risk analysis for: {user_input}
+                1. Calculate VaR at multiple confidence levels
+                2. Run Monte Carlo simulation for risk assessment
+                3. Calculate CVaR (Expected Shortfall)
+                4. Analyze downside risk metrics
+                5. Provide risk mitigation recommendations""",
+                agent=self.risk_analyst,
+                expected_output="Complete risk assessment report with VaR, CVaR, and simulations"
+            ))
+
+        # Backtesting Task
+        if "backtest" in input_lower or "strategy" in input_lower:
+            tasks.append(Task(
+                description=f"""Backtest trading strategies for: {user_input}
+                1. Test moving average crossover strategy
+                2. Evaluate RSI-based strategy
+                3. Compare with buy-and-hold
+                4. Calculate Sharpe ratio and maximum drawdown
+                5. Provide strategy recommendations""",
+                agent=self.algo_trader,
+                expected_output="Backtesting results with performance metrics and trade history"
+            ))
+
+        # Pairs Trading Task
+        if "pairs" in input_lower or "arbitrage" in input_lower:
+            tasks.append(Task(
+                description=f"""Identify pairs trading opportunities for: {user_input}
+                1. Find cointegrated pairs
+                2. Calculate spread statistics
+                3. Identify current trading signals
+                4. Analyze correlation patterns
+                5. Provide entry/exit recommendations""",
+                agent=self.algo_trader,
+                expected_output="Pairs trading analysis with identified opportunities"
+            ))
+
+        # Options Analysis Task
+        if "option" in input_lower or "calls" in input_lower or "puts" in input_lower:
+            tasks.append(Task(
+                description=f"""Analyze options strategies for: {user_input}
+                1. Calculate theoretical option prices
+                2. Compute all Greeks (Delta, Gamma, Theta, Vega, Rho)
+                3. Analyze different strike prices and expirations
+                4. Evaluate risk/reward profiles
+                5. Suggest optimal strategies""",
+                agent=self.derivatives_specialist,
+                expected_output="Options analysis with pricing, Greeks, and strategy recommendations"
+            ))
+
+        # Default comprehensive analysis if no specific task detected
+        if not tasks:
+            tasks.append(Task(
+                description=f"""Perform comprehensive quantitative analysis for: {user_input}
+                1. Technical and fundamental analysis
+                2. Risk assessment
+                3. Portfolio optimization suggestions
+                4. Trading strategy evaluation""",
+                agent=self.portfolio_manager,  # Use portfolio_manager as default
+                expected_output="Complete market analysis with actionable insights"
+            ))
+
+        return tasks
+
+    def analyze(self, user_input):
+        """Run the quantitative analysis crew."""
+
+        # Create agents and tasks
+        agents = self.create_agents()
+        tasks = self.create_tasks(user_input)
+
+        # Create and run crew
+        crew = Crew(
+            agents=agents,
+            tasks=tasks,
+            verbose=True
+        )
+
+        result = crew.kickoff()
+        return result
+
+    def optimize_portfolio(self, tickers, current_weights=None, user_profile=None, investment_amount=None):
+        """Specific function for portfolio optimization using quant crew."""
+        
+        # Create portfolio manager agent
+        self.create_agents()
+        
+        # Create specific task for portfolio optimization
+        optimization_task = Task(
+            description=f"""Optimize the given portfolio allocation:
+            
+            PORTFOLIO DATA:
+            - Tickers: {tickers}
+            - Current Weights: {current_weights if current_weights else 'Equal weight'}
+            - Investment Amount: ${investment_amount:,.0f if investment_amount else 10000}
+            - User Risk Profile: {user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'}
+            
+            OPTIMIZATION REQUIREMENTS:
+            1. Use the portfolio optimization tool to calculate optimal weights
+            2. Consider the user's risk tolerance and constraints
+            3. Provide before/after comparison if current weights provided
+            4. Include expected return, volatility, and Sharpe ratio
+            5. Suggest specific allocation changes with reasoning
+            
+            OUTPUT FORMAT:
+            - Optimized weights for each ticker
+            - Expected portfolio metrics (return, volatility, Sharpe)
+            - Comparison with current allocation (if applicable)
+            - Specific recommendations for improvements
+            """,
+            agent=self.portfolio_manager,
+            expected_output="Portfolio optimization results with specific weights and metrics"
+        )
+        
+        # Run optimization
+        crew = Crew(
+            agents=[self.portfolio_manager],
+            tasks=[optimization_task],
+            verbose=True
+        )
+        
+        return crew.kickoff()
+    
+    def analyze_portfolio_risk(self, tickers, weights=None, user_profile=None, investment_amount=None):
+        """Specific function for portfolio risk analysis using quant crew."""
+        
+        # Create risk analyst agent
+        self.create_agents()
+        
+        # Create specific task for risk analysis
+        risk_task = Task(
+            description=f"""Perform comprehensive risk analysis on the portfolio:
+            
+            PORTFOLIO DATA:
+            - Tickers: {tickers}
+            - Weights: {weights if weights else 'Equal weight'}
+            - Investment Amount: ${investment_amount:,.0f if investment_amount else 10000}
+            - User Risk Profile: {user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'}
+            
+            RISK ANALYSIS REQUIREMENTS:
+            1. Use VaR calculator tool to compute Value at Risk at 95% and 99% confidence
+            2. Calculate portfolio volatility and downside risk
+            3. Assess risk alignment with user's risk tolerance
+            4. Identify individual stock contributions to portfolio risk
+            5. Provide risk mitigation recommendations
+            
+            OUTPUT FORMAT:
+            - Portfolio VaR at multiple confidence levels
+            - Volatility and correlation analysis
+            - Risk profile alignment assessment
+            - Individual stock risk contributions
+            - Risk management recommendations
+            """,
+            agent=self.risk_analyst,
+            expected_output="Comprehensive portfolio risk assessment with VaR and recommendations"
+        )
+        
+        # Run risk analysis
+        crew = Crew(
+            agents=[self.risk_analyst],
+            tasks=[risk_task],
+            verbose=True
+        )
+        
+        return crew.kickoff()
+
