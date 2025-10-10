@@ -5,8 +5,8 @@
 
 from crewai import Agent, Crew, Task, LLM
 import os
-from tools.portfolio_optimization_tool import PortfolioOptimizationTool
-from tools.var_calculator_tool import VaRCalculatorTool
+from tools.portfolio_optimization_tool import portfolio_optimization
+from tools.var_calculator_tool import var_calculator
 # Import existing tools
 from tools.yf_tech_analysis_tool import yf_tech_analysis
 from tools.yf_fundamental_analysis_tool import yf_fundamental_analysis
@@ -30,8 +30,8 @@ class QuantitativeAnalysisCrew:
         )
 
         # Initialize core tools (always available)
-        self.portfolio_opt_tool = PortfolioOptimizationTool()
-        self.var_tool = VaRCalculatorTool()
+        self.portfolio_opt_tool = portfolio_optimization
+        self.var_tool = var_calculator
         self.tech_tool = yf_tech_analysis
         self.fundamental_tool = yf_fundamental_analysis
         
