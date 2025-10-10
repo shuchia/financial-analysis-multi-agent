@@ -232,7 +232,7 @@ class QuantitativeAnalysisCrew:
             PORTFOLIO DATA:
             - Tickers: {tickers}
             - Current Weights: {current_weights if current_weights else 'Equal weight'}
-            - Investment Amount: ${investment_amount:,.0f if investment_amount else 10000}
+            - Investment Amount: ${(investment_amount if investment_amount else 10000):,.0f}
             - User Risk Profile: {user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'}
             
             OPTIMIZATION REQUIREMENTS:
@@ -274,7 +274,7 @@ class QuantitativeAnalysisCrew:
             PORTFOLIO DATA:
             - Tickers: {tickers}
             - Weights: {weights if weights else 'Equal weight'}
-            - Investment Amount: ${investment_amount:,.0f if investment_amount else 10000}
+            - Investment Amount: ${(investment_amount if investment_amount else 10000):,.0f}
             - User Risk Profile: {user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'}
             
             RISK ANALYSIS REQUIREMENTS:
