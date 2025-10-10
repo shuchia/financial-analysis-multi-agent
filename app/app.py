@@ -1039,9 +1039,20 @@ def show_portfolio_results():
                 col1, col2 = st.columns([2, 1])
                 
                 with col1:
-                    # Portfolio allocation table
+                    # Portfolio allocation table with categories
+                    categories = []
+                    for i, ticker in enumerate(structured_portfolio['tickers']):
+                        # Find category from allocations
+                        category = "N/A"
+                        for alloc in structured_portfolio.get('allocations', []):
+                            if alloc['ticker'] == ticker:
+                                category = alloc.get('category', 'N/A')
+                                break
+                        categories.append(category)
+                    
                     portfolio_df = pd.DataFrame({
                         'Ticker': structured_portfolio['tickers'],
+                        'Category': categories,
                         'Allocation %': [f"{w*100:.1f}%" for w in structured_portfolio['weights']],
                         'Amount': [f"${a:,.2f}" for a in structured_portfolio['amounts']]
                     })

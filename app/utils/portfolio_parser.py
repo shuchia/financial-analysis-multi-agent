@@ -39,15 +39,16 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
             "key_risks": []
         }
         
-        # Common patterns for parsing
-        # Pattern 1: "TICKER - XX% ($X,XXX) - reasoning"
-        pattern1 = r'([A-Z]{2,5})\s*[-:]\s*(\d+(?:\.\d+)?)\s*%\s*\(\$?([\d,]+(?:\.\d+)?)\)\s*[-:]?\s*(.+?)(?=\n|$)'
+        # Common patterns for parsing - enhanced to capture category
+        # Pattern 1: "TICKER - XX% ($X,XXX) - Category/Sector - reasoning"
+        # or "TICKER (Category) - XX% ($X,XXX) - reasoning"
+        pattern1 = r'([A-Z]{2,5})(?:\s*\(([^)]+)\))?\s*[-:]\s*(\d+(?:\.\d+)?)\s*%\s*\(\$?([\d,]+(?:\.\d+)?)\)\s*(?:[-:]\s*([^-\n]+?))?(?:[-:]\s*(.+?))?(?=\n|$)'
         
-        # Pattern 2: "TICKER: XX% allocation ($X,XXX)"
-        pattern2 = r'([A-Z]{2,5}):\s*(\d+(?:\.\d+)?)\s*%.*?\(\$?([\d,]+(?:\.\d+)?)\)'
+        # Pattern 2: "TICKER: XX% allocation ($X,XXX) - Category"
+        pattern2 = r'([A-Z]{2,5}):\s*(\d+(?:\.\d+)?)\s*%.*?\(\$?([\d,]+(?:\.\d+)?)\)(?:\s*[-:]\s*([^-\n]+))?'
         
-        # Pattern 3: "XX% TICKER ($X,XXX)"
-        pattern3 = r'(\d+(?:\.\d+)?)\s*%\s*([A-Z]{2,5})\s*\(\$?([\d,]+(?:\.\d+)?)\)'
+        # Pattern 3: "XX% TICKER ($X,XXX) - Category"
+        pattern3 = r'(\d+(?:\.\d+)?)\s*%\s*([A-Z]{2,5})\s*\(\$?([\d,]+(?:\.\d+)?)\)(?:\s*[-:]\s*([^-\n]+))?'
         
         # Try different patterns
         matches = re.findall(pattern1, text, re.MULTILINE | re.IGNORECASE)
@@ -58,31 +59,111 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
             temp_matches = re.findall(pattern3, text, re.MULTILINE | re.IGNORECASE)
             matches = [(m[1], m[0], m[2], "") for m in temp_matches]
         
-        # Process matches
+        # Process matches - use dictionary to consolidate duplicates
+        ticker_data = {}
         total_percentage = 0
+        
         for match in matches:
             if len(match) >= 3:
-                ticker = match[0].upper()
-                percentage = float(match[1])
-                amount_str = match[2].replace(',', '')
+                # Handle different pattern structures
+                if len(match) == 6:  # Pattern 1 with category
+                    ticker = match[0].upper()
+                    category_in_parens = match[1]
+                    percentage = float(match[2])
+                    amount_str = match[3].replace(',', '')
+                    category_after = match[4]
+                    reasoning = match[5]
+                elif len(match) == 5:  # Pattern with category at end
+                    ticker = match[0].upper()
+                    percentage = float(match[1])
+                    amount_str = match[2].replace(',', '')
+                    category_or_reasoning = match[3]
+                    extra = match[4] if len(match) > 4 else ""
+                elif len(match) == 4:  # Pattern 2 or 3 with category
+                    if match[0].replace('.', '').isdigit():  # Pattern 3
+                        percentage = float(match[0])
+                        ticker = match[1].upper()
+                        amount_str = match[2].replace(',', '')
+                        category_or_reasoning = match[3]
+                    else:  # Pattern 2
+                        ticker = match[0].upper()
+                        percentage = float(match[1])
+                        amount_str = match[2].replace(',', '')
+                        category_or_reasoning = match[3]
+                else:  # Original pattern without category
+                    ticker = match[0].upper()
+                    percentage = float(match[1])
+                    amount_str = match[2].replace(',', '')
+                    category_or_reasoning = match[3] if len(match) > 3 else ""
+                    category_in_parens = ""
+                    category_after = ""
+                
                 amount = float(amount_str)
-                reasoning = match[3].strip() if len(match) > 3 else ""
+                
+                # Extract category and reasoning
+                category = ""
+                reasoning = ""
+                
+                # Priority: category in parentheses, then category after amount
+                if 'category_in_parens' in locals() and category_in_parens:
+                    category = category_in_parens.strip()
+                elif 'category_after' in locals() and category_after:
+                    # Check if this looks like a category (short, title case, common sectors)
+                    category_keywords = ['Technology', 'Healthcare', 'Financial', 'Consumer', 'Energy', 
+                                       'Industrial', 'ETF', 'Bond', 'Real Estate', 'Growth', 'Value',
+                                       'Large Cap', 'Small Cap', 'International', 'Emerging Markets']
+                    if any(keyword in category_after for keyword in category_keywords):
+                        category = category_after.strip()
+                        reasoning = locals().get('reasoning', '').strip()
+                    else:
+                        reasoning = category_after.strip()
+                elif 'category_or_reasoning' in locals() and category_or_reasoning:
+                    # Check if it's likely a category
+                    if len(category_or_reasoning.split()) <= 3 and any(word in category_or_reasoning for word in ['ETF', 'Tech', 'Health', 'Financial', 'Consumer', 'Growth']):
+                        category = category_or_reasoning.strip()
+                    else:
+                        reasoning = category_or_reasoning.strip()
+                
+                # Clean up reasoning if it exists
+                if 'extra' in locals() and extra and not reasoning:
+                    reasoning = extra.strip()
                 
                 # Validate ticker (2-5 uppercase letters)
                 if 2 <= len(ticker) <= 5 and ticker.isalpha():
-                    portfolio_data["tickers"].append(ticker)
-                    portfolio_data["weights"].append(percentage / 100)  # Convert to decimal
-                    portfolio_data["amounts"].append(amount)
-                    portfolio_data["reasoning"][ticker] = reasoning
-                    portfolio_data["allocations"].append({
-                        "ticker": ticker,
-                        "percentage": percentage,
-                        "amount": amount,
-                        "reasoning": reasoning
-                    })
-                    total_percentage += percentage
-                    
-                    logger.debug(f"Parsed allocation: {ticker} - {percentage}% (${amount})")
+                    # If ticker already exists, use the highest percentage allocation
+                    if ticker in ticker_data:
+                        if percentage > ticker_data[ticker]['percentage']:
+                            ticker_data[ticker] = {
+                                'percentage': percentage,
+                                'amount': amount,
+                                'reasoning': reasoning,
+                                'category': category
+                            }
+                            logger.debug(f"Updated {ticker} allocation to {percentage}%")
+                    else:
+                        ticker_data[ticker] = {
+                            'percentage': percentage,
+                            'amount': amount,
+                            'reasoning': reasoning,
+                            'category': category
+                        }
+                        logger.debug(f"Parsed allocation: {ticker} - {percentage}% (${amount}) - {category}")
+        
+        # Convert consolidated data to lists
+        for ticker, data in ticker_data.items():
+            portfolio_data["tickers"].append(ticker)
+            portfolio_data["weights"].append(data['percentage'] / 100)  # Convert to decimal
+            portfolio_data["amounts"].append(data['amount'])
+            portfolio_data["reasoning"][ticker] = data['reasoning']
+            
+            portfolio_data["allocations"].append({
+                "ticker": ticker,
+                "percentage": data['percentage'],
+                "amount": data['amount'],
+                "reasoning": data['reasoning'],
+                "category": data['category'] if data['category'] else "N/A"
+            })
+            total_percentage += data['percentage']
         
         # Extract expected return
         return_patterns = [

@@ -74,13 +74,18 @@ def create_initial_crew(amount,user_profile=None):
             9. Ensure proper diversification for the amount
             
             OUTPUT FORMAT:
-            Provide a clear portfolio with:
-            - Each holding (ticker symbol)
-            - Percentage allocation
-            - Dollar amount
-            - One-line reasoning
+            Provide a clear portfolio with each holding formatted as:
+            TICKER (Category) - XX% ($X,XXX) - One-line reasoning
+            
+            For example:
+            VTI (ETF) - 40% ($4,000) - Broad market exposure
+            AAPL (Technology) - 15% ($1,500) - Strong growth potential
+            
+            Also include:
             - Expected annual return range
             - Key risks to watch
+            
+            Categories should be one of: ETF, Technology, Healthcare, Financial, Consumer, Energy, Industrial, Real Estate, or specific fund types
             """,
         agent=strategist,
         expected_output="Portfolio with specific tickers and percentages",
