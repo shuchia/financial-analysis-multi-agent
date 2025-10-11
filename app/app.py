@@ -20,6 +20,7 @@ from components.fractional_analysis import render_fractional_analysis_page
 import traceback
 import logging
 from utils.portfolio_parser import parse_portfolio_output, validate_portfolio_data
+from utils.risk_parser import parse_risk_output
 from tools.risk_assessment_tool import risk_assessment
 from tools.portfolio_optimization_tool import PortfolioOptimizationTool
 from quant_crew import QuantitativeAnalysisCrew
@@ -1156,17 +1157,25 @@ def show_portfolio_results():
                     try:
                         # Initialize quantitative analysis crew
                         quant_crew = QuantitativeAnalysisCrew()
-                        
+
                         # Run risk analysis using AI crew
-                        risk_results = quant_crew.analyze_portfolio_risk(
+                        crew_risk_result = quant_crew.analyze_portfolio_risk(
                             tickers=structured['tickers'],
                             weights=structured['weights'],
                             user_profile=user_profile,
                             investment_amount=investment_amount
                         )
-                        
+
+                        # Store the raw crew output for narrative display
+                        st.session_state.portfolio_risk_crew_result = crew_risk_result
+
+                        # Parse the crew output into structured format for metrics dashboard
+                        risk_results = parse_risk_output(
+                            crew_risk_result,
+                            user_profile=user_profile,
+                            investment_amount=investment_amount
+                        )
                         st.session_state.portfolio_risk_analysis = risk_results
-                        st.session_state.portfolio_risk_crew_result = risk_results
                     except Exception as e:
                         st.error(f"AI Risk analysis failed: {str(e)}")
                         # Fallback to direct tool call
@@ -1272,7 +1281,7 @@ def show_portfolio_results():
                 with st.spinner("🔄 Optimizing portfolio allocation with AI crew..."):
                     try:
                         # Initialize quantitative analysis crew
-                        quant_crew = QuantitativeAnalysisCrew()
+                        quant_crew = show_portfolio_results()
                         
                         # Run optimization using AI crew
                         opt_crew_result = quant_crew.optimize_portfolio(

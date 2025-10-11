@@ -263,33 +263,43 @@ class QuantitativeAnalysisCrew:
     
     def analyze_portfolio_risk(self, tickers, weights=None, user_profile=None, investment_amount=None):
         """Specific function for portfolio risk analysis using quant crew."""
-        
+
         # Create risk analyst agent
         self.create_agents()
-        
+
+        # Format tickers as comma-separated string for the VaR tool
+        tickers_string = ','.join(tickers) if isinstance(tickers, list) else str(tickers)
+        portfolio_value = investment_amount if investment_amount else 10000
+        user_risk = user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'
+
         # Create specific task for risk analysis
         risk_task = Task(
             description=f"""Perform comprehensive risk analysis on the portfolio:
-            
+
             PORTFOLIO DATA:
-            - Tickers: {tickers}
+            - Tickers: {tickers_string}
             - Weights: {weights if weights else 'Equal weight'}
-            - Investment Amount: ${(investment_amount if investment_amount else 10000):,.0f}
-            - User Risk Profile: {user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'}
-            
+            - Portfolio Value: ${portfolio_value:,.0f}
+            - User Risk Profile: {user_risk}
+
             RISK ANALYSIS REQUIREMENTS:
-            1. Use VaR calculator tool to compute Value at Risk at 95% and 99% confidence
-            2. Calculate portfolio volatility and downside risk
-            3. Assess risk alignment with user's risk tolerance
-            4. Identify individual stock contributions to portfolio risk
-            5. Provide risk mitigation recommendations
-            
+            1. Use the var_calculator tool with these EXACT parameters:
+               - tickers_string="{tickers_string}"
+               - portfolio_value={portfolio_value}
+               - holding_period=10
+               - confidence_levels_string="0.95,0.99"
+            2. Analyze the VaR results and explain what they mean for this investor
+            3. Assess if portfolio risk aligns with user's {user_risk} risk tolerance
+            4. Review the portfolio metrics (volatility, Sharpe ratio, max drawdown) from the tool output
+            5. Provide specific, actionable risk mitigation recommendations
+
             OUTPUT FORMAT:
-            - Portfolio VaR at multiple confidence levels
-            - Volatility and correlation analysis
-            - Risk profile alignment assessment
-            - Individual stock risk contributions
-            - Risk management recommendations
+            Provide a clear, structured report with:
+            - Executive Summary: Overall risk level (Low/Moderate/High) and alignment with user profile
+            - Value at Risk Analysis: Explain the 95% and 99% VaR results in plain English
+            - Portfolio Risk Metrics: Interpret volatility, Sharpe ratio, and max drawdown
+            - Risk Alignment: Does this match the user's {user_risk} profile?
+            - Recommendations: 3-5 specific actions to optimize risk
             """,
             agent=self.risk_analyst,
             expected_output="Comprehensive portfolio risk assessment with VaR and recommendations"
