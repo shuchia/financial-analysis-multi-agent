@@ -1112,7 +1112,7 @@ def show_portfolio_results():
                         height=300,
                         margin=dict(l=0, r=0, t=30, b=0)
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, use_container_width=True, key="portfolio_allocation_pie")
             
             # Show raw output as well
             with st.expander("📝 Detailed Recommendations"):
@@ -1281,8 +1281,8 @@ def show_portfolio_results():
                 with st.spinner("🔄 Optimizing portfolio allocation with AI crew..."):
                     try:
                         # Initialize quantitative analysis crew
-                        quant_crew = show_portfolio_results()
-                        
+                        quant_crew = QuantitativeAnalysisCrew()
+
                         # Run optimization using AI crew
                         opt_crew_result = quant_crew.optimize_portfolio(
                             tickers=structured['tickers'],
@@ -3070,7 +3070,7 @@ def display_overview_tab(ticker: str, data: Dict[str, Any]):
                 yaxis_title="Price ($)",
                 xaxis_title=""
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key=f"stock_price_chart_{ticker}")
             
     except Exception as e:
         logger.error(f"Error displaying overview: {e}")
@@ -3392,8 +3392,8 @@ def display_tutorial_technical_tab(ticker: str, data: Dict[str, Any]):
                 height=400,
                 showlegend=False
             )
-            
-            st.plotly_chart(fig, use_container_width=True)
+
+            st.plotly_chart(fig, use_container_width=True, key=f"tutorial_price_chart_{ticker}")
             
             # Educational interpretation
             current_price = hist['Close'].iloc[-1]
