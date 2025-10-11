@@ -150,7 +150,7 @@ def render_investforge_header(title="InvestForge", subtitle="Forge Your Financia
     """Render consistent InvestForge header with logo and branding"""
     logo_b64 = get_logo_base64()
     center_style = "text-align: center;" if center else ""
-    
+
     if logo_b64:
         st.markdown(f"""
         <div style='{center_style} padding: 2rem 0;'>
@@ -167,6 +167,73 @@ def render_investforge_header(title="InvestForge", subtitle="Forge Your Financia
             <p style='color: var(--text-secondary); font-size: 1.2rem; margin: 0;'>{subtitle}</p>
         </div>
         """, unsafe_allow_html=True)
+
+
+def render_sidebar():
+    """Render InvestForge sidebar with logo and navigation"""
+    with st.sidebar:
+        # Logo
+        logo_b64 = get_logo_base64()
+        if logo_b64:
+            st.markdown(f"""
+            <div style='text-align: center; padding: 1rem 0 0.5rem 0;'>
+                <img src='data:image/png;base64,{logo_b64}' style='height: 50px; margin-bottom: 0.5rem;' alt='InvestForge Logo'>
+                <h2 class='gradient-text' style='font-size: 1.5rem; margin: 0;'>InvestForge</h2>
+                <p style='color: var(--text-secondary); font-size: 0.85rem; margin: 0.25rem 0;'>AI-Powered Investing</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style='text-align: center; padding: 1rem 0;'>
+                <div style='font-size: 2rem; margin-bottom: 0.5rem;'>⚒️</div>
+                <h2 class='gradient-text' style='font-size: 1.5rem; margin: 0;'>InvestForge</h2>
+                <p style='color: var(--text-secondary); font-size: 0.85rem; margin: 0.25rem 0;'>AI-Powered Investing</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # Navigation menu
+        st.markdown("### 🧭 Navigation")
+
+        if st.button("💼 My Portfolio", use_container_width=True, type="secondary"):
+            st.session_state.show_portfolio_generation = True
+            st.session_state.show_portfolio_results = False
+            st.session_state.show_main_app = False
+            st.rerun()
+
+        if st.button("📊 Analyze Stocks", use_container_width=True, type="secondary"):
+            st.session_state.show_main_app = True
+            st.session_state.show_portfolio_generation = False
+            st.session_state.show_portfolio_results = False
+            st.rerun()
+
+        st.markdown("---")
+
+        # User info
+        if st.session_state.get('authenticated'):
+            st.markdown("### 👤 Account")
+            st.markdown(f"**Email:** {st.session_state.user_email}")
+            st.markdown(f"**Plan:** {st.session_state.user_plan.title()}")
+
+            # Usage info for free users
+            if st.session_state.user_plan == 'free':
+                st.markdown("---")
+                st.markdown("### 📊 Usage")
+                st.markdown(f"**Analyses:** {st.session_state.analyses_count}/5")
+                progress = st.session_state.analyses_count / 5
+                st.progress(progress)
+                if st.session_state.analyses_count >= 5:
+                    st.warning("⚠️ Limit reached")
+                    if st.button("⬆️ Upgrade", use_container_width=True, type="primary"):
+                        st.info("Upgrade feature coming soon!")
+
+            st.markdown("---")
+
+            if st.button("🚪 Logout", use_container_width=True):
+                st.session_state.authenticated = False
+                st.session_state.user_email = None
+                st.rerun()
 
 
 # =====================================
@@ -201,8 +268,6 @@ def init_session_state():
         st.session_state.show_portfolio_results = False
     if 'show_main_app' not in st.session_state:
         st.session_state.show_main_app = False
-    if 'debug_mode' not in st.session_state:
-        st.session_state.debug_mode = True  # Re-enable debug mode to troubleshoot navigation
 
 
 # =====================================
@@ -863,11 +928,6 @@ def infer_income_range(age_range: str) -> str:
 def show_onboarding_results(risk_profile: dict, primary_goal: str):
     """Display onboarding results with personalized recommendations."""
     
-    # Check for portfolio generation button click FIRST before displaying anything
-    # This ensures the button handler executes before page content changes
-    if st.session_state.get('debug_mode', False):
-        st.sidebar.write("🔍 Checking for portfolio generation button click...")
-    
     st.success("🎉 **Profile Complete!** Your personalized investment plan is ready.")
     
     # Display risk profile results
@@ -912,18 +972,8 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("💼 Generate My Portfolio", type="primary", use_container_width=True, key="generate_portfolio_btn"):
-            # Debug: Log button click
-            if st.session_state.get('debug_mode', False):
-                st.sidebar.write("🔥 BUTTON CLICKED: Generate My Portfolio")
-            
             st.session_state.show_portfolio_generation = True
             st.session_state.show_onboarding = False
-            
-            # Debug: Show new state
-            if st.session_state.get('debug_mode', False):
-                st.sidebar.write(f"🔄 Set show_portfolio_generation = {st.session_state.show_portfolio_generation}")
-                st.sidebar.write(f"🔄 Set show_onboarding = {st.session_state.show_onboarding}")
-            
             st.rerun()
     
     # Add informational text about stock analysis
@@ -2140,51 +2190,9 @@ def main_app():
     </style>
     """, unsafe_allow_html=True)
 
-    # Sidebar
-    with st.sidebar:
-        # Logo and branding
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            render_investforge_header("InvestForge", "Portfolio Generation Complete", center=True)
-        
-        st.markdown("---")
-        st.markdown(f"**User:** {st.session_state.user_email}")
-        st.markdown(f"**Plan:** {st.session_state.user_plan.title()}")
-
-        if st.session_state.user_plan == 'free':
-            analyses_left = 5 - st.session_state.analyses_count
-            st.progress(st.session_state.analyses_count / 5)
-            st.markdown(f"**Analyses Left:** {analyses_left}/5")
-
-            if analyses_left <= 2:
-                st.warning("Running low on analyses! Upgrade to Growth for unlimited access.")
-                if st.button("🚀 Upgrade Now", use_container_width=True):
-                    show_upgrade_modal()
-
-        st.markdown("---")
-
-        # Navigation
-        page = st.selectbox(
-            "Navigation",
-            ["📊 Analysis", "💰 Fractional Shares", "💼 Portfolio", "📈 Backtesting",
-             "🎯 Risk Assessment", "📚 Learn", "⚙️ Settings"]
-        )
-
-    # Main content area
-    if page == "📊 Analysis":
-        show_analysis_page()
-    elif page == "💰 Fractional Shares":
-        show_fractional_analysis_page()
-    elif page == "💼 Portfolio":
-        show_portfolio_page()
-    elif page == "📈 Backtesting":
-        show_backtesting_page()
-    elif page == "🎯 Risk Assessment":
-        show_risk_page()
-    elif page == "📚 Learn":
-        show_education_page()
-    elif page == "⚙️ Settings":
-        show_settings_page()
+    # Old sidebar code removed - now using render_sidebar()
+    # Main app content - Stock Analysis
+    show_analysis_page()
 
 
 def show_fractional_analysis_page():
@@ -2235,24 +2243,7 @@ def show_analysis_page():
     
     # Check usage limits
     can_analyze, usage_message = check_usage_limits()
-    
-    # Show usage info in sidebar
-    with st.sidebar:
-        if st.session_state.user_plan == 'free':
-            st.markdown("### 📊 Usage This Month")
-            st.markdown(f"**Analyses:** {st.session_state.analyses_count}/5")
-            
-            # Progress bar
-            progress = st.session_state.analyses_count / 5
-            st.progress(progress)
-            
-            if st.session_state.analyses_count >= 3:
-                st.warning("Running low on analyses!")
-                if st.button("🚀 Upgrade to Growth", use_container_width=True):
-                    show_upgrade_modal()
-        else:
-            st.success("✨ " + usage_message)
-    
+
     # Main analysis interface
     if not can_analyze:
         st.error(f"""
@@ -3593,45 +3584,25 @@ if __name__ == "__main__":
     process_url_params()
 
     # Show appropriate interface
-    # Debug: Show current state
-    if st.session_state.get('debug_mode', False):
-        st.sidebar.write("🐛 Debug State:")
-        st.sidebar.write(f"authenticated: {st.session_state.get('authenticated', False)}")
-        st.sidebar.write(f"show_onboarding: {st.session_state.get('show_onboarding', False)}")
-        st.sidebar.write(f"onboarding_complete: {st.session_state.get('onboarding_complete', False)}")
-        st.sidebar.write(f"show_portfolio_generation: {st.session_state.get('show_portfolio_generation', False)}")
-        st.sidebar.write(f"show_portfolio_results: {st.session_state.get('show_portfolio_results', False)}")
-        st.sidebar.write(f"show_main_app: {st.session_state.get('show_main_app', False)}")
-        st.sidebar.write("---")
-        st.sidebar.write("🔄 Navigation Flow:")
-        if not st.session_state.get('authenticated', False):
-            st.sidebar.write("➡️ WILL GO TO: Authentication")
-        elif st.session_state.get('show_portfolio_generation', False):
-            st.sidebar.write("➡️ WILL GO TO: Portfolio Generation ✅")
-        elif st.session_state.get('show_portfolio_results', False):
-            st.sidebar.write("➡️ WILL GO TO: Portfolio Results")
-        elif st.session_state.get('show_onboarding', False):
-            st.sidebar.write("➡️ WILL GO TO: Onboarding")
-        elif st.session_state.get('show_main_app', False):
-            st.sidebar.write("➡️ WILL GO TO: Stock Analysis")
-        else:
-            st.sidebar.write("➡️ WILL GO TO: Portfolio Generation (Default) ✅")
-    
     if not st.session_state.authenticated:
         if st.session_state.get('show_forgot_password'):
             show_forgot_password()
         else:
             show_login_signup()
-    elif st.session_state.get('show_portfolio_generation', False):
-        # Check portfolio generation FIRST before onboarding
-        generate_portfolio_with_progress()
-    elif st.session_state.get('show_portfolio_results', False):
-        show_portfolio_results()
-    elif st.session_state.get('show_onboarding', False):
-        show_onboarding()
-    elif st.session_state.get('show_main_app', False):
-        # User explicitly wants stock analysis
-        main_app()
     else:
-        # Default to portfolio generation instead of stock analysis
-        generate_portfolio_with_progress()
+        # Render sidebar for authenticated users
+        render_sidebar()
+
+        if st.session_state.get('show_portfolio_generation', False):
+            # Check portfolio generation FIRST before onboarding
+            generate_portfolio_with_progress()
+        elif st.session_state.get('show_portfolio_results', False):
+            show_portfolio_results()
+        elif st.session_state.get('show_onboarding', False):
+            show_onboarding()
+        elif st.session_state.get('show_main_app', False):
+            # User explicitly wants stock analysis
+            main_app()
+        else:
+            # Default to portfolio generation instead of stock analysis
+            generate_portfolio_with_progress()
