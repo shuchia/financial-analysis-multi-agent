@@ -18,11 +18,17 @@ def render_sidebar() -> str:
         return "login"
     
     with st.sidebar:
-        # Header
+        # Header with logo
+        try:
+            logo_col1, logo_col2, logo_col3 = st.columns([1, 2, 1])
+            with logo_col2:
+                st.image("app/static/images/investforge-logo.png", width=80)
+        except:
+            st.markdown("⚒️", unsafe_allow_html=True)
+            
         st.markdown("""
-        <div style='text-align: center; padding: 1rem 0;'>
-            <h1 style='font-size: 2rem; margin: 0;'>⚒️</h1>
-            <h3 style='margin: 0; color: #FF6B35;'>InvestForge</h3>
+        <div style='text-align: center; padding: 0.5rem 0;'>
+            <h3 class='gradient-text' style='margin: 0; font-size: 1.2rem;'>InvestForge</h3>
         </div>
         """, unsafe_allow_html=True)
         

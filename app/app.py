@@ -87,6 +87,86 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+def load_custom_css():
+    """Load custom CSS to match landing page styling"""
+    try:
+        with open("app/static/css/custom.css", "r") as f:
+            css = f.read()
+        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    except FileNotFoundError:
+        # Fallback inline CSS with key branding elements
+        st.markdown("""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary-color: #FF6B35;
+            --secondary-color: #004E89;
+            --accent-color: #1A759F;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8F9FA;
+            --border-color: #E1E8ED;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .stApp {
+            font-family: var(--font-family) !important;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+        
+        .stButton > button[kind="primary"] {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: white;
+            border: none;
+            border-radius: 8px;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+# Load custom CSS
+load_custom_css()
+
+def get_logo_base64():
+    """Get InvestForge logo as base64 string"""
+    import base64
+    try:
+        with open("app/static/images/investforge-logo.png", "rb") as f:
+            logo_data = f.read()
+        return base64.b64encode(logo_data).decode()
+    except FileNotFoundError:
+        return ""
+
+def render_investforge_header(title="InvestForge", subtitle="Forge Your Financial Future with AI", center=True):
+    """Render consistent InvestForge header with logo and branding"""
+    logo_b64 = get_logo_base64()
+    center_style = "text-align: center;" if center else ""
+    
+    if logo_b64:
+        st.markdown(f"""
+        <div style='{center_style} padding: 2rem 0;'>
+            <img src='data:image/png;base64,{logo_b64}' style='height: 60px; margin-bottom: 1rem;' alt='InvestForge Logo'>
+            <h1 class='gradient-text' style='font-size: 2.5rem; margin: 0.5rem 0;'>{title}</h1>
+            <p style='color: var(--text-secondary); font-size: 1.2rem; margin: 0;'>{subtitle}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div style='{center_style} padding: 2rem 0;'>
+            <div style='font-size: 3rem; margin-bottom: 1rem;'>⚒️</div>
+            <h1 class='gradient-text' style='font-size: 2.5rem; margin: 0.5rem 0;'>{title}</h1>
+            <p style='color: var(--text-secondary); font-size: 1.2rem; margin: 0;'>{subtitle}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
 
 # =====================================
 # Session State Management
@@ -244,21 +324,7 @@ def show_login_signup():
 
     with col2:
         # Logo and branding
-        try:
-            st.image("app/static/images/investforge-logo.png", width=150)
-        except:
-            st.markdown("⚒️", unsafe_allow_html=True)
-            
-        st.markdown("""
-        <div style='text-align: center; padding: 1rem 0;'>
-            <h1 style='font-size: 3rem; background: linear-gradient(135deg, #FF6B35, #004E89);
-                       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                       font-weight: 700;'>
-                InvestForge
-            </h1>
-            <p style='color: #7F8C8D; font-size: 1.2rem; font-weight: 500;'>Forge Your Financial Future with AI</p>
-        </div>
-        """, unsafe_allow_html=True)
+        render_investforge_header()
 
         tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
 
@@ -359,17 +425,7 @@ def show_forgot_password():
 
     with col2:
         # Logo and branding
-        try:
-            st.image("app/static/images/investforge-logo.png", width=150)
-        except:
-            st.markdown("⚒️", unsafe_allow_html=True)
-            
-        st.markdown("""
-        <div style='text-align: center; padding: 1rem 0;'>
-            <h1 style='font-size: 2.5rem; font-weight: 700;'>Reset Your Password</h1>
-            <p style='color: #7F8C8D; font-size: 1.1rem;'>Enter your email to receive a password reset link</p>
-        </div>
-        """, unsafe_allow_html=True)
+        render_investforge_header("Reset Your Password", "Enter your email to receive a password reset link")
 
         with st.form("forgot_password_form"):
             email = st.text_input("Email Address", placeholder="your@email.com")
@@ -505,23 +561,7 @@ def show_onboarding():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         # Logo and branding
-        try:
-            st.image("app/static/images/investforge-logo.png", width=120)
-        except:
-            st.markdown("⚒️", unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div class='onboarding-header'>
-            <h1 style='font-size: 2.5rem; background: linear-gradient(135deg, #FF6B35, #004E89);
-                       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                       font-weight: 700; margin-bottom: 0.5rem;'>
-                Welcome to InvestForge! 🚀
-            </h1>
-            <p style='color: #7F8C8D; font-size: 1.1rem; font-weight: 500;'>
-                Let's personalize your experience in 30 seconds
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+        render_investforge_header("Welcome to InvestForge! 🚀", "Let's personalize your experience in 30 seconds")
         
         # Single form with all questions
         with st.form("streamlined_onboarding"):
@@ -2096,17 +2136,7 @@ def main_app():
         # Logo and branding
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            try:
-                st.image("app/static/images/investforge-logo.png", width=100)
-            except:
-                # Fallback if image not found
-                st.markdown("⚒️", unsafe_allow_html=True)
-            
-            st.markdown("""
-            <div style="text-align: center; margin-top: -10px;">
-                <span class="brand-text">InvestForge</span>
-            </div>
-            """, unsafe_allow_html=True)
+            render_investforge_header("InvestForge", "Portfolio Generation Complete", center=True)
         
         st.markdown("---")
         st.markdown(f"**User:** {st.session_state.user_email}")

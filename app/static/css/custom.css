@@ -1,0 +1,396 @@
+/* InvestForge Streamlit App Custom Styles */
+/* Matching Landing Page Design System */
+
+/* CSS Variables - Matching Landing Page */
+:root {
+    --primary-color: #FF6B35;
+    --secondary-color: #004E89;
+    --accent-color: #1A759F;
+    --success-color: #00BA6D;
+    --warning-color: #F5B800;
+    --danger-color: #E74C3C;
+    
+    --text-primary: #2C3E50;
+    --text-secondary: #7F8C8D;
+    --text-light: #BDC3C7;
+    
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F8F9FA;
+    --bg-dark: #2C3E50;
+    
+    --border-color: #E1E8ED;
+    --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.08);
+    --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.12);
+    --shadow-strong: 0 8px 30px rgba(0, 0, 0, 0.16);
+    
+    --border-radius: 8px;
+    --border-radius-large: 16px;
+    
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Global Font Import */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Main App Container */
+.stApp {
+    font-family: var(--font-family) !important;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+/* Header Styling */
+header[data-testid="stHeader"] {
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    height: 70px;
+}
+
+/* Sidebar Styling */
+section[data-testid="stSidebar"] {
+    background-color: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+}
+
+section[data-testid="stSidebar"] .stMarkdown {
+    font-family: var(--font-family);
+}
+
+/* Main Content Area */
+.main .block-container {
+    max-width: 1200px;
+    padding: 2rem 1rem;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family) !important;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.5rem; }
+
+p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* Buttons - Matching Landing Page */
+.stButton > button {
+    font-family: var(--font-family);
+    font-weight: 500;
+    border-radius: var(--border-radius);
+    transition: all 0.3s ease;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    cursor: pointer;
+}
+
+/* Primary Button */
+.stButton > button[kind="primary"],
+.stButton > button[type="primary"] {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: white;
+    box-shadow: var(--shadow-light);
+}
+
+.stButton > button[kind="primary"]:hover,
+.stButton > button[type="primary"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+}
+
+/* Secondary Button */
+.stButton > button[kind="secondary"],
+.stButton > button:not([kind]):not([type]) {
+    background: transparent;
+    color: var(--text-primary);
+    border: 2px solid var(--border-color);
+}
+
+.stButton > button[kind="secondary"]:hover,
+.stButton > button:not([kind]):not([type]):hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+/* Input Fields */
+.stTextInput > div > div > input,
+.stSelectbox > div > div > div,
+.stMultiSelect > div > div > div,
+.stTextArea > div > div > textarea {
+    font-family: var(--font-family);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+    background-color: var(--bg-primary);
+}
+
+.stTextInput > div > div > input:focus,
+.stSelectbox > div > div > div:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    outline: none;
+}
+
+/* Cards and Containers */
+.stExpander {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--bg-primary);
+    box-shadow: var(--shadow-light);
+    overflow: hidden;
+}
+
+.stExpander:hover {
+    box-shadow: var(--shadow-medium);
+}
+
+/* Metrics */
+[data-testid="metric-container"] {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-light);
+}
+
+[data-testid="metric-container"]:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 1rem;
+    background-color: transparent;
+}
+
+.stTabs [data-baseweb="tab"] {
+    font-family: var(--font-family);
+    font-weight: 500;
+    color: var(--text-secondary);
+    background-color: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+    color: var(--primary-color);
+}
+
+.stTabs [aria-selected="true"] {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Progress Bar */
+.stProgress > div > div > div {
+    background-color: var(--primary-color);
+}
+
+/* Alerts and Messages */
+.stAlert {
+    font-family: var(--font-family);
+    border-radius: var(--border-radius);
+    border: 1px solid;
+    padding: 1rem 1.5rem;
+}
+
+div[data-baseweb="notification"] {
+    font-family: var(--font-family);
+    border-radius: var(--border-radius);
+}
+
+/* Success Alert */
+.stSuccess, div[data-variant="success"] {
+    background-color: rgba(0, 186, 109, 0.1);
+    border-color: var(--success-color);
+    color: var(--success-color);
+}
+
+/* Warning Alert */
+.stWarning, div[data-variant="warning"] {
+    background-color: rgba(245, 184, 0, 0.1);
+    border-color: var(--warning-color);
+    color: var(--warning-color);
+}
+
+/* Error Alert */
+.stError, div[data-variant="error"] {
+    background-color: rgba(231, 76, 60, 0.1);
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+}
+
+/* Info Alert */
+.stInfo, div[data-variant="info"] {
+    background-color: rgba(26, 117, 159, 0.1);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+/* Dataframes and Tables */
+.stDataFrame {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-light);
+}
+
+/* Charts */
+.js-plotly-plot {
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-light);
+}
+
+/* Custom Classes for InvestForge */
+.gradient-text {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+}
+
+.brand-logo {
+    height: 50px;
+    margin-bottom: 1rem;
+}
+
+.portfolio-card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-light);
+    transition: all 0.3s ease;
+}
+
+.portfolio-card:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-2px);
+}
+
+/* Spinner */
+.stSpinner > div {
+    border-top-color: var(--primary-color) !important;
+}
+
+/* Markdown Links */
+.stMarkdown a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.stMarkdown a:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-light);
+}
+
+/* Radio Buttons and Checkboxes */
+.stRadio > div[data-baseweb="radio"] > label,
+.stCheckbox > label {
+    font-family: var(--font-family);
+    color: var(--text-primary);
+}
+
+/* File Uploader */
+.stFileUploader > div {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    transition: all 0.3s ease;
+}
+
+.stFileUploader > div:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(255, 107, 53, 0.05);
+}
+
+/* Column Gaps */
+[data-testid="column"] {
+    padding: 0 0.5rem;
+}
+
+/* Hide Streamlit Branding */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+/* Custom Container Classes */
+.invest-container {
+    background-color: var(--bg-secondary);
+    padding: 2rem;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-light);
+    margin-bottom: 2rem;
+}
+
+.invest-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.invest-header h1 {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+}
+
+.invest-header p {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
