@@ -1,3 +1,9 @@
+import numpy as np
+import pandas as pd
+import yfinance as yf
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional
+from langchain.tools import BaseTool
 from statsmodels.tsa.stattools import coint
 import warnings
 
@@ -18,7 +24,26 @@ class PairsTradingTool(BaseTool):
         end_date = datetime.now()
         start_date = end_date - timedelta(days=365)
 
-        data = yf.download(sector_tickers, start=start_date, end=end_date)['Adj Close']
+        # Download with robust MultiIndex handling
+        raw_data = yf.download(sector_tickers, start=start_date, end=end_date, progress=False)
+
+        if raw_data.empty:
+            return {'error': 'No data found for the provided tickers'}
+
+        # Check if 'Adj Close' exists in multi-level columns
+        if isinstance(raw_data.columns, pd.MultiIndex):
+            if 'Adj Close' in raw_data.columns.levels[0]:
+                data = raw_data['Adj Close']
+            elif 'Close' in raw_data.columns.levels[0]:
+                data = raw_data['Close']
+            else:
+                # Use the first price column available
+                data = raw_data.iloc[:, :len(sector_tickers)]
+        else:
+            data = raw_data
+
+        # Drop any rows with NaN values
+        data = data.dropna()
 
         # If single ticker provided, find best pairs
         if test_ticker and test_ticker in sector_tickers:

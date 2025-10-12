@@ -22,7 +22,21 @@ class MonteCarloSimulationTool(BaseTool):
         end_date = datetime.now()
         start_date = end_date - timedelta(days=365 * 2)  # 2 years of data
 
-        stock = yf.download(ticker, start=start_date, end=end_date)['Adj Close']
+        # Download with robust MultiIndex handling
+        raw_data = yf.download(ticker, start=start_date, end=end_date, progress=False)
+
+        if raw_data.empty:
+            return {'error': f'No data found for ticker {ticker}'}
+
+        # Handle different column structures
+        if 'Adj Close' in raw_data.columns:
+            stock = raw_data['Adj Close']
+        elif 'Close' in raw_data.columns:
+            stock = raw_data['Close']
+        else:
+            # Sometimes yfinance returns data without column names for single tickers
+            stock = raw_data.iloc[:, -1] if len(raw_data.columns) > 0 else raw_data
+
         returns = stock.pct_change().dropna()
 
         # Calculate parameters
