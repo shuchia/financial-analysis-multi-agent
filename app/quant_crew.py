@@ -221,32 +221,53 @@ class QuantitativeAnalysisCrew:
 
     def optimize_portfolio(self, tickers, current_weights=None, user_profile=None, investment_amount=None):
         """Specific function for portfolio optimization using quant crew."""
-        
+
         # Create portfolio manager agent
         self.create_agents()
-        
+
+        # Format tickers as comma-separated string for the tool
+        tickers_string = ','.join(tickers) if isinstance(tickers, list) else str(tickers)
+
+        # Format current weights if provided
+        current_weights_string = None
+        if current_weights:
+            if isinstance(current_weights, list):
+                current_weights_string = ','.join([str(w) for w in current_weights])
+            else:
+                current_weights_string = str(current_weights)
+
+        portfolio_value = investment_amount if investment_amount else 10000
+        user_risk = user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'
+
         # Create specific task for portfolio optimization
         optimization_task = Task(
             description=f"""Optimize the given portfolio allocation:
-            
+
             PORTFOLIO DATA:
-            - Tickers: {tickers}
+            - Tickers: {tickers_string}
             - Current Weights: {current_weights if current_weights else 'Equal weight'}
-            - Investment Amount: ${(investment_amount if investment_amount else 10000):,.0f}
-            - User Risk Profile: {user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'}
-            
+            - Investment Amount: ${portfolio_value:,.0f}
+            - User Risk Profile: {user_risk}
+
             OPTIMIZATION REQUIREMENTS:
-            1. Use the portfolio optimization tool to calculate optimal weights
+            1. Use the portfolio_optimization tool with these EXACT parameters:
+               - tickers_string="{tickers_string}"
+               - current_weights_string="{current_weights_string if current_weights_string else ''}"
+               - investment_amount={portfolio_value}
+               - user_risk_profile_string="{user_risk}"
             2. Consider the user's risk tolerance and constraints
             3. Provide before/after comparison if current weights provided
-            4. Include expected return, volatility, and Sharpe ratio
-            5. Suggest specific allocation changes with reasoning
-            
+            4. Analyze the max_sharpe_portfolio and min_volatility_portfolio results
+            5. Review the correlation matrix and efficient frontier data
+            6. Suggest specific allocation changes with reasoning
+
             OUTPUT FORMAT:
-            - Optimized weights for each ticker
-            - Expected portfolio metrics (return, volatility, Sharpe)
-            - Comparison with current allocation (if applicable)
-            - Specific recommendations for improvements
+            Provide a clear, structured report with:
+            - Recommended Portfolio: Specific weights for each ticker
+            - Expected Metrics: Return, volatility, and Sharpe ratio
+            - Comparison: If current weights provided, show before/after metrics
+            - Diversification Analysis: Review correlation matrix insights
+            - Specific Recommendations: 3-5 actionable suggestions for improvements
             """,
             agent=self.portfolio_manager,
             expected_output="Portfolio optimization results with specific weights and metrics"

@@ -43,8 +43,73 @@ def portfolio_optimization(tickers_string: str, start_date: str = None,
     if not start_date:
         start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
 
-    # Download historical data
-    data = yf.download(tickers, start=start_date, end=datetime.now().strftime('%Y-%m-%d'))['Adj Close']
+    # Download historical data with error handling
+    end_date = datetime.now().strftime('%Y-%m-%d')
+
+    try:
+        if len(tickers) == 1:
+            # Single ticker - handle differently
+            ticker = tickers[0]
+            raw_data = yf.download(ticker, start=start_date, end=end_date, progress=False)
+
+            if raw_data.empty:
+                return {
+                    'error': f'No data found for ticker {ticker}',
+                    'suggestion': 'Please verify the ticker symbol is correct and try again.'
+                }
+
+            # Handle different column structures
+            if 'Adj Close' in raw_data.columns:
+                prices = raw_data['Adj Close']
+            elif 'Close' in raw_data.columns:
+                prices = raw_data['Close']
+            else:
+                # Sometimes yfinance returns data without column names for single tickers
+                prices = raw_data.iloc[:, -1] if len(raw_data.columns) > 0 else raw_data
+
+            # Create DataFrame with ticker as column name
+            data = pd.DataFrame({ticker: prices})
+        else:
+            # Multiple tickers
+            raw_data = yf.download(tickers, start=start_date, end=end_date, progress=False)
+
+            if raw_data.empty:
+                return {
+                    'error': 'No data found for the provided tickers',
+                    'suggestion': 'Please verify the ticker symbols are correct.'
+                }
+
+            # Check if 'Adj Close' exists in multi-level columns
+            if isinstance(raw_data.columns, pd.MultiIndex):
+                if 'Adj Close' in raw_data.columns.levels[0]:
+                    data = raw_data['Adj Close']
+                elif 'Close' in raw_data.columns.levels[0]:
+                    data = raw_data['Close']
+                else:
+                    # Use the first price column available
+                    data = raw_data.iloc[:, :len(tickers)]
+            else:
+                data = raw_data
+
+            # Ensure we have all tickers
+            missing_tickers = [t for t in tickers if t not in data.columns]
+            if missing_tickers:
+                print(f"Warning: Missing data for tickers: {missing_tickers}")
+
+        # Drop any rows with NaN values
+        data = data.dropna()
+
+        if len(data) < 30:  # Minimum data points for reliable calculation
+            return {
+                'error': 'Insufficient historical data',
+                'suggestion': 'Need at least 30 days of price history for reliable optimization.'
+            }
+
+    except Exception as e:
+        return {
+            'error': f'Failed to fetch data: {str(e)}',
+            'suggestion': 'Please verify all ticker symbols are correct.'
+        }
 
     # Calculate returns
     returns = data.pct_change().dropna()
@@ -135,14 +200,83 @@ def portfolio_optimization(tickers_string: str, start_date: str = None,
 # Legacy class wrapper for backward compatibility
 class PortfolioOptimizationTool:
     """Legacy wrapper for the portfolio optimization tool."""
-    
+
     def __init__(self):
         self.name = "portfolio_optimization"
         self.description = "Optimizes portfolio allocation using Modern Portfolio Theory"
-    
+
     def _run(self, *args, **kwargs):
         # Convert to string format expected by the @tool function
         if 'tickers' in kwargs and isinstance(kwargs['tickers'], list):
             kwargs['tickers_string'] = ','.join(kwargs['tickers'])
             del kwargs['tickers']
         return portfolio_optimization(*args, **kwargs)
+
+
+# Test function for debugging
+def test_portfolio_optimization():
+    """Test function to verify the optimization works with various inputs"""
+
+    print("Testing Portfolio Optimization...")
+    print("-" * 50)
+
+    # Test 1: Single ticker
+    print("\nTest 1: Single Stock (AAPL)")
+    result1 = portfolio_optimization("AAPL")
+    if 'error' in result1:
+        print(f"Error: {result1['error']}")
+    else:
+        print(f"Max Sharpe Portfolio:")
+        print(f"  Weights: {result1['max_sharpe_portfolio']['weights']}")
+        print(f"  Expected Return: {result1['max_sharpe_portfolio']['expected_return']*100:.2f}%")
+        print(f"  Volatility: {result1['max_sharpe_portfolio']['volatility']*100:.2f}%")
+        print(f"  Sharpe Ratio: {result1['max_sharpe_portfolio']['sharpe_ratio']:.4f}")
+
+    # Test 2: Two stocks
+    print("\nTest 2: Two Stocks (AAPL,MSFT)")
+    result2 = portfolio_optimization("AAPL,MSFT")
+    if 'error' in result2:
+        print(f"Error: {result2['error']}")
+    else:
+        print(f"Max Sharpe Portfolio:")
+        print(f"  Weights: {result2['max_sharpe_portfolio']['weights']}")
+        print(f"  Expected Return: {result2['max_sharpe_portfolio']['expected_return']*100:.2f}%")
+        print(f"  Sharpe Ratio: {result2['max_sharpe_portfolio']['sharpe_ratio']:.4f}")
+        print(f"\nMin Volatility Portfolio:")
+        print(f"  Weights: {result2['min_volatility_portfolio']['weights']}")
+        print(f"  Volatility: {result2['min_volatility_portfolio']['volatility']*100:.2f}%")
+
+    # Test 3: Diversified portfolio
+    print("\nTest 3: Diversified Portfolio (AAPL,MSFT,GOOGL,AMZN,TSLA)")
+    result3 = portfolio_optimization("AAPL,MSFT,GOOGL,AMZN,TSLA")
+    if 'error' in result3:
+        print(f"Error: {result3['error']}")
+    else:
+        print(f"Max Sharpe Portfolio:")
+        print(f"  Weights: {result3['max_sharpe_portfolio']['weights']}")
+        print(f"  Expected Return: {result3['max_sharpe_portfolio']['expected_return']*100:.2f}%")
+        print(f"  Sharpe Ratio: {result3['max_sharpe_portfolio']['sharpe_ratio']:.4f}")
+        print(f"\nCorrelation Matrix (first 3x3):")
+        corr_tickers = list(result3['correlation_matrix'].keys())[:3]
+        for t1 in corr_tickers:
+            row = [f"{result3['correlation_matrix'][t1][t2]:.2f}" for t2 in corr_tickers]
+            print(f"  {t1}: {' '.join(row)}")
+        print(f"\nEfficient Frontier points: {len(result3['efficient_frontier'])}")
+
+    # Test 4: ETF portfolio
+    print("\nTest 4: ETF Portfolio (SPY,QQQ,IWM)")
+    result4 = portfolio_optimization("SPY,QQQ,IWM")
+    if 'error' in result4:
+        print(f"Error: {result4['error']}")
+    else:
+        print(f"Max Sharpe Portfolio:")
+        print(f"  Weights: {result4['max_sharpe_portfolio']['weights']}")
+        print(f"  Sharpe Ratio: {result4['max_sharpe_portfolio']['sharpe_ratio']:.4f}")
+
+    print("\n" + "-" * 50)
+    print("Testing complete!")
+
+
+if __name__ == "__main__":
+    # Run tests if script is executed directly
+    test_portfolio_optimization()
