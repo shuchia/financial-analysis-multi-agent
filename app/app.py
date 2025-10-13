@@ -1090,6 +1090,126 @@ def generate_portfolio_with_progress():
             st.rerun()
 
 
+def create_performance_chart(projection_data: Dict) -> go.Figure:
+    """
+    Create an interactive performance projection chart with three scenarios.
+
+    Args:
+        projection_data: Dictionary containing projection scenarios and timeline data
+
+    Returns:
+        Plotly Figure object with the performance projections
+    """
+    try:
+        # Extract data
+        scenarios = projection_data.get('scenarios', {})
+        timeline_months = projection_data.get('timeline_months', 0)
+        timeline_years = projection_data.get('timeline_years', 0)
+        initial_investment = projection_data.get('initial_investment', 0)
+
+        # Create month labels for x-axis
+        months = list(range(timeline_months + 1))
+
+        # Create figure
+        fig = go.Figure()
+
+        # Add conservative scenario
+        if 'conservative' in scenarios:
+            fig.add_trace(go.Scatter(
+                x=months,
+                y=scenarios['conservative']['values'],
+                mode='lines',
+                name='Conservative',
+                line=dict(color='#FF6B6B', width=2, dash='dot'),
+                hovertemplate='<b>Conservative</b><br>Month: %{x}<br>Value: $%{y:,.0f}<extra></extra>'
+            ))
+
+        # Add expected scenario (thicker line, more prominent)
+        if 'expected' in scenarios:
+            fig.add_trace(go.Scatter(
+                x=months,
+                y=scenarios['expected']['values'],
+                mode='lines',
+                name='Expected',
+                line=dict(color='#4ECDC4', width=3),
+                hovertemplate='<b>Expected</b><br>Month: %{x}<br>Value: $%{y:,.0f}<extra></extra>'
+            ))
+
+        # Add optimistic scenario
+        if 'optimistic' in scenarios:
+            fig.add_trace(go.Scatter(
+                x=months,
+                y=scenarios['optimistic']['values'],
+                mode='lines',
+                name='Optimistic',
+                line=dict(color='#95E1D3', width=2, dash='dot'),
+                hovertemplate='<b>Optimistic</b><br>Month: %{x}<br>Value: $%{y:,.0f}<extra></extra>'
+            ))
+
+        # Add initial investment reference line
+        fig.add_hline(
+            y=initial_investment,
+            line_dash="dash",
+            line_color="gray",
+            opacity=0.5,
+            annotation_text="Initial Investment",
+            annotation_position="left"
+        )
+
+        # Update layout
+        fig.update_layout(
+            title=dict(
+                text=f'Portfolio Performance Projection ({timeline_years} Years)',
+                font=dict(size=20, color='#2C3E50')
+            ),
+            xaxis=dict(
+                title='Months',
+                showgrid=True,
+                gridcolor='#E8E8E8',
+                zeroline=False
+            ),
+            yaxis=dict(
+                title='Portfolio Value ($)',
+                showgrid=True,
+                gridcolor='#E8E8E8',
+                zeroline=False,
+                tickformat='$,.0f'
+            ),
+            hovermode='x unified',
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="#CCCCCC",
+                borderwidth=1
+            ),
+            margin=dict(l=60, r=30, t=80, b=60),
+            height=400
+        )
+
+        return fig
+
+    except Exception as e:
+        logger.error(f"Error creating performance chart: {str(e)}")
+        # Return empty figure with error message
+        fig = go.Figure()
+        fig.add_annotation(
+            text=f"Error creating chart: {str(e)}",
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
+            font=dict(size=14, color='red')
+        )
+        return fig
+
+
 def show_portfolio_results():
     """Display the generated portfolio results with progressive enhancements."""
     if 'portfolio_result' not in st.session_state:
@@ -1099,107 +1219,172 @@ def show_portfolio_results():
             st.session_state.show_portfolio_generation = True
             st.rerun()
         return
-    
+
     portfolio_data = st.session_state.portfolio_result
     result = portfolio_data['result']
     investment_amount = portfolio_data['investment_amount']
     user_profile = portfolio_data.get('user_profile', {})
-    
+
     # Header
     st.markdown("## 🎯 Your Personalized Investment Portfolio")
     st.success(f"Portfolio optimized for ${investment_amount:,.0f} investment")
-    
-    # Create tabs for different views
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Portfolio", "📈 Risk Analysis", "⚡ Optimization", "📚 Education"])
-    
-    with tab1:
-        # Display portfolio summary
-        if hasattr(result, 'tasks_output') and result.tasks_output:
-            # Parse the result
-            portfolio_output = result.tasks_output[0].raw if result.tasks_output else "No portfolio data"
-            
-            # Parse portfolio to structured data
-            structured_portfolio = parse_portfolio_output(result, investment_amount)
-            st.session_state.structured_portfolio = structured_portfolio
-            
-            # Display the portfolio
-            st.markdown("### 📊 Recommended Portfolio Allocation")
-            
-            # Show structured view if parsing succeeded
+
+    # ============================================
+    # SECTION 1: Performance Projection Chart (Full Width)
+    # ============================================
+
+    # Extract projection data from second task output
+    projection_data = None
+    projection_narrative = None
+
+    if hasattr(result, 'tasks_output') and len(result.tasks_output) > 1:
+        # The second task contains the projection data
+        projection_task_output = result.tasks_output[1]
+        projection_narrative = projection_task_output.raw if hasattr(projection_task_output, 'raw') else str(projection_task_output)
+
+        # Try to extract the actual projection data from tool output if available
+        # The tool returns a dict with scenarios, which might be in the task's tool outputs
+        if hasattr(projection_task_output, 'pydantic') and hasattr(projection_task_output.pydantic, 'tool_outputs'):
+            tool_outputs = projection_task_output.pydantic.tool_outputs
+            if tool_outputs and len(tool_outputs) > 0:
+                projection_data = tool_outputs[0]  # First tool output should be the projection dict
+
+    # Display performance chart if we have projection data
+    if projection_data:
+        st.markdown("### 📈 Performance Projections")
+
+        # Create and display the chart
+        fig = create_performance_chart(projection_data)
+        st.plotly_chart(fig, use_container_width=True, key="performance_projection_chart")
+
+        # Display scenario metrics below the chart
+        if 'summary' in projection_data:
+            col1, col2, col3 = st.columns(3)
+            summary = projection_data['summary']
+
+            with col1:
+                st.metric(
+                    "📊 Conservative Scenario",
+                    summary.get('conservative_final_value', 'N/A'),
+                    summary.get('conservative_total_return', 'N/A'),
+                    help="If market underperforms"
+                )
+
+            with col2:
+                st.metric(
+                    "📊 Expected Scenario",
+                    summary.get('expected_final_value', 'N/A'),
+                    summary.get('expected_total_return', 'N/A'),
+                    help="Most likely outcome"
+                )
+
+            with col3:
+                st.metric(
+                    "📊 Optimistic Scenario",
+                    summary.get('optimistic_final_value', 'N/A'),
+                    summary.get('optimistic_total_return', 'N/A'),
+                    help="If market outperforms"
+                )
+
+        # Display AI narrative about projections
+        if projection_narrative:
+            with st.expander("💬 What This Means for You"):
+                st.markdown(projection_narrative)
+    else:
+        # Fallback if projection data not available
+        st.info("📊 Performance projections will be displayed here after generation.")
+
+    st.markdown("---")  # Separator
+
+    # ============================================
+    # SECTION 2: Two-Column Layout
+    # ============================================
+
+    # Parse portfolio data
+    if hasattr(result, 'tasks_output') and result.tasks_output:
+        portfolio_output = result.tasks_output[0].raw if result.tasks_output else "No portfolio data"
+        structured_portfolio = parse_portfolio_output(result, investment_amount)
+        st.session_state.structured_portfolio = structured_portfolio
+    else:
+        st.error("Unable to parse portfolio results.")
+        if st.button("🔄 Try Again", type="primary"):
+            st.session_state.show_portfolio_results = False
+            st.session_state.show_portfolio_generation = True
+            st.rerun()
+        return
+
+    # Create 2-column layout (1.2 : 1.8 ratio)
+    left_col, right_col = st.columns([1.2, 1.8])
+
+    # ============================================
+    # LEFT COLUMN: Portfolio Allocation & Risk Assessment (with internal tabs)
+    # ============================================
+    with left_col:
+        # Internal tabs for allocation and risk
+        alloc_tab, risk_tab = st.tabs(["📊 Portfolio Allocation", "⚠️ Risk Assessment"])
+
+        # -------------------
+        # TAB 1: Portfolio Allocation
+        # -------------------
+        with alloc_tab:
+            # Display allocation table
             if structured_portfolio['tickers']:
-                col1, col2 = st.columns([2, 1])
-                
+                # Portfolio allocation table with categories
+                categories = []
+                for i, ticker in enumerate(structured_portfolio['tickers']):
+                    # Find category from allocations
+                    category = "N/A"
+                    for alloc in structured_portfolio.get('allocations', []):
+                        if alloc['ticker'] == ticker:
+                            category = alloc.get('category', 'N/A')
+                            break
+                    categories.append(category)
+
+                portfolio_df = pd.DataFrame({
+                    'Ticker': structured_portfolio['tickers'],
+                    'Category': categories,
+                    'Allocation %': [f"{w*100:.1f}%" for w in structured_portfolio['weights']],
+                    'Amount': [f"${a:,.2f}" for a in structured_portfolio['amounts']]
+                })
+                st.dataframe(portfolio_df, use_container_width=True, hide_index=True)
+
+                # Portfolio metrics
+                st.markdown("#### Portfolio Summary")
+                col1, col2 = st.columns(2)
                 with col1:
-                    # Portfolio allocation table with categories
-                    categories = []
-                    for i, ticker in enumerate(structured_portfolio['tickers']):
-                        # Find category from allocations
-                        category = "N/A"
-                        for alloc in structured_portfolio.get('allocations', []):
-                            if alloc['ticker'] == ticker:
-                                category = alloc.get('category', 'N/A')
-                                break
-                        categories.append(category)
-                    
-                    portfolio_df = pd.DataFrame({
-                        'Ticker': structured_portfolio['tickers'],
-                        'Category': categories,
-                        'Allocation %': [f"{w*100:.1f}%" for w in structured_portfolio['weights']],
-                        'Amount': [f"${a:,.2f}" for a in structured_portfolio['amounts']]
-                    })
-                    st.dataframe(portfolio_df, use_container_width=True)
-                
+                    st.metric("Total Positions", len(structured_portfolio['tickers']))
                 with col2:
-                    # Pie chart
-                    fig = go.Figure(data=[go.Pie(
-                        labels=structured_portfolio['tickers'],
-                        values=[w*100 for w in structured_portfolio['weights']],
-                        hole=.3
-                    )])
-                    fig.update_layout(
-                        title="Allocation",
-                        showlegend=True,
-                        height=300,
-                        margin=dict(l=0, r=0, t=30, b=0)
-                    )
-                    st.plotly_chart(fig, use_container_width=True, key="portfolio_allocation_pie")
-            
-            # Show raw output as well
-            with st.expander("📝 Detailed Recommendations"):
-                st.markdown(portfolio_output)
-        
-        # Action buttons
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            if st.button("💾 Save Portfolio", type="primary", use_container_width=True):
-                # Save portfolio to user preferences
-                if 'user_preferences' in st.session_state:
-                    st.session_state.user_preferences['portfolio'] = {
-                        'allocation': portfolio_output,
-                        'amount': investment_amount,
-                        'generated_at': portfolio_data['generated_at']
-                    }
-                    save_user_preferences_to_api(st.session_state.user_preferences)
-                st.success("✅ Portfolio saved to your profile!")
-        
-        with col2:
-            if st.button("🔄 Regenerate", type="secondary", use_container_width=True):
-                st.session_state.show_portfolio_results = False
-                st.session_state.show_portfolio_generation = True
-                st.rerun()
-        
-        with col3:
-            if st.button("📈 Analyze Stocks", type="primary", use_container_width=True):
-                st.session_state.show_portfolio_results = False
-                st.session_state.show_main_app = True
-                st.rerun()
-    
-    with tab2:
-        st.markdown("### 📈 Portfolio Risk Analysis")
-        
-        if 'structured_portfolio' in st.session_state and st.session_state.structured_portfolio['tickers']:
-            structured = st.session_state.structured_portfolio
+                    st.metric("Total Value", f"${investment_amount:,.0f}")
+
+                # Action buttons
+                st.markdown("---")
+                btn_col1, btn_col2 = st.columns(2)
+
+                with btn_col1:
+                    if st.button("💾 Save", type="secondary", use_container_width=True):
+                        if 'user_preferences' in st.session_state:
+                            st.session_state.user_preferences['portfolio'] = {
+                                'allocation': portfolio_output,
+                                'amount': investment_amount,
+                                'generated_at': portfolio_data['generated_at']
+                            }
+                            save_user_preferences_to_api(st.session_state.user_preferences)
+                        st.success("✅ Saved!")
+
+                with btn_col2:
+                    if st.button("🔄 Regenerate", type="secondary", use_container_width=True):
+                        st.session_state.show_portfolio_results = False
+                        st.session_state.show_portfolio_generation = True
+                        st.rerun()
+            else:
+                st.warning("No portfolio allocation data available.")
+
+        # -------------------
+        # TAB 2: Risk Assessment
+        # -------------------
+        with risk_tab:
+            if structured_portfolio['tickers']:
+                structured = structured_portfolio
             
             # Check if risk analysis already completed
             if 'portfolio_risk_analysis' not in st.session_state:
@@ -1318,16 +1503,16 @@ def show_portfolio_results():
                         for ticker, data in risk_results['risk_contributions'].items()
                     ])
                     st.dataframe(risk_df, use_container_width=True)
-        else:
-            st.info("📊 Risk analysis will appear here once portfolio is parsed")
-    
-    with tab3:
-        st.markdown("### ⚡ Portfolio Optimization")
-        
-        if 'structured_portfolio' in st.session_state and st.session_state.structured_portfolio['tickers']:
-            structured = st.session_state.structured_portfolio
-            
-            if st.button("🔧 Run Portfolio Optimization", type="primary"):
+            else:
+                st.info("📊 Risk analysis will appear here once portfolio is parsed")
+
+        # -------------------
+        # OPTIMIZE BUTTON (below tabs, still in left column)
+        # -------------------
+        st.markdown("---")
+        if structured_portfolio['tickers']:
+            if st.button("🔧 Optimize Portfolio", type="primary", use_container_width=True):
+                structured = structured_portfolio
                 with st.spinner("🔄 Optimizing portfolio allocation with AI crew..."):
                     try:
                         # Initialize quantitative analysis crew
@@ -1422,44 +1607,81 @@ def show_portfolio_results():
                         else:
                             st.warning(f"📉 **{rec['ticker']}**: Decrease by {abs(rec['percentage_change']):.1f}% (${rec['dollar_amount']:,.2f})")
                 
-                if st.button("✅ Apply Optimized Allocation", type="primary"):
-                    st.info("🚧 Feature coming soon: Apply optimization and rebalance portfolio")
+                    if st.button("✅ Apply Optimized Allocation", type="primary"):
+                        st.info("🚧 Feature coming soon: Apply optimization and rebalance portfolio")
+
+    # ============================================
+    # RIGHT COLUMN: AI Recommendations
+    # ============================================
+    with right_col:
+        st.markdown("### 💡 Detailed AI Recommendations")
+
+        # Display the full portfolio recommendations from the AI
+        if portfolio_output:
+            st.markdown(portfolio_output)
         else:
-            st.info("⚡ Optimization options will appear here once portfolio is analyzed")
-    
-    with tab4:
+            st.info("AI recommendations will appear here after portfolio generation.")
+
+        # Additional insights
+        st.markdown("---")
+        st.markdown("#### 📌 Quick Actions")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📈 Analyze Individual Stocks", type="secondary", use_container_width=True):
+                st.session_state.show_portfolio_results = False
+                st.session_state.show_main_app = True
+                st.rerun()
+
+        with col2:
+            if st.button("📊 View Detailed Analysis", type="secondary", use_container_width=True):
+                st.info("Coming soon: Detailed stock-by-stock analysis")
+
+    # ============================================
+    # SECTION 3: Education Content (Bottom, Collapsible)
+    # ============================================
+    st.markdown("---")
+
+    with st.expander("📚 Investment Education & Learning Resources", expanded=False):
         st.markdown("### 📚 Investment Education")
-        
-        # Check if education content exists
-        if hasattr(result, 'tasks_output') and len(result.tasks_output) > 1:
-            education_content = result.tasks_output[1].raw if len(result.tasks_output) > 1 else None
-            if education_content:
-                st.markdown(education_content)
+
+        # Check if education content already exists in session state
+        if 'education_content' in st.session_state:
+            education_result = st.session_state.education_content
+            if isinstance(education_result, dict) and 'content' in education_result:
+                education_content = education_result['content']
+                if hasattr(education_content, 'tasks_output') and education_content.tasks_output:
+                    st.markdown(education_content.tasks_output[0].raw)
+                else:
+                    st.markdown(str(education_content))
+            else:
+                st.markdown(str(education_result))
         else:
             # Trigger education generation if not available
             if st.button("📖 Generate Educational Content", type="primary"):
                 with st.spinner("🎓 Creating personalized education content..."):
                     try:
-                        if 'structured_portfolio' in st.session_state:
-                            # Get the portfolio output for education
-                            portfolio_output = result.tasks_output[0].raw if hasattr(result, 'tasks_output') and result.tasks_output else "Portfolio data"
-                            
-                            education_result = portfoliocrew.create_education(
-                                amount=investment_amount,  # Pass as number
-                                portfolio=portfolio_output,
-                                user_profile=user_profile
-                            )
-                            if education_result:
-                                # Extract content from the education result
-                                if isinstance(education_result, dict) and 'content' in education_result:
-                                    education_content = education_result['content']
-                                    if hasattr(education_content, 'tasks_output') and education_content.tasks_output:
-                                        st.markdown(education_content.tasks_output[0].raw)
-                                    else:
-                                        st.markdown(str(education_content))
+                        # Get the portfolio output for education
+                        portfolio_text = portfolio_output if portfolio_output else "Portfolio data"
+
+                        education_result = portfoliocrew.create_education(
+                            amount=investment_amount,  # Pass as number
+                            portfolio=portfolio_text,
+                            user_profile=user_profile
+                        )
+                        if education_result:
+                            # Store and display
+                            st.session_state.education_content = education_result
+
+                            # Extract content from the education result
+                            if isinstance(education_result, dict) and 'content' in education_result:
+                                education_content = education_result['content']
+                                if hasattr(education_content, 'tasks_output') and education_content.tasks_output:
+                                    st.markdown(education_content.tasks_output[0].raw)
                                 else:
-                                    st.markdown(str(education_result))
-                                st.session_state.education_content = education_result
+                                    st.markdown(str(education_content))
+                            else:
+                                st.markdown(str(education_result))
                     except Exception as e:
                         st.error(f"Failed to generate education content: {str(e)}")
         
@@ -1478,14 +1700,6 @@ def show_portfolio_results():
             3. Review and rebalance quarterly
             4. Continue learning about each investment
             """)
-    
-    # Handle case where portfolio results can't be parsed (moved outside tab structure)
-    if not (hasattr(result, 'tasks_output') and result.tasks_output):
-        st.error("Unable to parse portfolio results.")
-        if st.button("🔄 Try Again", type="primary"):
-            st.session_state.show_portfolio_results = False
-            st.session_state.show_portfolio_generation = True
-            st.rerun()
 
 
 def save_user_preferences_to_api(preferences: dict):

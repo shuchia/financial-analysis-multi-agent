@@ -5,9 +5,23 @@ from tools.sentiment_analysis_tool import sentiment_analysis
 from tools.competitor_analysis_tool import competitor_analysis
 from tools.risk_assessment_tool import risk_assessment
 from tools.fractional_share_tool import calculate_fractional_shares, get_fractional_portfolio_suggestions
+from tools.performance_projection_tool import calculate_portfolio_projections
 import logging
 import time
 import os
+
+
+def parse_timeline_to_years(timeline: str) -> int:
+    """Convert timeline string to years (middle of range)."""
+    timeline_map = {
+        "Learning only (no timeline)": 5,
+        "1-2 years": 2,
+        "3-5 years": 4,
+        "5-10 years": 7,
+        "10+ years": 15
+    }
+    return timeline_map.get(timeline, 7)
+
 
 def create_initial_crew(amount,user_profile=None):
     # Configure logging
@@ -55,14 +69,20 @@ def create_initial_crew(amount,user_profile=None):
     strategist = Agent(
         role='Portfolio Strategist',
         goal='Create personalized investment portfolios optimized for user risk tolerance, investment amount, and goals',
-        backstory="""You are an expert portfolio manager who specializes in 
-                    creating starter portfolios for young investors. You understand modern 
-                    portfolio theory, risk management, and behavioral finance. You excel at 
-                    translating complex allocation strategies into simple, actionable portfolios 
-                    that beginners can understand and implement. You always consider the user's 
-                    age, timeline, emergency fund status, and risk tolerance when making 
-                    recommendations.""",
-        tools=[],
+        backstory="""You are an expert portfolio manager who creates personalized
+                    starter portfolios for individual investors. You understand modern
+                    portfolio theory, risk management, and behavioral finance. You excel at
+                    translating complex allocation strategies into simple, actionable portfolios
+                    that beginners can understand and implement.
+
+                    IMPORTANT: Always address the investor directly using 'you' and 'your'
+                    instead of third person ('the investor', 'they', 'them'). For example:
+                    - Use: "This portfolio will help YOU achieve your goals"
+                    - NOT: "This portfolio will help the investor achieve their goals"
+
+                    You consider their age, timeline, emergency fund status, and risk tolerance
+                    when making recommendations.""",
+        tools=[calculate_portfolio_projections],
         llm=llm,
         verbose=True
     )
@@ -86,19 +106,20 @@ def create_initial_crew(amount,user_profile=None):
             7. Minimize fees - prioritize low-cost index funds
             8. Consider tax efficiency if applicable
             9. Ensure proper diversification for the amount
-            
+            10. Address the investor directly as 'you/your' (never 'the investor/their')
+
             OUTPUT FORMAT:
             Provide a clear portfolio with each holding formatted as:
             TICKER (Category) - XX% ($X,XXX) - One-line reasoning
-            
+
             For example:
-            VTI (ETF) - 40% ($4,000) - Broad market exposure
-            AAPL (Technology) - 15% ($1,500) - Strong growth potential
-            
+            VTI (ETF) - 40% ($4,000) - Provides you with broad market exposure
+            AAPL (Technology) - 15% ($1,500) - Gives you exposure to strong growth potential
+
             Also include:
-            - Expected annual return range
-            - Key risks to watch
-            
+            - Expected annual return range for YOUR portfolio
+            - Key risks YOU should watch
+
             Categories should be one of: ETF, Technology, Healthcare, Financial, Consumer, Energy, Industrial, Real Estate, or specific fund types
             """,
         agent=strategist,
@@ -106,11 +127,60 @@ def create_initial_crew(amount,user_profile=None):
         max_retries=1
     )
     logger.debug("Portfolio task created")
+
+    # Projection task - calculate performance projections
+    logger.info("Creating projection task...")
+
+    # Parse timeline to years
+    timeline_years = parse_timeline_to_years(user_profile.get('timeline', '5-10 years'))
+
+    # Determine volatility based on risk profile
+    risk_profile = user_profile.get('risk_profile', 'moderate').lower()
+    volatility_map = {
+        'conservative': 0.10,
+        'moderate': 0.15,
+        'aggressive': 0.20
+    }
+    annual_volatility = volatility_map.get(risk_profile, 0.15)
+
+    projection_task = Task(
+        description=f"""Calculate performance projections for the recommended portfolio.
+
+        USE THE TOOL: calculate_portfolio_projections
+
+        INPUTS:
+        - investment_amount: {amount_numeric}
+        - expected_annual_return: (Use the expected return range you provided in the portfolio task, take the midpoint and convert percentage to decimal, e.g., if 7-9%, use 0.08)
+        - timeline_years: {timeline_years}
+        - annual_volatility: {annual_volatility}
+
+        TASK:
+        1. Use the performance projection tool with the parameters above
+        2. Explain the results to the investor in simple terms
+        3. Address them directly as 'you' and 'your'
+        4. Describe what the conservative, expected, and optimistic scenarios mean for THEM
+
+        OUTPUT FORMAT:
+        Based on your {user_profile.get('timeline', '5-10 years')} timeline, here's what you can expect:
+
+        📊 Conservative Scenario: $X,XXX (if market underperforms)
+        📊 Expected Scenario: $X,XXX (most likely outcome)
+        📊 Optimistic Scenario: $X,XXX (if market outperforms)
+
+        This means your {amount_display} investment could grow to $X,XXX over the timeline,
+        giving you a total return of X%. [Add context about what this means for their goals]
+        """,
+        agent=strategist,
+        expected_output="Performance projections with investor-friendly explanation",
+        context=[portfolio_task]
+    )
+    logger.debug("Projection task created")
+
     # Create Crew
     logger.info("Creating portfolio crew with sequential process...")
     portfolio_creation_crew = Crew(
         agents=[strategist],
-        tasks=[portfolio_task],
+        tasks=[portfolio_task, projection_task],
         process=Process.sequential
     )
     logger.info("Portfolio Crew created successfully")
