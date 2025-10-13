@@ -1090,6 +1090,32 @@ def generate_portfolio_with_progress():
             st.rerun()
 
 
+def escape_markdown_latex(text: str) -> str:
+    """
+    Escape LaTeX/math characters in text to prevent katex rendering.
+
+    Args:
+        text: Raw text that may contain LaTeX triggers
+
+    Returns:
+        Text with escaped characters safe for st.markdown()
+    """
+    if not text:
+        return text
+
+    # Replace LaTeX triggers that cause katex font rendering
+    # Escape underscores (except in URLs)
+    text = re.sub(r'(?<!https?://)(?<!www\.)_', r'\_', text)
+
+    # Escape dollar signs when followed by digits (prevents inline math)
+    text = re.sub(r'\$(\d)', r'\\\$$1', text)
+
+    # Escape asterisks when they might trigger math mode (3 or more in a row)
+    text = re.sub(r'\*\*\*+', lambda m: '\\' + m.group(), text)
+
+    return text
+
+
 def create_performance_chart(projection_data: Dict) -> go.Figure:
     """
     Create an interactive performance projection chart with three scenarios.
@@ -1229,6 +1255,19 @@ def show_portfolio_results():
     st.markdown("## 🎯 Your Personalized Investment Portfolio")
     st.success(f"Portfolio optimized for ${investment_amount:,.0f} investment")
 
+    # Parse portfolio data first (needed for projections)
+    if hasattr(result, 'tasks_output') and result.tasks_output:
+        portfolio_output = result.tasks_output[0].raw if result.tasks_output else "No portfolio data"
+        structured_portfolio = parse_portfolio_output(result, investment_amount)
+        st.session_state.structured_portfolio = structured_portfolio
+    else:
+        st.error("Unable to parse portfolio results.")
+        if st.button("🔄 Try Again", type="primary"):
+            st.session_state.show_portfolio_results = False
+            st.session_state.show_portfolio_generation = True
+            st.rerun()
+        return
+
     # ============================================
     # SECTION 1: Performance Projection Chart (Full Width)
     # ============================================
@@ -1242,12 +1281,50 @@ def show_portfolio_results():
         projection_task_output = result.tasks_output[1]
         projection_narrative = projection_task_output.raw if hasattr(projection_task_output, 'raw') else str(projection_task_output)
 
-        # Try to extract the actual projection data from tool output if available
-        # The tool returns a dict with scenarios, which might be in the task's tool outputs
-        if hasattr(projection_task_output, 'pydantic') and hasattr(projection_task_output.pydantic, 'tool_outputs'):
-            tool_outputs = projection_task_output.pydantic.tool_outputs
-            if tool_outputs and len(tool_outputs) > 0:
-                projection_data = tool_outputs[0]  # First tool output should be the projection dict
+        # Try to extract JSON data from the narrative (CrewAI embeds tool output as JSON in text)
+        try:
+            import json
+            import re
+            # Look for JSON-like structures in the text
+            json_match = re.search(r'\{[^{}]*"scenarios"[^{}]*\{.*?\}.*?\}', str(projection_narrative), re.DOTALL)
+            if json_match:
+                projection_data = json.loads(json_match.group())
+                logger.info("Successfully extracted projection data from task output")
+        except Exception as e:
+            logger.warning(f"Could not extract projection JSON: {str(e)}")
+
+    # Fallback: Recalculate projections if data not found
+    if not projection_data and user_profile:
+        try:
+            from tools.performance_projection_tool import calculate_portfolio_projections
+            from portfoliocrew import parse_timeline_to_years
+
+            # Parse expected return from portfolio output
+            expected_return = 0.08  # Default 8%
+            if structured_portfolio.get('expected_return'):
+                # Extract midpoint from range like "7-9%"
+                return_match = re.search(r'(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)', str(structured_portfolio['expected_return']))
+                if return_match:
+                    low = float(return_match.group(1))
+                    high = float(return_match.group(2))
+                    expected_return = (low + high) / 2 / 100  # Convert to decimal
+
+            # Get timeline and volatility
+            timeline_years = parse_timeline_to_years(user_profile.get('timeline', '5-10 years'))
+            risk_profile = user_profile.get('risk_profile', 'moderate').lower()
+            volatility_map = {'conservative': 0.10, 'moderate': 0.15, 'aggressive': 0.20}
+            annual_volatility = volatility_map.get(risk_profile, 0.15)
+
+            # Calculate projections
+            projection_data = calculate_portfolio_projections(
+                investment_amount=float(investment_amount),
+                expected_annual_return=expected_return,
+                timeline_years=timeline_years,
+                annual_volatility=annual_volatility
+            )
+            logger.info("Recalculated projection data as fallback")
+        except Exception as e:
+            logger.error(f"Failed to recalculate projections: {str(e)}")
 
     # Display performance chart if we have projection data
     if projection_data:
@@ -1289,7 +1366,7 @@ def show_portfolio_results():
         # Display AI narrative about projections
         if projection_narrative:
             with st.expander("💬 What This Means for You"):
-                st.markdown(projection_narrative)
+                st.markdown(escape_markdown_latex(projection_narrative))
     else:
         # Fallback if projection data not available
         st.info("📊 Performance projections will be displayed here after generation.")
@@ -1299,19 +1376,6 @@ def show_portfolio_results():
     # ============================================
     # SECTION 2: Two-Column Layout
     # ============================================
-
-    # Parse portfolio data
-    if hasattr(result, 'tasks_output') and result.tasks_output:
-        portfolio_output = result.tasks_output[0].raw if result.tasks_output else "No portfolio data"
-        structured_portfolio = parse_portfolio_output(result, investment_amount)
-        st.session_state.structured_portfolio = structured_portfolio
-    else:
-        st.error("Unable to parse portfolio results.")
-        if st.button("🔄 Try Again", type="primary"):
-            st.session_state.show_portfolio_results = False
-            st.session_state.show_portfolio_generation = True
-            st.rerun()
-        return
 
     # Create 2-column layout (1.2 : 1.8 ratio)
     left_col, right_col = st.columns([1.2, 1.8])
@@ -1349,12 +1413,27 @@ def show_portfolio_results():
                 st.dataframe(portfolio_df, use_container_width=True, hide_index=True)
 
                 # Portfolio metrics
-                st.markdown("#### Portfolio Summary")
+                st.markdown("#### Portfolio Metrics")
+
+                # Calculate category diversification score
+                unique_categories = len(set(categories)) - (1 if "N/A" in categories else 0)
+                diversification_score = min(100, int((unique_categories / max(len(structured_portfolio['tickers']), 1)) * 100))
+
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.metric("Total Positions", len(structured_portfolio['tickers']))
+                    if structured_portfolio.get('expected_return'):
+                        st.metric("Expected Return", structured_portfolio['expected_return'], help="Annual return range")
+                    else:
+                        st.metric("Expected Return", "6-10%", help="Estimated annual return range")
                 with col2:
-                    st.metric("Total Value", f"${investment_amount:,.0f}")
+                    risk_level = user_profile.get('risk_profile', 'Moderate').capitalize()
+                    st.metric("Risk Level", risk_level, help="Portfolio risk profile")
+
+                col3, col4 = st.columns(2)
+                with col3:
+                    st.metric("Holdings", len(structured_portfolio['tickers']), help="Number of positions")
+                with col4:
+                    st.metric("Diversification", f"{diversification_score}%", help="Category spread")
 
                 # Action buttons
                 st.markdown("---")
@@ -1437,9 +1516,9 @@ def show_portfolio_results():
                 if hasattr(crew_risk_result, 'tasks_output') and crew_risk_result.tasks_output:
                     crew_output = crew_risk_result.tasks_output[0].raw
                     st.markdown("##### Quantitative Risk Analysis Report:")
-                    st.markdown(crew_output)
+                    st.markdown(escape_markdown_latex(crew_output))
                 else:
-                    st.markdown(str(crew_risk_result))
+                    st.markdown(escape_markdown_latex(str(crew_risk_result)))
                 
                 st.markdown("---")
             
@@ -1557,9 +1636,9 @@ def show_portfolio_results():
                 if hasattr(opt_crew_result, 'tasks_output') and opt_crew_result.tasks_output:
                     crew_output = opt_crew_result.tasks_output[0].raw
                     st.markdown("##### AI Portfolio Manager Recommendations:")
-                    st.markdown(crew_output)
+                    st.markdown(escape_markdown_latex(crew_output))
                 else:
-                    st.markdown(str(opt_crew_result))
+                    st.markdown(escape_markdown_latex(str(opt_crew_result)))
                 
                 st.markdown("---")
             
@@ -1618,7 +1697,7 @@ def show_portfolio_results():
 
         # Display the full portfolio recommendations from the AI
         if portfolio_output:
-            st.markdown(portfolio_output)
+            st.markdown(escape_markdown_latex(portfolio_output))
         else:
             st.info("AI recommendations will appear here after portfolio generation.")
 
@@ -1651,11 +1730,11 @@ def show_portfolio_results():
             if isinstance(education_result, dict) and 'content' in education_result:
                 education_content = education_result['content']
                 if hasattr(education_content, 'tasks_output') and education_content.tasks_output:
-                    st.markdown(education_content.tasks_output[0].raw)
+                    st.markdown(escape_markdown_latex(education_content.tasks_output[0].raw))
                 else:
-                    st.markdown(str(education_content))
+                    st.markdown(escape_markdown_latex(str(education_content)))
             else:
-                st.markdown(str(education_result))
+                st.markdown(escape_markdown_latex(str(education_result)))
         else:
             # Trigger education generation if not available
             if st.button("📖 Generate Educational Content", type="primary"):
@@ -1677,11 +1756,11 @@ def show_portfolio_results():
                             if isinstance(education_result, dict) and 'content' in education_result:
                                 education_content = education_result['content']
                                 if hasattr(education_content, 'tasks_output') and education_content.tasks_output:
-                                    st.markdown(education_content.tasks_output[0].raw)
+                                    st.markdown(escape_markdown_latex(education_content.tasks_output[0].raw))
                                 else:
-                                    st.markdown(str(education_content))
+                                    st.markdown(escape_markdown_latex(str(education_content)))
                             else:
-                                st.markdown(str(education_result))
+                                st.markdown(escape_markdown_latex(str(education_result)))
                     except Exception as e:
                         st.error(f"Failed to generate education content: {str(e)}")
         
