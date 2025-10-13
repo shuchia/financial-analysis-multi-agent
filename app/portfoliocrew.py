@@ -13,7 +13,7 @@ def create_initial_crew(amount,user_profile=None):
     # Configure logging
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
-    
+
     # Set default user profile if none provided
     if user_profile is None:
         user_profile = {
@@ -24,8 +24,22 @@ def create_initial_crew(amount,user_profile=None):
             'risk_profile': 'moderate',
             'experience': 'beginner'
         }
-    
-    logger.info(f"Creating portfolio crew for  user profile: {user_profile.get('age_range', 'unknown')} years old, {user_profile.get('experience', 'unknown')} experience")
+
+    # Convert amount to numeric if it's a string (for backward compatibility)
+    if isinstance(amount, str):
+        import re
+        amount_match = re.search(r'[\d,]+', amount.replace('$', ''))
+        if amount_match:
+            amount_numeric = float(amount_match.group().replace(',', ''))
+        else:
+            amount_numeric = 100.0
+    else:
+        amount_numeric = float(amount)
+
+    # Format amount for display
+    amount_display = f"${amount_numeric:,.0f}"
+
+    logger.info(f"Creating portfolio crew for {amount_display}, user profile: {user_profile.get('age_range', 'unknown')} years old, {user_profile.get('experience', 'unknown')} experience")
     
     # Initialize AWS Bedrock LLM using CrewAI's LLM class
     # In ECS Fargate, credentials are automatically obtained from the task role
@@ -59,13 +73,13 @@ def create_initial_crew(amount,user_profile=None):
     logger.info("Creating portfolio task...")
     
     portfolio_task = Task(
-        description=f""" Create a diversified portfolio for this investor: PROFILE: - Age: {user_profile.get('age_range', '25-35')} - Risk tolerance: 
-                             {user_profile.get('risk_profile', 'moderate')} {user_profile.get('risk_score')}- Amount: ${amount} - Timeline: {user_profile.get('timeline', '5-10 years')} - 
-                             Goal: {user_profile.get('primary_goal', 'wealth_building')} - Emergency Fund: {user_profile.get('emergency_fund_status', 'Getting there')} 
+        description=f""" Create a diversified portfolio for this investor: PROFILE: - Age: {user_profile.get('age_range', '25-35')} - Risk tolerance:
+                             {user_profile.get('risk_profile', 'moderate')} {user_profile.get('risk_score')}- Amount: {amount_display} - Timeline: {user_profile.get('timeline', '5-10 years')} -
+                             Goal: {user_profile.get('primary_goal', 'wealth_building')} - Emergency Fund: {user_profile.get('emergency_fund_status', 'Getting there')}
                              REQUIREMENTS:
             1. Suggest specific ETFs/stocks with exact percentages
             2. Match the risk tolerance (don't exceed it)
-            3. For ${amount}, suggest {get_position_count(amount)} positions maximum
+            3. For {amount_display}, suggest {get_position_count(amount_numeric)} positions maximum
             4. Include dollar amounts for each holding
             5. Provide brief reasoning for each pick
             6. Use only ETFs and stocks available for fractional shares

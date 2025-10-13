@@ -1047,9 +1047,9 @@ def generate_portfolio_with_progress():
         status_placeholder.write(f"💡 Analyzing best investments for ${investment_amount:,.0f}...")
         progress_bar.progress(40)
         
-        # Call portfolio crew
+        # Call portfolio crew (pass numeric value, not formatted string)
         result = portfoliocrew.create_portfolio(
-            amount=f"${investment_amount:,.0f}",
+            amount=investment_amount,  # Pass as number, portfoliocrew will format
             user_profile=user_profile
         )
         
@@ -1445,7 +1445,7 @@ def show_portfolio_results():
                             portfolio_output = result.tasks_output[0].raw if hasattr(result, 'tasks_output') and result.tasks_output else "Portfolio data"
                             
                             education_result = portfoliocrew.create_education(
-                                amount=f"${investment_amount:,.0f}",
+                                amount=investment_amount,  # Pass as number
                                 portfolio=portfolio_output,
                                 user_profile=user_profile
                             )

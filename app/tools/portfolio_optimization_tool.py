@@ -14,7 +14,7 @@ def portfolio_optimization(tickers_string: str, start_date: str = None,
                           investment_amount: float = None) -> Dict:
     """
     Optimizes portfolio allocation using Modern Portfolio Theory (Markowitz).
-    
+
     Args:
         tickers_string (str): Comma-separated list of stock tickers
         start_date (str): Start date for historical data (YYYY-MM-DD)
@@ -23,13 +23,27 @@ def portfolio_optimization(tickers_string: str, start_date: str = None,
         optimization_mode (str): "full", "enhance", or "rebalance"
         user_risk_profile_string (str): User risk profile (conservative|moderate|aggressive)
         investment_amount (float): Total investment amount
-    
+
     Returns:
         dict: Portfolio optimization results with weights and metrics
     """
-    
+
+    # Validate required input
+    if not tickers_string or not isinstance(tickers_string, str):
+        return {
+            'error': 'Missing or invalid tickers_string parameter',
+            'suggestion': 'Please provide a comma-separated list of stock tickers (e.g., "AAPL,MSFT,GOOGL")'
+        }
+
     # Parse input strings
     tickers = [t.strip() for t in tickers_string.split(',')]
+
+    # Validate tickers list
+    if not tickers or len(tickers) == 0:
+        return {
+            'error': 'No valid tickers provided',
+            'suggestion': 'Please provide at least one stock ticker'
+        }
     
     current_weights = None
     if current_weights_string:
@@ -58,14 +72,24 @@ def portfolio_optimization(tickers_string: str, start_date: str = None,
                     'suggestion': 'Please verify the ticker symbol is correct and try again.'
                 }
 
-            # Handle different column structures
-            if 'Adj Close' in raw_data.columns:
-                prices = raw_data['Adj Close']
-            elif 'Close' in raw_data.columns:
-                prices = raw_data['Close']
+            # Handle different column structures - check for MultiIndex first!
+            if isinstance(raw_data.columns, pd.MultiIndex):
+                # Single ticker but yfinance returned MultiIndex
+                if 'Adj Close' in raw_data.columns.levels[0]:
+                    prices = raw_data['Adj Close'].iloc[:, 0]  # Get first (and only) column
+                elif 'Close' in raw_data.columns.levels[0]:
+                    prices = raw_data['Close'].iloc[:, 0]
+                else:
+                    prices = raw_data.iloc[:, 0]
             else:
-                # Sometimes yfinance returns data without column names for single tickers
-                prices = raw_data.iloc[:, -1] if len(raw_data.columns) > 0 else raw_data
+                # Normal single-level columns
+                if 'Adj Close' in raw_data.columns:
+                    prices = raw_data['Adj Close']
+                elif 'Close' in raw_data.columns:
+                    prices = raw_data['Close']
+                else:
+                    # Sometimes yfinance returns data without column names for single tickers
+                    prices = raw_data.iloc[:, -1] if len(raw_data.columns) > 0 else raw_data
 
             # Create DataFrame with ticker as column name
             data = pd.DataFrame({ticker: prices})
