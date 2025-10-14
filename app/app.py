@@ -1305,7 +1305,7 @@ def show_portfolio_results():
     st.markdown("""
     <style>
     .success-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #FF6B35 0%, #4ECDC4 100%);
         border-radius: 15px;
         padding: 2rem;
         margin-bottom: 2rem;
@@ -1321,7 +1321,7 @@ def show_portfolio_results():
     }
     .success-subtitle {
         font-size: 1rem;
-        opacity: 0.9;
+        opacity: 0.95;
         margin-bottom: 1.5rem;
     }
     .badge-row {
@@ -1331,11 +1331,12 @@ def show_portfolio_results():
         flex-wrap: wrap;
     }
     .badge {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.25);
         padding: 0.5rem 1rem;
         border-radius: 20px;
         font-size: 0.9rem;
         backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
     }
     .metrics-grid {
         display: grid;
@@ -1343,10 +1344,11 @@ def show_portfolio_results():
         gap: 1rem;
     }
     .metric-card {
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 10px;
-        padding: 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 1.25rem;
         backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
     }
     .metric-value {
         font-size: 1.8rem;
@@ -1355,15 +1357,23 @@ def show_portfolio_results():
     }
     .metric-label {
         font-size: 0.85rem;
-        opacity: 0.9;
+        opacity: 0.95;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # Extract expected return from portfolio
+    # Extract expected return from portfolio output
     expected_return_5y = "N/A"
     if structured_portfolio.get('expected_return'):
         expected_return_5y = structured_portfolio['expected_return']
+    else:
+        # Try to extract from portfolio output text
+        import re
+        return_match = re.search(r'(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*%', str(portfolio_output))
+        if return_match:
+            low = float(return_match.group(1))
+            high = float(return_match.group(2))
+            expected_return_5y = f"{low:.0f}-{high:.0f}%"
 
     st.markdown(f"""
     <div class="success-header">
@@ -1461,6 +1471,47 @@ def show_portfolio_results():
     # MAIN CONTENT: 4-TAB LAYOUT
     # ============================================
 
+    # Add custom tab styling
+    st.markdown("""
+    <style>
+    /* Style the tabs container */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #f8f9fa;
+        padding: 8px;
+        border-radius: 12px;
+    }
+
+    /* Style individual tabs */
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        background-color: transparent;
+        border-radius: 8px;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 0 24px;
+        border: none;
+    }
+
+    /* Style the active/selected tab */
+    .stTabs [aria-selected="true"] {
+        background-color: white;
+        color: #212529;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Remove the default underline indicator */
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: transparent;
+    }
+
+    /* Hover effect for non-selected tabs */
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: rgba(255, 255, 255, 0.5);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     # Create 4 tabs
     tab_overview, tab_risk, tab_projections, tab_budget = st.tabs([
         "📊 Overview",
@@ -1554,7 +1605,7 @@ def show_portfolio_results():
             }
             .allocation-fill {
                 height: 100%;
-                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(90deg, #FF6B35 0%, #4ECDC4 100%);
                 border-radius: 4px;
             }
             </style>
@@ -1851,7 +1902,7 @@ def show_portfolio_results():
         <style>
         .insight-box {
             background: #f8f9fa;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #FF6B35;
             padding: 1.5rem;
             margin: 1rem 0;
             border-radius: 8px;
@@ -1872,7 +1923,7 @@ def show_portfolio_results():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if structured_portfolio['tickers']:
-            if st.button("🔧 Optimize Portfolio with AI", type="primary", use_container_width=True):
+            if st.button("🔧 Optimize Further", type="primary", use_container_width=True):
                 structured = structured_portfolio
                 with st.spinner("🔄 Optimizing portfolio allocation with AI crew..."):
                     try:
