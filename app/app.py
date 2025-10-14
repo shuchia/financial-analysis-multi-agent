@@ -170,71 +170,275 @@ def render_investforge_header(title="InvestForge", subtitle="Forge Your Financia
         """, unsafe_allow_html=True)
 
 
-def render_sidebar():
-    """Render InvestForge sidebar with logo and navigation"""
-    with st.sidebar:
-        # Logo
-        logo_b64 = get_logo_base64()
+# =====================================
+# SIDEBAR CODE - COMMENTED OUT FOR HORIZONTAL NAV
+# =====================================
+# def render_sidebar():
+#     """Render InvestForge sidebar with logo and navigation"""
+#     with st.sidebar:
+#         # Logo
+#         logo_b64 = get_logo_base64()
+#         if logo_b64:
+#             st.markdown(f"""
+#             <div style='text-align: center; padding: 1rem 0 0.5rem 0;'>
+#                 <img src='data:image/png;base64,{logo_b64}' style='height: 50px; margin-bottom: 0.5rem;' alt='InvestForge Logo'>
+#                 <h2 class='gradient-text' style='font-size: 1.5rem; margin: 0;'>InvestForge</h2>
+#                 <p style='color: var(--text-secondary); font-size: 0.85rem; margin: 0.25rem 0;'>AI-Powered Investing</p>
+#             </div>
+#             """, unsafe_allow_html=True)
+#         else:
+#             st.markdown("""
+#             <div style='text-align: center; padding: 1rem 0;'>
+#                 <div style='font-size: 2rem; margin-bottom: 0.5rem;'>⚒️</div>
+#                 <h2 class='gradient-text' style='font-size: 1.5rem; margin: 0;'>InvestForge</h2>
+#                 <p style='color: var(--text-secondary); font-size: 0.85rem; margin: 0.25rem 0;'>AI-Powered Investing</p>
+#             </div>
+#             """, unsafe_allow_html=True)
+#
+#         st.markdown("---")
+#
+#         # Navigation menu
+#         st.markdown("### 🧭 Navigation")
+#
+#         if st.button("💼 My Portfolio", use_container_width=True, type="secondary"):
+#             st.session_state.show_portfolio_generation = True
+#             st.session_state.show_portfolio_results = False
+#             st.session_state.show_main_app = False
+#             st.rerun()
+#
+#         if st.button("📊 Analyze Stocks", use_container_width=True, type="secondary"):
+#             st.session_state.show_main_app = True
+#             st.session_state.show_portfolio_generation = False
+#             st.session_state.show_portfolio_results = False
+#             st.rerun()
+#
+#         st.markdown("---")
+#
+#         # User info
+#         if st.session_state.get('authenticated'):
+#             st.markdown("### 👤 Account")
+#             st.markdown(f"**Email:** {st.session_state.user_email}")
+#             st.markdown(f"**Plan:** {st.session_state.user_plan.title()}")
+#
+#             # Usage info for free users
+#             if st.session_state.user_plan == 'free':
+#                 st.markdown("---")
+#                 st.markdown("### 📊 Usage")
+#                 st.markdown(f"**Analyses:** {st.session_state.analyses_count}/5")
+#                 progress = st.session_state.analyses_count / 5
+#                 st.progress(progress)
+#                 if st.session_state.analyses_count >= 5:
+#                     st.warning("⚠️ Limit reached")
+#                     if st.button("⬆️ Upgrade", use_container_width=True, type="primary"):
+#                         st.info("Upgrade feature coming soon!")
+#
+#             st.markdown("---")
+#
+#             if st.button("🚪 Logout", use_container_width=True):
+#                 st.session_state.authenticated = False
+#                 st.session_state.user_email = None
+#                 st.rerun()
+
+
+def render_horizontal_nav():
+    """Render horizontal navigation bar at the top"""
+    # Get logo
+    logo_b64 = get_logo_base64()
+
+    # Navbar styling
+    st.markdown("""
+    <style>
+    /* Hide default Streamlit header */
+    header[data-testid="stHeader"] {
+        display: none;
+    }
+
+    /* Main navbar container */
+    .top-navbar {
+        background-color: #2C3E50;
+        padding: 0.75rem 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Logo section */
+    .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: white;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .nav-logo img {
+        height: 35px;
+    }
+
+    /* Navigation items */
+    .nav-items {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        flex: 1;
+        margin: 0 2rem;
+    }
+
+    .nav-item {
+        color: #B8C1CC;
+        text-decoration: none;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .nav-item:hover {
+        color: white;
+    }
+
+    .nav-item.active {
+        color: white;
+    }
+
+    /* Search bar */
+    .nav-search {
+        flex: 1;
+        max-width: 400px;
+    }
+
+    .nav-search input {
+        width: 100%;
+        background-color: #34495E;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        color: white;
+        font-size: 0.9rem;
+    }
+
+    .nav-search input::placeholder {
+        color: #95A5A6;
+    }
+
+    /* Right section */
+    .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .nav-upgrade-btn {
+        background-color: #3498DB;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 0.5rem 1.25rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .nav-upgrade-btn:hover {
+        background-color: #2980B9;
+    }
+
+    .nav-user-icon {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background-color: #95A5A6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Create navbar container
+    col_logo, col_nav, col_search, col_upgrade, col_user = st.columns([1.5, 3, 2.5, 1, 0.5])
+
+    with col_logo:
         if logo_b64:
             st.markdown(f"""
-            <div style='text-align: center; padding: 1rem 0 0.5rem 0;'>
-                <img src='data:image/png;base64,{logo_b64}' style='height: 50px; margin-bottom: 0.5rem;' alt='InvestForge Logo'>
-                <h2 class='gradient-text' style='font-size: 1.5rem; margin: 0;'>InvestForge</h2>
-                <p style='color: var(--text-secondary); font-size: 0.85rem; margin: 0.25rem 0;'>AI-Powered Investing</p>
+            <div class="nav-logo">
+                <img src='data:image/png;base64,{logo_b64}' alt='InvestForge'>
+                <span>InvestForge</span>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown("""
-            <div style='text-align: center; padding: 1rem 0;'>
-                <div style='font-size: 2rem; margin-bottom: 0.5rem;'>⚒️</div>
-                <h2 class='gradient-text' style='font-size: 1.5rem; margin: 0;'>InvestForge</h2>
-                <p style='color: var(--text-secondary); font-size: 0.85rem; margin: 0.25rem 0;'>AI-Powered Investing</p>
+            <div class="nav-logo">
+                <span>⚒️ InvestForge</span>
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown("---")
+    with col_nav:
+        nav_col1, nav_col2, nav_col3, nav_col4, nav_col5 = st.columns(5)
 
-        # Navigation menu
-        st.markdown("### 🧭 Navigation")
+        with nav_col1:
+            if st.button("Portfolio", key="nav_portfolio", use_container_width=True):
+                st.session_state.show_portfolio_generation = True
+                st.session_state.show_portfolio_results = False
+                st.session_state.show_main_app = False
+                st.rerun()
 
-        if st.button("💼 My Portfolio", use_container_width=True, type="secondary"):
-            st.session_state.show_portfolio_generation = True
-            st.session_state.show_portfolio_results = False
-            st.session_state.show_main_app = False
-            st.rerun()
+        with nav_col2:
+            if st.button("Watchlist", key="nav_watchlist", use_container_width=True):
+                st.info("Watchlist feature coming soon!")
 
-        if st.button("📊 Analyze Stocks", use_container_width=True, type="secondary"):
-            st.session_state.show_main_app = True
-            st.session_state.show_portfolio_generation = False
-            st.session_state.show_portfolio_results = False
-            st.rerun()
+        with nav_col3:
+            if st.button("Discover", key="nav_discover", use_container_width=True):
+                st.session_state.show_main_app = True
+                st.session_state.show_portfolio_generation = False
+                st.session_state.show_portfolio_results = False
+                st.rerun()
 
-        st.markdown("---")
+        with nav_col4:
+            if st.button("Learn", key="nav_learn", use_container_width=True):
+                st.info("Educational resources coming soon!")
 
-        # User info
+        with nav_col5:
+            if st.button("Budget", key="nav_budget", use_container_width=True):
+                st.info("Budget planning feature coming soon!")
+
+    with col_search:
+        search_query = st.text_input("🔍", placeholder="Search companies worldwide...", label_visibility="collapsed", key="nav_search")
+        if search_query:
+            st.info(f"Searching for: {search_query}")
+
+    with col_upgrade:
+        if st.button("⬆️ Upgrade", key="nav_upgrade", type="primary", use_container_width=True):
+            st.info("Upgrade feature coming soon!")
+
+    with col_user:
+        # User dropdown
         if st.session_state.get('authenticated'):
-            st.markdown("### 👤 Account")
-            st.markdown(f"**Email:** {st.session_state.user_email}")
-            st.markdown(f"**Plan:** {st.session_state.user_plan.title()}")
+            user_menu = st.selectbox(
+                "user_menu",
+                ["👤", "Account", "Settings", "Logout"],
+                label_visibility="collapsed",
+                key="nav_user_dropdown"
+            )
 
-            # Usage info for free users
-            if st.session_state.user_plan == 'free':
-                st.markdown("---")
-                st.markdown("### 📊 Usage")
-                st.markdown(f"**Analyses:** {st.session_state.analyses_count}/5")
-                progress = st.session_state.analyses_count / 5
-                st.progress(progress)
-                if st.session_state.analyses_count >= 5:
-                    st.warning("⚠️ Limit reached")
-                    if st.button("⬆️ Upgrade", use_container_width=True, type="primary"):
-                        st.info("Upgrade feature coming soon!")
-
-            st.markdown("---")
-
-            if st.button("🚪 Logout", use_container_width=True):
+            if user_menu == "Account":
+                st.info(f"Logged in as: {st.session_state.user_email}")
+            elif user_menu == "Logout":
                 st.session_state.authenticated = False
                 st.session_state.user_email = None
                 st.rerun()
+        else:
+            st.markdown("👤")
+
+    st.markdown("<hr style='margin: 0; border: none; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
 
 
 # =====================================
@@ -1381,7 +1585,7 @@ def show_portfolio_results():
             🧠 AI Portfolio Created Successfully!
         </div>
         <div class="success-subtitle">
-            Powered by 5 specialized AI agents analyzing market data, risk factors, and your personal goals
+            Powered by specialized AI agents analyzing market data, risk factors, and your personal goals
         </div>
         <div class="badge-row">
             <div class="badge">📊 Risk Profile: {risk_profile}</div>
@@ -4208,8 +4412,8 @@ if __name__ == "__main__":
         else:
             show_login_signup()
     else:
-        # Render sidebar for authenticated users
-        render_sidebar()
+        # Render horizontal navigation bar for authenticated users
+        render_horizontal_nav()
 
         if st.session_state.get('show_portfolio_generation', False):
             # Check portfolio generation FIRST before onboarding
