@@ -767,16 +767,14 @@ def process_streamlined_onboarding(age_range: str, timeline: str, emergency_fund
     # Store in session state
     st.session_state.user_preferences = user_preferences
     st.session_state.onboarding_complete = True
-    
+
     # Save preferences
     save_user_preferences_to_api(user_preferences)
-    
-    # Show results inline (outside form context now)
-    show_onboarding_results(risk_profile, primary_goal)
-    
-    # Clear onboarding flag so user can proceed with portfolio generation
-    # This ensures the debug state shows show_onboarding: False
+
+    # Skip intermediate results page - go directly to portfolio generation
+    st.session_state.show_portfolio_generation = True
     st.session_state.show_onboarding = False
+    st.rerun()
 
 
 def calculate_risk_tolerance_fast(age_range: str, timeline: str, emergency_fund: str, loss_reaction: str) -> dict:
@@ -1118,6 +1116,20 @@ def escape_markdown_latex(text: str) -> str:
     return text
 
 
+def get_ticker_name(ticker: str) -> str:
+    """Get company/ETF name for a ticker symbol."""
+    try:
+        import yfinance as yf
+        stock = yf.Ticker(ticker)
+        name = stock.info.get('longName') or stock.info.get('shortName') or ticker
+        # Shorten very long names
+        if len(name) > 40:
+            name = name[:37] + "..."
+        return name
+    except:
+        return ticker
+
+
 def create_performance_chart(projection_data: Dict) -> go.Figure:
     """
     Create an interactive performance projection chart with three scenarios.
@@ -1253,9 +1265,16 @@ def show_portfolio_results():
     investment_amount = portfolio_data['investment_amount']
     user_profile = portfolio_data.get('user_profile', {})
 
-    # Header
-    st.markdown("## 🎯 Your Personalized Investment Portfolio")
-    st.success(f"Portfolio optimized for ${investment_amount:,.0f} investment")
+    # ============================================
+    # SUCCESS HEADER - InvestForge Style
+    # ============================================
+
+    # Extract metrics for header
+    risk_profile = user_profile.get('risk_profile', 'moderate').capitalize()
+    timeline = user_profile.get('timeline', '5-10 years')
+    # Convert risk_score from 0-1 scale to 0-10 scale
+    risk_score_raw = user_profile.get('risk_score', 0.5)
+    risk_score = risk_score_raw * 10  # Convert to 0-10 scale
 
     # Parse portfolio data first (needed for projections)
     if hasattr(result, 'tasks_output') and result.tasks_output:
@@ -1269,6 +1288,116 @@ def show_portfolio_results():
             st.session_state.show_portfolio_generation = True
             st.rerun()
         return
+
+    # Calculate diversification score for header
+    categories = []
+    for ticker in structured_portfolio['tickers']:
+        category = "N/A"
+        for alloc in structured_portfolio.get('allocations', []):
+            if alloc['ticker'] == ticker:
+                category = alloc.get('category', 'N/A')
+                break
+        categories.append(category)
+    unique_categories = len(set(categories)) - (1 if "N/A" in categories else 0)
+    diversification_score = min(100, int((unique_categories / max(len(structured_portfolio['tickers']), 1)) * 100))
+
+    # Display success header
+    st.markdown("""
+    <style>
+    .success-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        color: white;
+    }
+    .success-title {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .success-subtitle {
+        font-size: 1rem;
+        opacity: 0.9;
+        margin-bottom: 1.5rem;
+    }
+    .badge-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        backdrop-filter: blur(10px);
+    }
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    .metric-card {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        padding: 1rem;
+        backdrop-filter: blur(10px);
+    }
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin: 0.5rem 0;
+    }
+    .metric-label {
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Extract expected return from portfolio
+    expected_return_5y = "N/A"
+    if structured_portfolio.get('expected_return'):
+        expected_return_5y = structured_portfolio['expected_return']
+
+    st.markdown(f"""
+    <div class="success-header">
+        <div class="success-title">
+            🧠 AI Portfolio Created Successfully!
+        </div>
+        <div class="success-subtitle">
+            Powered by 5 specialized AI agents analyzing market data, risk factors, and your personal goals
+        </div>
+        <div class="badge-row">
+            <div class="badge">📊 Risk Profile: {risk_profile}</div>
+            <div class="badge">⏰ Timeline: {timeline}</div>
+            <div class="badge">🎯 Diversification: {diversification_score}%</div>
+        </div>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Initial Investment</div>
+                <div class="metric-value">${investment_amount:,.0f}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Expected Return (5Y)</div>
+                <div class="metric-value">{expected_return_5y}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Risk Score</div>
+                <div class="metric-value">{risk_score:.1f}/10</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Diversification</div>
+                <div class="metric-value">{diversification_score}%</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     # ============================================
     # SECTION 1: Performance Projection Chart (Full Width)
@@ -1328,145 +1457,172 @@ def show_portfolio_results():
         except Exception as e:
             logger.error(f"Failed to recalculate projections: {str(e)}")
 
-    # Display performance chart if we have projection data
-    if projection_data:
-        st.markdown("### 📈 Performance Projections")
+    # ============================================
+    # MAIN CONTENT: 4-TAB LAYOUT
+    # ============================================
 
-        # Create and display the chart
-        fig = create_performance_chart(projection_data)
-        st.plotly_chart(fig, use_container_width=True, key="performance_projection_chart")
+    # Create 4 tabs
+    tab_overview, tab_risk, tab_projections, tab_budget = st.tabs([
+        "📊 Overview",
+        "⚠️ Risk Analysis",
+        "📈 Projections",
+        "💰 Budget Plan"
+    ])
 
-        # Display scenario metrics below the chart
-        if 'summary' in projection_data:
+    # ============================================
+    # TAB 1: OVERVIEW - Portfolio Allocation Table
+    # ============================================
+    with tab_overview:
+
+        st.markdown("### 📊 Portfolio Allocation")
+
+        # Display allocation table with enhanced design
+        if structured_portfolio['tickers']:
+            # Get ticker names and create enhanced portfolio table
+            portfolio_data = []
+            for i, ticker in enumerate(structured_portfolio['tickers']):
+                # Get category
+                category = "N/A"
+                for alloc in structured_portfolio.get('allocations', []):
+                    if alloc['ticker'] == ticker:
+                        category = alloc.get('category', 'N/A')
+                        break
+
+                # Get asset name and current price
+                asset_name = get_ticker_name(ticker)
+
+                # Calculate actual shares based on current price
+                amount = structured_portfolio['amounts'][i]
+                try:
+                    import yfinance as yf
+                    stock = yf.Ticker(ticker)
+                    current_price = stock.info.get('currentPrice') or stock.info.get('regularMarketPrice')
+                    if current_price and current_price > 0:
+                        shares = round(amount / current_price, 4)
+                    else:
+                        # Fallback if price not available
+                        shares = 0
+                except:
+                    shares = 0
+
+                portfolio_data.append({
+                    'Ticker': ticker,
+                    'Asset Name': asset_name,
+                    'Type': category,
+                    'Allocation': structured_portfolio['weights'][i],
+                    'Amount': amount,
+                    'Shares': shares
+                })
+
+            # Create styled table
+            st.markdown("""
+            <style>
+            .allocation-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 1rem 0;
+            }
+            .allocation-table th {
+                background: #f8f9fa;
+                padding: 12px;
+                text-align: left;
+                font-weight: 600;
+                border-bottom: 2px solid #dee2e6;
+            }
+            .allocation-table td {
+                padding: 12px;
+                border-bottom: 1px solid #dee2e6;
+            }
+            .type-badge {
+                display: inline-block;
+                padding: 4px 12px;
+                border-radius: 12px;
+                font-size: 0.85rem;
+                font-weight: 500;
+            }
+            .badge-etf { background: #e3f2fd; color: #1976d2; }
+            .badge-stock { background: #f3e5f5; color: #7b1fa2; }
+            .badge-tech { background: #e8f5e9; color: #388e3c; }
+            .badge-other { background: #fff3e0; color: #f57c00; }
+            .allocation-bar {
+                width: 100%;
+                height: 8px;
+                background: #e9ecef;
+                border-radius: 4px;
+                overflow: hidden;
+                margin-top: 4px;
+            }
+            .allocation-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                border-radius: 4px;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+            # Display table with HTML for better styling
+            table_html = '<table class="allocation-table"><thead><tr>'
+            table_html += '<th>Ticker</th><th>Asset Name</th><th>Type</th><th>Allocation</th><th>Amount</th><th>Shares</th>'
+            table_html += '</tr></thead><tbody>'
+
+            for item in portfolio_data:
+                # Determine badge class
+                badge_class = "badge-other"
+                if "ETF" in item['Type'].upper():
+                    badge_class = "badge-etf"
+                elif "STOCK" in item['Type'].upper() or "TECHNOLOGY" in item['Type'].upper():
+                    badge_class = "badge-tech"
+
+                alloc_pct = item['Allocation'] * 100
+                table_html += f'<tr>'
+                table_html += f'<td><strong>{item["Ticker"]}</strong></td>'
+                table_html += f'<td>{item["Asset Name"]}</td>'
+                table_html += f'<td><span class="type-badge {badge_class}">{item["Type"]}</span></td>'
+                table_html += f'<td>{alloc_pct:.1f}%<div class="allocation-bar"><div class="allocation-fill" style="width: {alloc_pct}%"></div></div></td>'
+                table_html += f'<td>${item["Amount"]:,.2f}</td>'
+                table_html += f'<td>{item["Shares"]}</td>'
+                table_html += f'</tr>'
+
+            table_html += '</tbody></table>'
+            st.markdown(table_html, unsafe_allow_html=True)
+
+            # Action buttons
+            st.markdown("---")
             col1, col2, col3 = st.columns(3)
-            summary = projection_data['summary']
 
             with col1:
-                st.metric(
-                    "📊 Conservative Scenario",
-                    summary.get('conservative_final_value', 'N/A'),
-                    summary.get('conservative_total_return', 'N/A'),
-                    help="If market underperforms"
-                )
+                if st.button("💾 Save Portfolio", type="secondary", use_container_width=True):
+                    if 'user_preferences' in st.session_state:
+                        st.session_state.user_preferences['portfolio'] = {
+                            'allocation': portfolio_output,
+                            'amount': investment_amount,
+                            'generated_at': portfolio_data['generated_at']
+                        }
+                        save_user_preferences_to_api(st.session_state.user_preferences)
+                    st.success("✅ Saved!")
 
             with col2:
-                st.metric(
-                    "📊 Expected Scenario",
-                    summary.get('expected_final_value', 'N/A'),
-                    summary.get('expected_total_return', 'N/A'),
-                    help="Most likely outcome"
-                )
+                if st.button("🔄 Regenerate", type="secondary", use_container_width=True):
+                    st.session_state.show_portfolio_results = False
+                    st.session_state.show_portfolio_generation = True
+                    st.rerun()
 
             with col3:
-                st.metric(
-                    "📊 Optimistic Scenario",
-                    summary.get('optimistic_final_value', 'N/A'),
-                    summary.get('optimistic_total_return', 'N/A'),
-                    help="If market outperforms"
-                )
+                if st.button("🔧 Optimize", type="primary", use_container_width=True):
+                    st.info("Scroll down to see optimization options")
 
-        # Display AI narrative about projections
-        if projection_narrative:
-            with st.expander("💬 What This Means for You"):
-                st.markdown(escape_markdown_latex(projection_narrative))
-    else:
-        # Fallback if projection data not available
-        st.info("📊 Performance projections will be displayed here after generation.")
-
-    st.markdown("---")  # Separator
+        else:
+            st.warning("No portfolio allocation data available.")
 
     # ============================================
-    # SECTION 2: Two-Column Layout
+    # TAB 2: RISK ANALYSIS
     # ============================================
+    with tab_risk:
+        st.markdown("### ⚠️ Risk Analysis")
 
-    # Create 2-column layout (1.2 : 1.8 ratio)
-    left_col, right_col = st.columns([1.2, 1.8])
+        if structured_portfolio['tickers']:
+            structured = structured_portfolio
 
-    # ============================================
-    # LEFT COLUMN: Portfolio Allocation & Risk Assessment (with internal tabs)
-    # ============================================
-    with left_col:
-        # Internal tabs for allocation and risk
-        alloc_tab, risk_tab = st.tabs(["📊 Portfolio Allocation", "⚠️ Risk Assessment"])
-
-        # -------------------
-        # TAB 1: Portfolio Allocation
-        # -------------------
-        with alloc_tab:
-            # Display allocation table
-            if structured_portfolio['tickers']:
-                # Portfolio allocation table with categories
-                categories = []
-                for i, ticker in enumerate(structured_portfolio['tickers']):
-                    # Find category from allocations
-                    category = "N/A"
-                    for alloc in structured_portfolio.get('allocations', []):
-                        if alloc['ticker'] == ticker:
-                            category = alloc.get('category', 'N/A')
-                            break
-                    categories.append(category)
-
-                portfolio_df = pd.DataFrame({
-                    'Ticker': structured_portfolio['tickers'],
-                    'Category': categories,
-                    'Allocation %': [f"{w*100:.1f}%" for w in structured_portfolio['weights']],
-                    'Amount': [f"${a:,.2f}" for a in structured_portfolio['amounts']]
-                })
-                st.dataframe(portfolio_df, use_container_width=True, hide_index=True)
-
-                # Portfolio metrics
-                st.markdown("#### Portfolio Metrics")
-
-                # Calculate category diversification score
-                unique_categories = len(set(categories)) - (1 if "N/A" in categories else 0)
-                diversification_score = min(100, int((unique_categories / max(len(structured_portfolio['tickers']), 1)) * 100))
-
-                col1, col2 = st.columns(2)
-                with col1:
-                    if structured_portfolio.get('expected_return'):
-                        st.metric("Expected Return", structured_portfolio['expected_return'], help="Annual return range")
-                    else:
-                        st.metric("Expected Return", "6-10%", help="Estimated annual return range")
-                with col2:
-                    risk_level = user_profile.get('risk_profile', 'Moderate').capitalize()
-                    st.metric("Risk Level", risk_level, help="Portfolio risk profile")
-
-                col3, col4 = st.columns(2)
-                with col3:
-                    st.metric("Holdings", len(structured_portfolio['tickers']), help="Number of positions")
-                with col4:
-                    st.metric("Diversification", f"{diversification_score}%", help="Category spread")
-
-                # Action buttons
-                st.markdown("---")
-                btn_col1, btn_col2 = st.columns(2)
-
-                with btn_col1:
-                    if st.button("💾 Save", type="secondary", use_container_width=True):
-                        if 'user_preferences' in st.session_state:
-                            st.session_state.user_preferences['portfolio'] = {
-                                'allocation': portfolio_output,
-                                'amount': investment_amount,
-                                'generated_at': portfolio_data['generated_at']
-                            }
-                            save_user_preferences_to_api(st.session_state.user_preferences)
-                        st.success("✅ Saved!")
-
-                with btn_col2:
-                    if st.button("🔄 Regenerate", type="secondary", use_container_width=True):
-                        st.session_state.show_portfolio_results = False
-                        st.session_state.show_portfolio_generation = True
-                        st.rerun()
-            else:
-                st.warning("No portfolio allocation data available.")
-
-        # -------------------
-        # TAB 2: Risk Assessment
-        # -------------------
-        with risk_tab:
-            if structured_portfolio['tickers']:
-                structured = structured_portfolio
-            
             # Check if risk analysis already completed
             if 'portfolio_risk_analysis' not in st.session_state:
                 with st.spinner("🔄 Analyzing portfolio risk with AI crew..."):
@@ -1587,12 +1743,136 @@ def show_portfolio_results():
             else:
                 st.info("📊 Risk analysis will appear here once portfolio is parsed")
 
-        # -------------------
-        # OPTIMIZE BUTTON (below tabs, still in left column)
-        # -------------------
-        st.markdown("---")
+    # ============================================
+    # TAB 3: PROJECTIONS
+    # ============================================
+    with tab_projections:
+        st.markdown("### 📈 Performance Projections")
+
+        # Display performance chart if we have projection data
+        if projection_data:
+            # Create and display the chart
+            fig = create_performance_chart(projection_data)
+            st.plotly_chart(fig, use_container_width=True, key="performance_projection_chart")
+
+            # Display scenario metrics below the chart
+            if 'summary' in projection_data:
+                col1, col2, col3 = st.columns(3)
+                summary = projection_data['summary']
+
+                with col1:
+                    st.metric(
+                        "📊 Conservative Scenario",
+                        summary.get('conservative_final_value', 'N/A'),
+                        summary.get('conservative_total_return', 'N/A'),
+                        help="If market underperforms"
+                    )
+
+                with col2:
+                    st.metric(
+                        "📊 Expected Scenario",
+                        summary.get('expected_final_value', 'N/A'),
+                        summary.get('expected_total_return', 'N/A'),
+                        help="Most likely outcome"
+                    )
+
+                with col3:
+                    st.metric(
+                        "📊 Optimistic Scenario",
+                        summary.get('optimistic_final_value', 'N/A'),
+                        summary.get('optimistic_total_return', 'N/A'),
+                        help="If market outperforms"
+                    )
+
+            # Display AI narrative about projections
+            if projection_narrative:
+                st.markdown("---")
+                st.markdown("#### 💬 What This Means for You")
+                st.markdown(escape_markdown_latex(projection_narrative))
+        else:
+            st.info("📊 Performance projections will be displayed here after generation.")
+
+    # ============================================
+    # TAB 4: BUDGET PLAN
+    # ============================================
+    with tab_budget:
+        st.markdown("### 💰 Budget Plan & Next Steps")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("#### 💵 Investment Breakdown")
+            st.metric("Initial Investment", f"${investment_amount:,.0f}")
+            st.metric("Recommended Monthly Addition", f"${investment_amount * 0.1:,.0f}", help="10% of initial investment")
+
+            st.markdown("---")
+            st.markdown("#### 📅 Timeline")
+            st.info(f"**Investment Horizon:** {timeline}")
+            st.write(f"Based on your {timeline} timeline, here's what to expect:")
+            st.write("• **Short-term (1-2 years):** Focus on stability, monitor quarterly")
+            st.write("• **Mid-term (3-5 years):** Balanced growth, rebalance annually")
+            st.write("• **Long-term (10+ years):** Maximize growth, review semi-annually")
+
+        with col2:
+            st.markdown("#### 🎯 Action Plan")
+            st.markdown("""
+            ✅ **Step 1:** Open a brokerage account (if needed)
+            - Recommended: Fidelity, Vanguard, or Schwab
+
+            ✅ **Step 2:** Fund your account
+            - Transfer ${:,.0f}
+
+            ✅ **Step 3:** Execute trades
+            - Use the allocation percentages above
+            - Consider fractional shares for precise allocation
+
+            ✅ **Step 4:** Set up monitoring
+            - Review quarterly
+            - Rebalance when allocations drift >5%
+
+            ✅ **Step 5:** Stay the course
+            - Don't panic sell during downturns
+            - Consider dollar-cost averaging for additions
+            """.format(investment_amount))
+
+    # ============================================
+    # AI OPTIMIZATION INSIGHTS (After tabs)
+    # ============================================
+    st.markdown("---")
+    st.markdown("## 🤖 AI Optimization Insights")
+
+    # Display AI recommendations with improved formatting
+    if portfolio_output:
+        # Format with checkmarks and better styling
+        formatted_output = escape_markdown_latex(portfolio_output)
+
+        # Add checkmark styling
+        st.markdown("""
+        <style>
+        .insight-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+        }
+        .insight-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        st.markdown(formatted_output)
+
+    # Optimize Portfolio Button
+    st.markdown("---")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
         if structured_portfolio['tickers']:
-            if st.button("🔧 Optimize Portfolio", type="primary", use_container_width=True):
+            if st.button("🔧 Optimize Portfolio with AI", type="primary", use_container_width=True):
                 structured = structured_portfolio
                 with st.spinner("🔄 Optimizing portfolio allocation with AI crew..."):
                     try:
@@ -1691,32 +1971,24 @@ def show_portfolio_results():
                     if st.button("✅ Apply Optimized Allocation", type="primary"):
                         st.info("🚧 Feature coming soon: Apply optimization and rebalance portfolio")
 
-    # ============================================
-    # RIGHT COLUMN: AI Recommendations
-    # ============================================
-    with right_col:
-        st.markdown("### 💡 Detailed AI Recommendations")
+    # Quick Actions
+    st.markdown("---")
+    st.markdown("### 📌 Quick Actions")
 
-        # Display the full portfolio recommendations from the AI
-        if portfolio_output:
-            st.markdown(escape_markdown_latex(portfolio_output))
-        else:
-            st.info("AI recommendations will appear here after portfolio generation.")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("📈 Analyze Individual Stocks", type="secondary", use_container_width=True):
+            st.session_state.show_portfolio_results = False
+            st.session_state.show_main_app = True
+            st.rerun()
 
-        # Additional insights
-        st.markdown("---")
-        st.markdown("#### 📌 Quick Actions")
+    with col2:
+        if st.button("📊 View Detailed Analysis", type="secondary", use_container_width=True):
+            st.info("Coming soon: Detailed stock-by-stock analysis")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📈 Analyze Individual Stocks", type="secondary", use_container_width=True):
-                st.session_state.show_portfolio_results = False
-                st.session_state.show_main_app = True
-                st.rerun()
-
-        with col2:
-            if st.button("📊 View Detailed Analysis", type="secondary", use_container_width=True):
-                st.info("Coming soon: Detailed stock-by-stock analysis")
+    with col3:
+        if st.button("📖 Educational Resources", type="secondary", use_container_width=True):
+            st.info("Scroll down to see educational content")
 
     # ============================================
     # SECTION 3: Education Content (Bottom, Collapsible)
