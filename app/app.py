@@ -5,6 +5,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import re
 from datetime import datetime, timedelta
 import yfinance as yf
 from urllib.parse import parse_qs, urlparse
