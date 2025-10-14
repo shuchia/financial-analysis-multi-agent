@@ -3,26 +3,16 @@ import numpy as np
 from typing import Dict
 
 
-@tool
-def calculate_portfolio_projections(
+def _calculate_projections_impl(
     investment_amount: float,
     expected_annual_return: float,
     timeline_years: int,
     annual_volatility: float = 0.15
 ) -> Dict:
     """
-    Calculate portfolio performance projections over a given timeline with three scenarios.
-
-    Args:
-        investment_amount (float): Initial investment amount in dollars
-        expected_annual_return (float): Expected annual return as decimal (e.g., 0.08 for 8%)
-        timeline_years (int): Investment timeline in years
-        annual_volatility (float): Expected annual volatility as decimal (e.g., 0.15 for 15%)
-
-    Returns:
-        dict: Dictionary with projection scenarios including conservative, expected, and optimistic outcomes
+    Internal implementation of portfolio projection calculations.
+    This is the non-decorated version that can be called directly.
     """
-
     try:
         # Calculate number of months
         months = timeline_years * 12
@@ -91,6 +81,33 @@ def calculate_portfolio_projections(
             'error': f'Failed to calculate projections: {str(e)}',
             'suggestion': 'Please verify input parameters are valid numbers'
         }
+
+
+@tool
+def calculate_portfolio_projections(
+    investment_amount: float,
+    expected_annual_return: float,
+    timeline_years: int,
+    annual_volatility: float = 0.15
+) -> Dict:
+    """
+    Calculate portfolio performance projections over a given timeline with three scenarios.
+
+    Args:
+        investment_amount (float): Initial investment amount in dollars
+        expected_annual_return (float): Expected annual return as decimal (e.g., 0.08 for 8%)
+        timeline_years (int): Investment timeline in years
+        annual_volatility (float): Expected annual volatility as decimal (e.g., 0.15 for 15%)
+
+    Returns:
+        dict: Dictionary with projection scenarios including conservative, expected, and optimistic outcomes
+    """
+    return _calculate_projections_impl(
+        investment_amount=investment_amount,
+        expected_annual_return=expected_annual_return,
+        timeline_years=timeline_years,
+        annual_volatility=annual_volatility
+    )
 
 
 # Legacy class wrapper for backward compatibility

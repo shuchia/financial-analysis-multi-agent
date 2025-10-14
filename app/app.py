@@ -1104,15 +1104,16 @@ def escape_markdown_latex(text: str) -> str:
     if not text:
         return text
 
-    # Replace LaTeX triggers that cause katex font rendering
-    # Escape underscores (except in URLs)
-    text = re.sub(r'(?<!https?://)(?<!www\.)_', r'\_', text)
+    # Simple approach: escape common LaTeX triggers
+    # Streamlit interprets $ and _ as LaTeX, causing katex font rendering
 
-    # Escape dollar signs when followed by digits (prevents inline math)
-    text = re.sub(r'\$(\d)', r'\\\$$1', text)
+    # Escape dollar signs (but preserve if already escaped)
+    if '\\$' not in text:
+        text = text.replace('$', '\\$')
 
-    # Escape asterisks when they might trigger math mode (3 or more in a row)
-    text = re.sub(r'\*\*\*+', lambda m: '\\' + m.group(), text)
+    # Escape underscores (but preserve if already escaped)
+    if '\\_' not in text:
+        text = text.replace('_', '\\_')
 
     return text
 
@@ -1297,7 +1298,7 @@ def show_portfolio_results():
     # Fallback: Recalculate projections if data not found
     if not projection_data and user_profile:
         try:
-            from tools.performance_projection_tool import calculate_portfolio_projections
+            from tools.performance_projection_tool import _calculate_projections_impl
             from portfoliocrew import parse_timeline_to_years
 
             # Parse expected return from portfolio output
@@ -1316,8 +1317,8 @@ def show_portfolio_results():
             volatility_map = {'conservative': 0.10, 'moderate': 0.15, 'aggressive': 0.20}
             annual_volatility = volatility_map.get(risk_profile, 0.15)
 
-            # Calculate projections
-            projection_data = calculate_portfolio_projections(
+            # Calculate projections using the non-decorated implementation
+            projection_data = _calculate_projections_impl(
                 investment_amount=float(investment_amount),
                 expected_annual_return=expected_return,
                 timeline_years=timeline_years,
