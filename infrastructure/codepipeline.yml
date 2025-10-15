@@ -1,0 +1,416 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CodePipeline for InvestForge - Automated CI/CD from GitHub to ECS'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+
+  GitHubOwner:
+    Type: String
+    Description: GitHub repository owner/organization
+    Default: shuchia
+
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository name
+    Default: financial-analysis-multi-agent
+
+  GitHubBranch:
+    Type: String
+    Description: GitHub branch to track
+    Default: main
+
+  GitHubToken:
+    Type: String
+    Description: GitHub Personal Access Token (stored in Secrets Manager)
+    NoEcho: true
+
+  ECRRepositoryName:
+    Type: String
+    Description: ECR repository name
+    Default: financial-analysis-app
+
+  ECSClusterName:
+    Type: String
+    Description: ECS cluster name
+    Default: financial-analysis-cluster
+
+  ECSServiceName:
+    Type: String
+    Description: ECS service name
+    Default: financial-analysis-service
+
+  CodeBuildProjectName:
+    Type: String
+    Description: Existing CodeBuild project name
+    Default: financial-analysis-build
+
+Resources:
+  # ========================================
+  # S3 Bucket for Pipeline Artifacts
+  # ========================================
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-pipeline-artifacts-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldArtifacts
+            Status: Enabled
+            ExpirationInDays: 30
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # ========================================
+  # IAM Role for CodePipeline
+  # ========================================
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-codepipeline-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCodePipelineFullAccess
+      Policies:
+        - PolicyName: CodePipelineAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # S3 Access
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                  - s3:GetBucketLocation
+                  - s3:ListBucket
+                Resource:
+                  - !Sub '${ArtifactBucket.Arn}'
+                  - !Sub '${ArtifactBucket.Arn}/*'
+
+              # CodeBuild Access
+              - Effect: Allow
+                Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                  - codebuild:StopBuild
+                Resource:
+                  - !Sub 'arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:project/${CodeBuildProjectName}'
+
+              # ECS Access
+              - Effect: Allow
+                Action:
+                  - ecs:*
+                  - ecr:*
+                Resource: '*'
+
+              # IAM Pass Role
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: '*'
+                Condition:
+                  StringEqualsIfExists:
+                    iam:PassedToService:
+                      - ecs-tasks.amazonaws.com
+
+  # ========================================
+  # Update CodeBuild Project IAM Role
+  # ========================================
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-codebuild-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+      Policies:
+        - PolicyName: CodeBuildAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # CloudWatch Logs
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*'
+
+              # S3 Artifacts
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                Resource:
+                  - !Sub '${ArtifactBucket.Arn}/*'
+
+              # ECR Access
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:PutImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                Resource: '*'
+
+              # Secrets Manager (if using)
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: '*'
+
+  # ========================================
+  # GitHub Connection (CodeStar)
+  # ========================================
+  GitHubConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Properties:
+      ConnectionName: !Sub '${AWS::StackName}-github-connection'
+      ProviderType: GitHub
+
+  # ========================================
+  # CodePipeline
+  # ========================================
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Sub '${AWS::StackName}-pipeline-${Environment}'
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      Stages:
+        # Stage 1: Source from GitHub
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: '1'
+              Configuration:
+                ConnectionArn: !Ref GitHubConnection
+                FullRepositoryId: !Sub '${GitHubOwner}/${GitHubRepo}'
+                BranchName: !Ref GitHubBranch
+                OutputArtifactFormat: CODE_ZIP
+                DetectChanges: true
+              OutputArtifacts:
+                - Name: SourceOutput
+
+        # Stage 2: Build with CodeBuild
+        - Name: Build
+          Actions:
+            - Name: BuildAction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref CodeBuildProjectName
+                EnvironmentVariables: !Sub |
+                  [
+                    {
+                      "name": "IMAGE_REPO_NAME",
+                      "value": "${ECRRepositoryName}",
+                      "type": "PLAINTEXT"
+                    },
+                    {
+                      "name": "AWS_DEFAULT_REGION",
+                      "value": "${AWS::Region}",
+                      "type": "PLAINTEXT"
+                    },
+                    {
+                      "name": "AWS_ACCOUNT_ID",
+                      "value": "${AWS::AccountId}",
+                      "type": "PLAINTEXT"
+                    }
+                  ]
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+
+        # Stage 3: Deploy to ECS
+        - Name: Deploy
+          Actions:
+            - Name: DeployAction
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: ECS
+                Version: '1'
+              Configuration:
+                ClusterName: !Ref ECSClusterName
+                ServiceName: !Ref ECSServiceName
+                FileName: imagedefinitions.json
+                DeploymentTimeout: 15
+              InputArtifacts:
+                - Name: BuildOutput
+
+  # ========================================
+  # CloudWatch Event Rule for Pipeline Trigger
+  # ========================================
+  PipelineEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${AWS::StackName}-pipeline-trigger'
+      Description: Trigger pipeline on GitHub push
+      EventPattern:
+        source:
+          - aws.codeconnections
+        detail-type:
+          - CodeStar Source Connection State Change
+        detail:
+          event:
+            - referenceCreated
+            - referenceUpdated
+          referenceType:
+            - branch
+          referenceName:
+            - !Ref GitHubBranch
+      State: ENABLED
+      Targets:
+        - Arn: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}'
+          RoleArn: !GetAtt PipelineEventRole.Arn
+          Id: codepipeline-target
+
+  PipelineEventRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StartPipelineExecution
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codepipeline:StartPipelineExecution
+                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}'
+
+  # ========================================
+  # SNS Topic for Pipeline Notifications
+  # ========================================
+  PipelineNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-pipeline-notifications'
+      DisplayName: Pipeline Status Notifications
+      Subscription:
+        - Endpoint: !Ref NotificationEmail
+          Protocol: email
+
+  PipelineNotificationTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref PipelineNotificationTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codestar-notifications.amazonaws.com
+            Action: SNS:Publish
+            Resource: !Ref PipelineNotificationTopic
+
+  # ========================================
+  # CodePipeline Notification Rule
+  # ========================================
+  PipelineNotificationRule:
+    Type: AWS::CodeStarNotifications::NotificationRule
+    Properties:
+      Name: !Sub '${AWS::StackName}-pipeline-notifications'
+      DetailType: FULL
+      Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}'
+      EventTypeIds:
+        - codepipeline-pipeline-pipeline-execution-failed
+        - codepipeline-pipeline-pipeline-execution-succeeded
+        - codepipeline-pipeline-pipeline-execution-started
+      Targets:
+        - TargetType: SNS
+          TargetAddress: !Ref PipelineNotificationTopic
+      Status: ENABLED
+
+  # ========================================
+  # CloudWatch Logs for Pipeline
+  # ========================================
+  PipelineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/codepipeline/${AWS::StackName}-${Environment}'
+      RetentionInDays: 30
+
+Parameters:
+  NotificationEmail:
+    Type: String
+    Description: Email address for pipeline notifications
+    Default: your-email@example.com
+
+Outputs:
+  PipelineName:
+    Description: CodePipeline name
+    Value: !Ref Pipeline
+    Export:
+      Name: !Sub '${AWS::StackName}-pipeline-name'
+
+  PipelineUrl:
+    Description: CodePipeline Console URL
+    Value: !Sub 'https://console.aws.amazon.com/codesuite/codepipeline/pipelines/${Pipeline}/view?region=${AWS::Region}'
+
+  ArtifactBucket:
+    Description: S3 bucket for pipeline artifacts
+    Value: !Ref ArtifactBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-artifact-bucket'
+
+  GitHubConnectionArn:
+    Description: GitHub connection ARN (needs to be activated)
+    Value: !Ref GitHubConnection
+    Export:
+      Name: !Sub '${AWS::StackName}-github-connection'
+
+  NotificationTopicArn:
+    Description: SNS topic for pipeline notifications
+    Value: !Ref PipelineNotificationTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-notification-topic'
