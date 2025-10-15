@@ -7,10 +7,11 @@ from typing import List, Dict
 from crewai.tools import tool
 
 
-@tool
-def var_calculator(tickers_string: str, portfolio_value: float = 100000,
-                   holding_period: int = 10, confidence_levels_string: str = "0.90,0.95,0.99") -> Dict:
+def _var_calculator_impl(tickers_string: str, portfolio_value: float = 100000,
+                         holding_period: int = 10, confidence_levels_string: str = "0.90,0.95,0.99") -> Dict:
     """
+    Internal implementation of VaR calculator (non-decorated version for direct calls).
+
     Calculates Value at Risk (VaR) and Conditional VaR (CVaR) using multiple methods.
 
     Args:
@@ -243,6 +244,24 @@ def var_calculator(tickers_string: str, portfolio_value: float = 100000,
                 'holding_period': holding_period
             }
         }
+
+
+@tool
+def var_calculator(tickers_string: str, portfolio_value: float = 100000,
+                   holding_period: int = 10, confidence_levels_string: str = "0.90,0.95,0.99") -> Dict:
+    """
+    Calculates Value at Risk (VaR) and Conditional VaR (CVaR) using multiple methods.
+
+    Args:
+        tickers_string (str): Comma-separated list of stock tickers
+        portfolio_value (float): Total portfolio value
+        holding_period (int): Holding period in days
+        confidence_levels_string (str): Comma-separated confidence levels (e.g., "0.90,0.95,0.99")
+
+    Returns:
+        dict: VaR and CVaR results using historical, parametric, and Monte Carlo methods
+    """
+    return _var_calculator_impl(tickers_string, portfolio_value, holding_period, confidence_levels_string)
 
 
 def _interpret_risk_level(volatility: float, sharpe: float, max_dd: float) -> str:

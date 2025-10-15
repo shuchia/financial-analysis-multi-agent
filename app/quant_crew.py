@@ -6,7 +6,7 @@
 from crewai import Agent, Crew, Task, LLM
 import os
 from tools.portfolio_optimization_tool import portfolio_optimization
-from tools.var_calculator_tool import var_calculator
+from tools.var_calculator_tool import var_calculator, _var_calculator_impl
 # Import existing tools
 from tools.yf_tech_analysis_tool import yf_tech_analysis
 from tools.yf_fundamental_analysis_tool import yf_fundamental_analysis
