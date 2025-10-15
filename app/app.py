@@ -1820,12 +1820,8 @@ def show_portfolio_results():
                     # Trigger optimization directly
                     with st.spinner("🔄 Optimizing portfolio allocation with AI crew..."):
                         try:
-                            # Initialize quantitative analysis crew
-                            from quant_crew import QuantitativeAnalysisCrew
-                            quant_crew = QuantitativeAnalysisCrew()
-
                             # Run optimization using AI crew
-                            opt_crew_result = quant_crew.optimize_portfolio(
+                            opt_crew_result = QuantitativeAnalysisCrew().optimize_portfolio(
                                 tickers=structured_portfolio['tickers'],
                                 current_weights=structured_portfolio['weights'],
                                 user_profile=user_profile,
@@ -1873,11 +1869,8 @@ def show_portfolio_results():
             if 'portfolio_risk_analysis' not in st.session_state:
                 with st.spinner("🔄 Analyzing portfolio risk with AI crew..."):
                     try:
-                        # Initialize quantitative analysis crew
-                        quant_crew = QuantitativeAnalysisCrew()
-
-                        # Run risk analysis using AI crew
-                        crew_risk_result = quant_crew.analyze_portfolio_risk(
+                        # Run risk analysis using AI crew (using already imported class)
+                        crew_risk_result = QuantitativeAnalysisCrew().analyze_portfolio_risk(
                             tickers=structured['tickers'],
                             weights=structured['weights'],
                             user_profile=user_profile,
@@ -1911,21 +1904,8 @@ def show_portfolio_results():
                             risk_results = None
             else:
                 risk_results = st.session_state.portfolio_risk_analysis
-            
-            # Display AI crew risk analysis if available
-            if 'portfolio_risk_crew_result' in st.session_state:
-                st.markdown("#### 🤖 AI Risk Analyst Assessment")
-                crew_risk_result = st.session_state.portfolio_risk_crew_result
-                
-                if hasattr(crew_risk_result, 'tasks_output') and crew_risk_result.tasks_output:
-                    crew_output = crew_risk_result.tasks_output[0].raw
-                    st.markdown("##### Quantitative Risk Analysis Report:")
-                    st.markdown(escape_markdown_latex(crew_output))
-                else:
-                    st.markdown(escape_markdown_latex(str(crew_risk_result)))
-                
-                st.markdown("---")
-            
+
+            # Display Risk Metrics Dashboard FIRST
             if risk_results:
                 st.markdown("#### 📊 Risk Metrics Dashboard")
                 # Display risk metrics
@@ -1986,6 +1966,48 @@ def show_portfolio_results():
                         for ticker, data in risk_results['risk_contributions'].items()
                     ])
                     st.dataframe(risk_df, use_container_width=True)
+
+                # Display AI Risk Summary & Recommendations (non-duplicate content only)
+                if 'portfolio_risk_crew_result' in st.session_state:
+                    st.markdown("---")
+                    with st.expander("💡 Risk Summary & Recommendations", expanded=False):
+                        crew_risk_result = st.session_state.portfolio_risk_crew_result
+
+                        if hasattr(crew_risk_result, 'tasks_output') and crew_risk_result.tasks_output:
+                            crew_output = crew_risk_result.tasks_output[0].raw
+
+                            # Extract only summary and recommendations sections (skip metrics already shown)
+                            import re
+
+                            # Try to extract Executive Summary
+                            summary_match = re.search(r'(?:Executive\s+Summary|Summary)[:\s]+(.*?)(?=(?:\n\n|Value\s+at\s+Risk|Portfolio\s+Risk\s+Metrics|Risk\s+Alignment|Recommendations|\Z))', str(crew_output), re.IGNORECASE | re.DOTALL)
+
+                            # Try to extract Recommendations section
+                            recommendations_match = re.search(r'(?:Recommendations|Actions|Suggestions)[:\s]+(.*?)(?=\Z)', str(crew_output), re.IGNORECASE | re.DOTALL)
+
+                            # Try to extract Risk Alignment narrative (not just the level)
+                            alignment_match = re.search(r'Risk\s+Alignment[:\s]+(.*?)(?=(?:\n\n|Recommendations|\Z))', str(crew_output), re.IGNORECASE | re.DOTALL)
+
+                            # Display extracted sections
+                            if summary_match or recommendations_match or alignment_match:
+                                if summary_match:
+                                    st.markdown("**Executive Summary:**")
+                                    st.markdown(escape_markdown_latex(summary_match.group(1).strip()))
+                                    st.markdown("")
+
+                                if alignment_match:
+                                    st.markdown("**Risk Profile Alignment:**")
+                                    st.markdown(escape_markdown_latex(alignment_match.group(1).strip()))
+                                    st.markdown("")
+
+                                if recommendations_match:
+                                    st.markdown("**Recommendations:**")
+                                    st.markdown(escape_markdown_latex(recommendations_match.group(1).strip()))
+                            else:
+                                # Fallback: show full output if parsing fails
+                                st.markdown(escape_markdown_latex(crew_output))
+                        else:
+                            st.markdown(escape_markdown_latex(str(crew_risk_result)))
             else:
                 st.info("📊 Risk analysis will appear here once portfolio is parsed")
 
