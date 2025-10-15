@@ -140,12 +140,24 @@ load_custom_css()
 def get_logo_base64():
     """Get InvestForge logo as base64 string"""
     import base64
-    try:
-        with open("app/static/images/investforge-logo.png", "rb") as f:
-            logo_data = f.read()
-        return base64.b64encode(logo_data).decode()
-    except FileNotFoundError:
-        return ""
+    import os
+    # Try multiple possible paths (local dev vs Docker container)
+    possible_paths = [
+        "static/images/investforge-logo.png",  # Docker container path
+        "app/static/images/investforge-logo.png",  # Local dev path
+        "assets/images/investforge-logo.png",  # Alternative path
+    ]
+
+    for path in possible_paths:
+        try:
+            if os.path.exists(path):
+                with open(path, "rb") as f:
+                    logo_data = f.read()
+                return base64.b64encode(logo_data).decode()
+        except:
+            continue
+
+    return ""  # Return empty string if no logo found
 
 def render_investforge_header(title="InvestForge", subtitle="Forge Your Financial Future with AI", center=True):
     """Render consistent InvestForge header with logo and branding"""
