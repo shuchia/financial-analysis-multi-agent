@@ -285,53 +285,70 @@ class QuantitativeAnalysisCrew:
     def analyze_portfolio_risk(self, tickers, weights=None, user_profile=None, investment_amount=None):
         """Specific function for portfolio risk analysis using quant crew."""
 
-        # Create risk analyst agent
-        self.create_agents()
+        # BETTER APPROACH: Call the tool directly for structured data
+        # Then optionally use AI for narrative interpretation
 
         # Format tickers as comma-separated string for the VaR tool
         tickers_string = ','.join(tickers) if isinstance(tickers, list) else str(tickers)
         portfolio_value = investment_amount if investment_amount else 10000
         user_risk = user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'
 
-        # Create specific task for risk analysis
+        # Call VaR calculator tool directly to get structured data
+        tool_result = var_calculator(
+            tickers_string=tickers_string,
+            portfolio_value=portfolio_value,
+            holding_period=10,
+            confidence_levels_string="0.95,0.99"
+        )
+
+        # Check if tool returned an error
+        if 'error' in tool_result:
+            return {
+                'raw': f"Error calculating risk metrics: {tool_result['error']}",
+                'tool_output': tool_result,
+                'tasks_output': []
+            }
+
+        # Create agents for narrative interpretation
+        self.create_agents()
+
+        # Create task that uses the tool output for narrative
         risk_task = Task(
-            description=f"""Perform comprehensive risk analysis on the portfolio:
+            description=f"""Provide risk analysis narrative based on these calculated metrics:
 
             PORTFOLIO DATA:
             - Tickers: {tickers_string}
-            - Weights: {weights if weights else 'Equal weight'}
             - Portfolio Value: ${portfolio_value:,.0f}
             - User Risk Profile: {user_risk}
 
-            RISK ANALYSIS REQUIREMENTS:
-            1. Use the var_calculator tool with these EXACT parameters:
-               - tickers_string="{tickers_string}"
-               - portfolio_value={portfolio_value}
-               - holding_period=10
-               - confidence_levels_string="0.95,0.99"
-            2. Analyze the VaR results and explain what they mean for this investor
-            3. Assess if portfolio risk aligns with user's {user_risk} risk tolerance
-            4. Review the portfolio metrics (volatility, Sharpe ratio, max drawdown) from the tool output
-            5. Provide specific, actionable risk mitigation recommendations
+            CALCULATED RISK METRICS (from VaR calculator):
+            {tool_result}
 
-            OUTPUT FORMAT:
-            Provide a clear, structured report with:
-            - Executive Summary: Overall risk level (Low/Moderate/High) and alignment with user profile
-            - Value at Risk Analysis: Explain the 95% and 99% VaR results in plain English
-            - Portfolio Risk Metrics: Interpret volatility, Sharpe ratio, and max drawdown
-            - Risk Alignment: Does this match the user's {user_risk} profile?
-            - Recommendations: 3-5 specific actions to optimize risk
+            YOUR TASK:
+            Interpret these metrics and provide:
+            1. Executive Summary: Overall risk level (Low/Moderate/High) based on the metrics
+            2. Risk Alignment: Does this match the user's {user_risk} profile?
+            3. Recommendations: 3-5 specific actions to optimize risk based on the actual metrics
+
+            DO NOT recalculate metrics. Use the values provided above.
             """,
             agent=self.risk_analyst,
-            expected_output="Comprehensive portfolio risk assessment with VaR and recommendations"
+            expected_output="Risk interpretation and recommendations based on calculated metrics"
         )
-        
-        # Run risk analysis
+
+        # Run narrative generation
         crew = Crew(
             agents=[self.risk_analyst],
             tasks=[risk_task],
             verbose=True
         )
-        
-        return crew.kickoff()
+
+        narrative_result = crew.kickoff()
+
+        # Return both structured tool output AND narrative
+        return {
+            'tool_output': tool_result,  # Structured data
+            'narrative': narrative_result,  # AI interpretation
+            'tasks_output': narrative_result.tasks_output if hasattr(narrative_result, 'tasks_output') else []
+        }
 

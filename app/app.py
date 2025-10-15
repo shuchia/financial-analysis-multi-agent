@@ -1880,13 +1880,50 @@ def show_portfolio_results():
                         # Store the raw crew output for narrative display
                         st.session_state.portfolio_risk_crew_result = crew_risk_result
 
-                        # Parse the crew output into structured format for metrics dashboard
-                        risk_results = parse_risk_output(
-                            crew_risk_result,
-                            user_profile=user_profile,
-                            investment_amount=investment_amount
-                        )
-                        st.session_state.portfolio_risk_analysis = risk_results
+                        # NEW: Extract structured tool output directly
+                        if isinstance(crew_risk_result, dict) and 'tool_output' in crew_risk_result:
+                            # Use the tool output directly - no parsing needed!
+                            tool_output = crew_risk_result['tool_output']
+
+                            # Convert to the format expected by the UI
+                            risk_results = {
+                                "portfolio_metrics": {
+                                    "beta": 1.0,  # Default, VaR tool doesn't calculate beta
+                                    "sharpe_ratio": tool_output.get('portfolio_metrics', {}).get('sharpe_ratio', 0.0),
+                                    "value_at_risk_95": float(tool_output.get('var_historical', {}).get('95%', 0.0)) / investment_amount * 100,
+                                    "value_at_risk_99": float(tool_output.get('var_historical', {}).get('99%', 0.0)) / investment_amount * 100,
+                                    "max_drawdown": tool_output.get('portfolio_metrics', {}).get('max_drawdown', 0.0),
+                                    "annual_volatility": tool_output.get('portfolio_metrics', {}).get('annual_volatility', 0.0),
+                                    "expected_annual_return": tool_output.get('portfolio_metrics', {}).get('annual_return', 0.0)
+                                },
+                                "risk_contributions": {},
+                                "risk_alignment": {
+                                    "user_profile": user_profile.get('risk_profile', 'moderate'),
+                                    "risk_score": user_profile.get('risk_score', 0.5),
+                                    "portfolio_risk_level": "aligned",
+                                    "expected_volatility_range": "12%-18%",
+                                    "actual_volatility": f"{tool_output.get('portfolio_metrics', {}).get('annual_volatility', 0.0):.1f}%",
+                                    "adjustment_recommendation": None
+                                },
+                                "diversification_metrics": {
+                                    "number_of_positions": len(structured['tickers']),
+                                    "effective_number_of_stocks": 0,
+                                    "concentration_risk": "moderate"
+                                },
+                                "value_at_risk_interpretation": {
+                                    "95%": tool_output.get('interpretation', {}).get('95%_var_interpretation', 'Data pending'),
+                                    "99%": f"1% chance of losing more than ${tool_output.get('var_historical', {}).get('99%', 0.0):,.2f} over 10 days"
+                                }
+                            }
+                            st.session_state.portfolio_risk_analysis = risk_results
+                        else:
+                            # Fallback: Parse the narrative output (old behavior)
+                            risk_results = parse_risk_output(
+                                crew_risk_result,
+                                user_profile=user_profile,
+                                investment_amount=investment_amount
+                            )
+                            st.session_state.portfolio_risk_analysis = risk_results
                     except Exception as e:
                         st.error(f"AI Risk analysis failed: {str(e)}")
                         # Fallback to direct tool call
@@ -1973,36 +2010,45 @@ def show_portfolio_results():
                     with st.expander("💡 Risk Summary & Recommendations", expanded=False):
                         crew_risk_result = st.session_state.portfolio_risk_crew_result
 
-                        if hasattr(crew_risk_result, 'tasks_output') and crew_risk_result.tasks_output:
+                        # NEW: Handle the new structure with tool_output and narrative
+                        if isinstance(crew_risk_result, dict) and 'narrative' in crew_risk_result:
+                            narrative_result = crew_risk_result['narrative']
+                            if hasattr(narrative_result, 'tasks_output') and narrative_result.tasks_output:
+                                crew_output = narrative_result.tasks_output[0].raw
+                            else:
+                                crew_output = str(narrative_result)
+                        elif hasattr(crew_risk_result, 'tasks_output') and crew_risk_result.tasks_output:
                             crew_output = crew_risk_result.tasks_output[0].raw
+                        else:
+                            crew_output = str(crew_risk_result)
 
-                            # Extract only summary and recommendations sections (skip metrics already shown)
-                            import re
+                        # Extract only summary and recommendations sections (skip metrics already shown)
+                        import re
 
-                            # Try to extract Executive Summary
-                            summary_match = re.search(r'(?:Executive\s+Summary|Summary)[:\s]+(.*?)(?=(?:\n\n|Value\s+at\s+Risk|Portfolio\s+Risk\s+Metrics|Risk\s+Alignment|Recommendations|\Z))', str(crew_output), re.IGNORECASE | re.DOTALL)
+                        # Try to extract Executive Summary
+                        summary_match = re.search(r'(?:Executive\s+Summary|Summary)[:\s]+(.*?)(?=(?:\n\n|Value\s+at\s+Risk|Portfolio\s+Risk\s+Metrics|Risk\s+Alignment|Recommendations|\Z))', str(crew_output), re.IGNORECASE | re.DOTALL)
 
-                            # Try to extract Recommendations section
-                            recommendations_match = re.search(r'(?:Recommendations|Actions|Suggestions)[:\s]+(.*?)(?=\Z)', str(crew_output), re.IGNORECASE | re.DOTALL)
+                        # Try to extract Recommendations section
+                        recommendations_match = re.search(r'(?:Recommendations|Actions|Suggestions)[:\s]+(.*?)(?=\Z)', str(crew_output), re.IGNORECASE | re.DOTALL)
 
-                            # Try to extract Risk Alignment narrative (not just the level)
-                            alignment_match = re.search(r'Risk\s+Alignment[:\s]+(.*?)(?=(?:\n\n|Recommendations|\Z))', str(crew_output), re.IGNORECASE | re.DOTALL)
+                        # Try to extract Risk Alignment narrative (not just the level)
+                        alignment_match = re.search(r'Risk\s+Alignment[:\s]+(.*?)(?=(?:\n\n|Recommendations|\Z))', str(crew_output), re.IGNORECASE | re.DOTALL)
 
-                            # Display extracted sections
-                            if summary_match or recommendations_match or alignment_match:
-                                if summary_match:
-                                    st.markdown("**Executive Summary:**")
-                                    st.markdown(escape_markdown_latex(summary_match.group(1).strip()))
-                                    st.markdown("")
+                        # Display extracted sections
+                        if summary_match or recommendations_match or alignment_match:
+                            if summary_match:
+                                st.markdown("**Executive Summary:**")
+                                st.markdown(escape_markdown_latex(summary_match.group(1).strip()))
+                                st.markdown("")
 
-                                if alignment_match:
-                                    st.markdown("**Risk Profile Alignment:**")
-                                    st.markdown(escape_markdown_latex(alignment_match.group(1).strip()))
-                                    st.markdown("")
+                            if alignment_match:
+                                st.markdown("**Risk Profile Alignment:**")
+                                st.markdown(escape_markdown_latex(alignment_match.group(1).strip()))
+                                st.markdown("")
 
-                                if recommendations_match:
-                                    st.markdown("**Recommendations:**")
-                                    st.markdown(escape_markdown_latex(recommendations_match.group(1).strip()))
+                            if recommendations_match:
+                                st.markdown("**Recommendations:**")
+                                st.markdown(escape_markdown_latex(recommendations_match.group(1).strip()))
                             else:
                                 # Fallback: show full output if parsing fails
                                 st.markdown(escape_markdown_latex(crew_output))
