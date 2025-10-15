@@ -116,14 +116,30 @@ def create_initial_crew(amount,user_profile=None):
             VTI (ETF) - 40% ($4,000) - Provides you with broad market exposure
             AAPL (Technology) - 15% ($1,500) - Gives you exposure to strong growth potential
 
-            Also include:
-            - Expected annual return range for YOUR portfolio
-            - Key risks YOU should watch
-
             Categories should be one of: ETF, Technology, Healthcare, Financial, Consumer, Energy, Industrial, Real Estate, or specific fund types
+
+            Then provide these additional sections using the exact headers shown:
+
+            ## RISK MANAGEMENT
+            Key Risks to Watch:
+            - [List 3-5 specific risks based on THIS portfolio's actual composition, e.g., "Tech sector concentration (40% in NASDAQ) - vulnerable to sector rotation"]
+            - [Not generic market risks, but specific to the holdings you chose]
+
+            ## PERFORMANCE OUTLOOK
+            Expected Annual Return: X-Y%
+
+            Key Monitoring Points:
+            - Rebalancing trigger: [Specify when to rebalance, e.g., "When any position drifts more than 5% from target allocation"]
+            - Monitoring frequency: [Based on their timeline, e.g., "Quarterly review recommended for 5-10 year timeline"]
+            - Volatility expectations: [Expected volatility range, e.g., "Moderate volatility (10-15% annual standard deviation)"]
+
+            ## COST EFFICIENCY
+            - [Specific expense ratios of the funds you chose, e.g., "VTI expense ratio: 0.03% - among the lowest available"]
+            - [Tax efficiency considerations specific to these holdings, e.g., "ETF structure provides tax-efficient capital gains distribution"]
+            - [Fee minimization strategy used, e.g., "All holdings available commission-free at major brokerages"]
             """,
         agent=strategist,
-        expected_output="Portfolio with specific tickers and percentages",
+        expected_output="Portfolio with specific tickers, percentages, and structured insights sections",
         max_retries=1
     )
     logger.debug("Portfolio task created")

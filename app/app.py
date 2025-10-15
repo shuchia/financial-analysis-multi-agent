@@ -1476,13 +1476,45 @@ def show_portfolio_results():
     expected_return_amount = "N/A"
     timeline_display = timeline
 
-    # Try to extract annual return percentage from portfolio output text
+    # Try multiple patterns to extract annual return percentage from portfolio output
     import re
-    return_match = re.search(r'(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*%', str(portfolio_output))
+    avg_annual_return = None
+
+    # Pattern 1: "Expected annual return: X-Y%"
+    return_match = re.search(r'Expected annual return[^:]*:\s*(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*%', str(portfolio_output), re.IGNORECASE)
     if return_match:
         low = float(return_match.group(1))
         high = float(return_match.group(2))
         avg_annual_return = (low + high) / 2
+    else:
+        # Pattern 2: "X-Y% annual return" or "X-Y% yearly"
+        return_match = re.search(r'(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*%\s*(?:annual|yearly|per year)', str(portfolio_output), re.IGNORECASE)
+        if return_match:
+            low = float(return_match.group(1))
+            high = float(return_match.group(2))
+            avg_annual_return = (low + high) / 2
+        else:
+            # Pattern 3: Any percentage range in the output (less specific)
+            return_match = re.search(r'(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*%', str(portfolio_output))
+            if return_match:
+                low = float(return_match.group(1))
+                high = float(return_match.group(2))
+                # Only use if in reasonable return range (3-30%)
+                if 3 <= low <= 30 and 3 <= high <= 30:
+                    avg_annual_return = (low + high) / 2
+
+    # Fallback: Use defaults based on risk profile if no match found
+    if avg_annual_return is None:
+        risk_profile_lower = risk_profile.lower()
+        if 'conservative' in risk_profile_lower:
+            avg_annual_return = 6.0
+        elif 'aggressive' in risk_profile_lower:
+            avg_annual_return = 12.5
+        else:  # moderate
+            avg_annual_return = 8.5
+
+    # Now calculate display values
+    if avg_annual_return:
         expected_return_pct = f"~{avg_annual_return:.1f}% avg annually"
 
         # Calculate expected return amount based on timeline
@@ -2110,24 +2142,58 @@ def show_portfolio_results():
         </style>
         """, unsafe_allow_html=True)
 
-        # Parse portfolio output to extract insights
+        # Parse portfolio output to extract insights using section headers
         import re
 
         # Extract holdings with reasoning (format: TICKER (Category) - XX% ($X,XXX) - Reasoning)
         holdings_pattern = r'([A-Z]{1,5})\s*\([^)]+\)\s*-\s*(\d+(?:\.\d+)?%)\s*\(\$[\d,]+\)\s*-\s*([^\n]+)'
         holdings_matches = re.findall(holdings_pattern, str(portfolio_output))
 
-        # Extract expected return range
-        return_range_match = re.search(r'Expected annual return[^:]*:\s*(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*%', str(portfolio_output), re.IGNORECASE)
+        # Extract sections by headers
+        # Risk Management section
+        risk_section_match = re.search(r'##\s*RISK MANAGEMENT\s*\n(.*?)(?=##|\Z)', str(portfolio_output), re.IGNORECASE | re.DOTALL)
+        risk_items = []
+        if risk_section_match:
+            risk_section = risk_section_match.group(1)
+            # Extract bullet points or dashes
+            risk_items = [r.strip() for r in re.findall(r'[-•]\s*([^\n]+)', risk_section) if r.strip()]
 
-        # Extract key risks section
-        risks_match = re.search(r'Key risks[^:]*:([^#\n]+(?:\n(?!#)[^\n]+)*)', str(portfolio_output), re.IGNORECASE)
+        # Performance Outlook section
+        performance_section_match = re.search(r'##\s*PERFORMANCE OUTLOOK\s*\n(.*?)(?=##|\Z)', str(portfolio_output), re.IGNORECASE | re.DOTALL)
+        expected_return_range = None
+        rebalancing_trigger = None
+        monitoring_frequency = None
+        volatility_expectations = None
 
-        # Extract performance outlook narrative (look for portfolio description paragraph)
-        outlook_match = re.search(r'This portfolio[^.]+\.[^.]+\.[^.]+\.', str(portfolio_output), re.IGNORECASE)
+        if performance_section_match:
+            performance_section = performance_section_match.group(1)
+            # Extract expected return
+            return_match = re.search(r'Expected Annual Return:\s*(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*%', performance_section, re.IGNORECASE)
+            if return_match:
+                low = return_match.group(1)
+                high = return_match.group(2)
+                expected_return_range = f"{low}-{high}%"
 
-        # Extract cost/fee related content
-        cost_matches = re.findall(r'(?:low[- ]cost|fee|expense ratio|tax[- ]efficient)[^.\n]*[.\n]', str(portfolio_output), re.IGNORECASE)
+            # Extract monitoring points
+            rebalancing_match = re.search(r'Rebalancing trigger:\s*([^\n]+)', performance_section, re.IGNORECASE)
+            if rebalancing_match:
+                rebalancing_trigger = rebalancing_match.group(1).strip()
+
+            frequency_match = re.search(r'Monitoring frequency:\s*([^\n]+)', performance_section, re.IGNORECASE)
+            if frequency_match:
+                monitoring_frequency = frequency_match.group(1).strip()
+
+            volatility_match = re.search(r'Volatility expectations:\s*([^\n]+)', performance_section, re.IGNORECASE)
+            if volatility_match:
+                volatility_expectations = volatility_match.group(1).strip()
+
+        # Cost Efficiency section
+        cost_section_match = re.search(r'##\s*COST EFFICIENCY\s*\n(.*?)(?=##|\Z)', str(portfolio_output), re.IGNORECASE | re.DOTALL)
+        cost_items = []
+        if cost_section_match:
+            cost_section = cost_section_match.group(1)
+            # Extract bullet points or dashes
+            cost_items = [c.strip() for c in re.findall(r'[-•]\s*([^\n]+)', cost_section) if c.strip()]
 
         formatted_output = escape_markdown_latex(portfolio_output)
 
@@ -2159,34 +2225,35 @@ def show_portfolio_results():
                     ''', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # Performance Outlook - Show expected return and narrative
+            # Performance Outlook - Show expected return and KPIs
             st.markdown('<div class="insight-category"><div class="insight-category-title">📊 Performance Outlook</div>', unsafe_allow_html=True)
 
-            if return_range_match:
-                low = return_range_match.group(1)
-                high = return_range_match.group(2)
-                st.markdown(f'<div class="insight-item">Expected annual return: {low}-{high}%</div>', unsafe_allow_html=True)
+            if expected_return_range:
+                st.markdown(f'<div class="insight-item">Expected annual return: {expected_return_range}</div>', unsafe_allow_html=True)
 
-            if outlook_match:
-                outlook_text = outlook_match.group(0)
-                st.markdown(f'<div class="insight-item">{outlook_text}</div>', unsafe_allow_html=True)
-            else:
-                # Fallback
+            if rebalancing_trigger:
+                st.markdown(f'<div class="insight-item"><strong>Rebalancing:</strong> {rebalancing_trigger}</div>', unsafe_allow_html=True)
+
+            if monitoring_frequency:
+                st.markdown(f'<div class="insight-item"><strong>Monitoring:</strong> {monitoring_frequency}</div>', unsafe_allow_html=True)
+
+            if volatility_expectations:
+                st.markdown(f'<div class="insight-item"><strong>Volatility:</strong> {volatility_expectations}</div>', unsafe_allow_html=True)
+
+            # Fallback if no data extracted
+            if not expected_return_range and not rebalancing_trigger:
                 st.markdown('<div class="insight-item">Portfolio designed to align with your investment goals and timeline</div>', unsafe_allow_html=True)
+                st.markdown('<div class="insight-item">Review quarterly and rebalance when allocations drift significantly</div>', unsafe_allow_html=True)
 
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
-            # Risk Management - Show key risks from AI output
+            # Risk Management - Show portfolio-specific risks
             st.markdown('<div class="insight-category"><div class="insight-category-title">⚠️ Risk Management</div>', unsafe_allow_html=True)
 
-            if risks_match:
-                risks_text = risks_match.group(1).strip()
-                # Split by bullet points or newlines
-                risk_items = [r.strip() for r in re.split(r'[•\-\n]', risks_text) if r.strip()]
+            if risk_items:
                 for risk in risk_items[:5]:  # Show up to 5 risks
-                    if risk:
-                        st.markdown(f'<div class="insight-item">{risk}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="insight-item">{risk}</div>', unsafe_allow_html=True)
             else:
                 # Fallback risks
                 st.markdown('<div class="insight-item">Monitor market volatility and economic conditions</div>', unsafe_allow_html=True)
@@ -2195,12 +2262,12 @@ def show_portfolio_results():
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # Cost Efficiency - Extract fee/cost related insights
+            # Cost Efficiency - Show specific expense ratios and fee insights
             st.markdown('<div class="insight-category"><div class="insight-category-title">💰 Cost Efficiency</div>', unsafe_allow_html=True)
 
-            if cost_matches:
-                for cost_item in cost_matches[:4]:  # Show up to 4 cost items
-                    st.markdown(f'<div class="insight-item">{cost_item.strip()}</div>', unsafe_allow_html=True)
+            if cost_items:
+                for cost_item in cost_items[:4]:  # Show up to 4 cost items
+                    st.markdown(f'<div class="insight-item">{cost_item}</div>', unsafe_allow_html=True)
             else:
                 # Fallback cost insights
                 st.markdown('<div class="insight-item">Low-cost index funds prioritized</div>', unsafe_allow_html=True)
@@ -2208,10 +2275,6 @@ def show_portfolio_results():
                 st.markdown('<div class="insight-item">Minimal management fees</div>', unsafe_allow_html=True)
 
             st.markdown('</div>', unsafe_allow_html=True)
-
-        # Show full AI analysis in expander
-        with st.expander("📄 View Full AI Analysis"):
-            st.markdown(formatted_output)
             
             # Display optimization results (prioritize AI crew results)
             if 'portfolio_optimization_crew' in st.session_state:
