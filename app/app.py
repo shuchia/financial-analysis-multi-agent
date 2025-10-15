@@ -257,7 +257,7 @@ def render_horizontal_nav():
     # Get logo
     logo_b64 = get_logo_base64()
 
-    # Navbar styling
+    # Navbar styling with fixed widths to prevent wrapping
     st.markdown("""
     <style>
     /* Hide default Streamlit header */
@@ -265,177 +265,76 @@ def render_horizontal_nav():
         display: none;
     }
 
-    /* Main navbar container */
-    .top-navbar {
-        background-color: #2C3E50;
-        padding: 0.75rem 2rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        position: sticky;
-        top: 0;
-        z-index: 999;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    /* Streamlit button styling for navbar */
+    .stButton button {
+        white-space: nowrap !important;
+        padding: 0.375rem 0.75rem !important;
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        min-width: fit-content !important;
     }
 
-    /* Logo section */
-    .nav-logo {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        color: white;
-        font-size: 1.25rem;
-        font-weight: 600;
-    }
-
-    .nav-logo img {
-        height: 35px;
-    }
-
-    /* Navigation items */
-    .nav-items {
-        display: flex;
-        align-items: center;
-        gap: 2rem;
-        flex: 1;
-        margin: 0 2rem;
-    }
-
-    .nav-item {
-        color: #B8C1CC;
-        text-decoration: none;
-        font-size: 0.95rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: color 0.2s;
-    }
-
-    .nav-item:hover {
-        color: white;
-    }
-
-    .nav-item.active {
-        color: white;
-    }
-
-    /* Search bar */
-    .nav-search {
-        flex: 1;
-        max-width: 400px;
-    }
-
-    .nav-search input {
-        width: 100%;
-        background-color: #34495E;
-        border: none;
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        color: white;
-        font-size: 0.9rem;
-    }
-
-    .nav-search input::placeholder {
-        color: #95A5A6;
-    }
-
-    /* Right section */
-    .nav-right {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .nav-upgrade-btn {
-        background-color: #3498DB;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        padding: 0.5rem 1.25rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-
-    .nav-upgrade-btn:hover {
-        background-color: #2980B9;
-    }
-
-    .nav-user-icon {
-        width: 35px;
-        height: 35px;
-        border-radius: 50%;
-        background-color: #95A5A6;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        cursor: pointer;
-        font-size: 1rem;
+    /* Fix column gaps */
+    [data-testid="column"] {
+        padding: 0 0.25rem !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # Create navbar container
-    col_logo, col_nav, col_search, col_upgrade, col_user = st.columns([1.5, 3, 2.5, 1, 0.5])
+    # Create navbar with better column proportions
+    cols = st.columns([1.2, 0.7, 0.7, 0.7, 0.7, 0.7, 2, 0.8, 0.4])
 
-    with col_logo:
+    with cols[0]:
         if logo_b64:
             st.markdown(f"""
-            <div class="nav-logo">
-                <img src='data:image/png;base64,{logo_b64}' alt='InvestForge'>
+            <div style='display: flex; align-items: center; gap: 0.5rem; color: #2C3E50; font-weight: 600; padding-top: 0.25rem;'>
+                <img src='data:image/png;base64,{logo_b64}' style='height: 28px;' alt='InvestForge'>
                 <span>InvestForge</span>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown("""
-            <div class="nav-logo">
-                <span>⚒️ InvestForge</span>
-            </div>
+            <div style='color: #2C3E50; font-weight: 600; padding-top: 0.25rem;'>⚒️ InvestForge</div>
             """, unsafe_allow_html=True)
 
-    with col_nav:
-        nav_col1, nav_col2, nav_col3, nav_col4, nav_col5 = st.columns(5)
+    with cols[1]:
+        if st.button("📊 Portfolio", key="nav_portfolio", use_container_width=True):
+            st.session_state.show_portfolio_generation = True
+            st.session_state.show_portfolio_results = False
+            st.session_state.show_main_app = False
+            st.rerun()
 
-        with nav_col1:
-            if st.button("Portfolio", key="nav_portfolio", use_container_width=True):
-                st.session_state.show_portfolio_generation = True
-                st.session_state.show_portfolio_results = False
-                st.session_state.show_main_app = False
-                st.rerun()
+    with cols[2]:
+        if st.button("👁 Watchlist", key="nav_watchlist", use_container_width=True):
+            st.info("Watchlist feature coming soon!")
 
-        with nav_col2:
-            if st.button("Watchlist", key="nav_watchlist", use_container_width=True):
-                st.info("Watchlist feature coming soon!")
+    with cols[3]:
+        if st.button("🔍 Discover", key="nav_discover", use_container_width=True):
+            st.session_state.show_main_app = True
+            st.session_state.show_portfolio_generation = False
+            st.session_state.show_portfolio_results = False
+            st.rerun()
 
-        with nav_col3:
-            if st.button("Discover", key="nav_discover", use_container_width=True):
-                st.session_state.show_main_app = True
-                st.session_state.show_portfolio_generation = False
-                st.session_state.show_portfolio_results = False
-                st.rerun()
+    with cols[4]:
+        if st.button("📚 Learn", key="nav_learn", use_container_width=True):
+            st.info("Educational resources coming soon!")
 
-        with nav_col4:
-            if st.button("Learn", key="nav_learn", use_container_width=True):
-                st.info("Educational resources coming soon!")
+    with cols[5]:
+        if st.button("💰 Budget", key="nav_budget", use_container_width=True):
+            st.info("Budget planning feature coming soon!")
 
-        with nav_col5:
-            if st.button("Budget", key="nav_budget", use_container_width=True):
-                st.info("Budget planning feature coming soon!")
+    with cols[6]:
+        search_query = st.text_input("🔍 Search", placeholder="Search companies...", label_visibility="collapsed", key="nav_search")
 
-    with col_search:
-        search_query = st.text_input("🔍", placeholder="Search companies worldwide...", label_visibility="collapsed", key="nav_search")
-        if search_query:
-            st.info(f"Searching for: {search_query}")
-
-    with col_upgrade:
+    with cols[7]:
         if st.button("⬆️ Upgrade", key="nav_upgrade", type="primary", use_container_width=True):
             st.info("Upgrade feature coming soon!")
 
-    with col_user:
+    with cols[8]:
         # User dropdown
         if st.session_state.get('authenticated'):
             user_menu = st.selectbox(
-                "user_menu",
+                "user",
                 ["👤", "Account", "Settings", "Logout"],
                 label_visibility="collapsed",
                 key="nav_user_dropdown"
@@ -448,7 +347,7 @@ def render_horizontal_nav():
                 st.session_state.user_email = None
                 st.rerun()
         else:
-            st.markdown("👤")
+            st.markdown("<div style='text-align: center; padding-top: 0.25rem;'>👤</div>", unsafe_allow_html=True)
 
     st.markdown("<hr style='margin: 0; border: none; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
 
@@ -1203,18 +1102,12 @@ def generate_portfolio_with_progress():
     st.markdown("## 🎯 InvestForge Portfolio Creator")
     
     # Simple navigation
-    col1, col2, col3 = st.columns([1, 1, 2])
+    col1, col2 = st.columns([1, 3])
     with col1:
         if st.button("📊 Analyze Stocks", use_container_width=True):
             # Switch to stock analysis mode
             st.session_state.show_portfolio_generation = False
             st.session_state.show_main_app = True
-            st.rerun()
-    with col2:
-        if st.button("🔄 Regenerate Portfolio", use_container_width=True):
-            # Clear any existing results to force regeneration
-            if 'portfolio_result' in st.session_state:
-                del st.session_state.portfolio_result
             st.rerun()
     
     st.markdown("---")
@@ -1578,18 +1471,39 @@ def show_portfolio_results():
     </style>
     """, unsafe_allow_html=True)
 
-    # Extract expected return from portfolio output
-    expected_return_5y = "N/A"
-    if structured_portfolio.get('expected_return'):
-        expected_return_5y = structured_portfolio['expected_return']
-    else:
-        # Try to extract from portfolio output text
-        import re
-        return_match = re.search(r'(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*%', str(portfolio_output))
-        if return_match:
-            low = float(return_match.group(1))
-            high = float(return_match.group(2))
-            expected_return_5y = f"{low:.0f}-{high:.0f}%"
+    # Extract expected return from portfolio output and calculate based on timeline
+    expected_return_pct = "N/A"
+    expected_return_amount = "N/A"
+    timeline_display = timeline
+
+    # Try to extract annual return percentage from portfolio output text
+    import re
+    return_match = re.search(r'(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*%', str(portfolio_output))
+    if return_match:
+        low = float(return_match.group(1))
+        high = float(return_match.group(2))
+        avg_annual_return = (low + high) / 2
+        expected_return_pct = f"~{avg_annual_return:.1f}% avg annually"
+
+        # Calculate expected return amount based on timeline
+        # Parse timeline to years
+        timeline_years = 5  # default
+        if "1-2" in timeline:
+            timeline_years = 2
+            timeline_display = "2Y"
+        elif "3-5" in timeline:
+            timeline_years = 4
+            timeline_display = "4Y"
+        elif "5-10" in timeline:
+            timeline_years = 7
+            timeline_display = "7Y"
+        elif "10+" in timeline:
+            timeline_years = 15
+            timeline_display = "15Y"
+
+        # Calculate compound return over timeline
+        total_return = investment_amount * ((1 + avg_annual_return/100) ** timeline_years) - investment_amount
+        expected_return_amount = f"+${total_return:,.0f}"
 
     st.markdown(f"""
     <div class="success-header">
@@ -1610,8 +1524,9 @@ def show_portfolio_results():
                 <div class="metric-value">${investment_amount:,.0f}</div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Expected Return (5Y)</div>
-                <div class="metric-value">{expected_return_5y}</div>
+                <div class="metric-label">Expected Return ({timeline_display})</div>
+                <div class="metric-value" style="color: #2ecc71;">{expected_return_amount}</div>
+                <div class="metric-label">{expected_return_pct}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Risk Score</div>
@@ -1869,14 +1784,46 @@ def show_portfolio_results():
                     st.success("✅ Saved!")
 
             with col2:
-                if st.button("🔄 Regenerate", type="secondary", use_container_width=True):
-                    st.session_state.show_portfolio_results = False
-                    st.session_state.show_portfolio_generation = True
-                    st.rerun()
+                if st.button("🔧 Optimize Further", type="primary", use_container_width=True):
+                    # Trigger optimization directly
+                    with st.spinner("🔄 Optimizing portfolio allocation with AI crew..."):
+                        try:
+                            # Initialize quantitative analysis crew
+                            from quant_crew import QuantitativeAnalysisCrew
+                            quant_crew = QuantitativeAnalysisCrew()
 
-            with col3:
-                if st.button("🔧 Optimize", type="primary", use_container_width=True):
-                    st.info("Scroll down to see optimization options")
+                            # Run optimization using AI crew
+                            opt_crew_result = quant_crew.optimize_portfolio(
+                                tickers=structured_portfolio['tickers'],
+                                current_weights=structured_portfolio['weights'],
+                                user_profile=user_profile,
+                                investment_amount=investment_amount
+                            )
+
+                            st.session_state.portfolio_optimization_crew = opt_crew_result
+                            st.success("✅ AI Portfolio optimization completed!")
+                            st.rerun()
+
+                        except Exception as e:
+                            st.error(f"AI Optimization failed: {str(e)}")
+                            st.info("🔄 Falling back to direct optimization tool...")
+
+                            # Fallback to direct tool call only if AI crew fails
+                            try:
+                                from tools.portfolio_optimization_tool import PortfolioOptimizationTool
+                                opt_tool = PortfolioOptimizationTool()
+                                opt_results = opt_tool._run(
+                                    tickers=structured_portfolio['tickers'],
+                                    current_weights=structured_portfolio['weights'],
+                                    optimization_mode="enhance",
+                                    user_risk_profile=user_profile,
+                                    investment_amount=investment_amount
+                                )
+                                st.session_state.portfolio_optimization = opt_results
+                                st.success("✅ Fallback optimization completed!")
+                                st.rerun()
+                            except Exception as e2:
+                                st.error(f"Fallback optimization also failed: {str(e2)}")
 
         else:
             st.warning("No portfolio allocation data available.")
@@ -2103,78 +2050,168 @@ def show_portfolio_results():
             """.format(investment_amount))
 
     # ============================================
-    # AI OPTIMIZATION INSIGHTS (After tabs)
+    # PORTFOLIO INSIGHTS (After tabs)
     # ============================================
     st.markdown("---")
-    st.markdown("## 🤖 AI Optimization Insights")
+    st.markdown("## 💡 Portfolio Insights")
 
-    # Display AI recommendations with improved formatting
+    # Display AI recommendations grouped into categories
     if portfolio_output:
-        # Format with checkmarks and better styling
-        formatted_output = escape_markdown_latex(portfolio_output)
-
-        # Add checkmark styling
+        # Add category styling
         st.markdown("""
         <style>
-        .insight-box {
-            background: #f8f9fa;
-            border-left: 4px solid #FF6B35;
+        .insight-category {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
             padding: 1.5rem;
             margin: 1rem 0;
-            border-radius: 8px;
         }
-        .insight-title {
+        .insight-category-title {
             font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #333;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #2C3E50;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .insight-item {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .insight-item:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4ECDC4;
+            font-weight: bold;
+        }
+        .holding-row {
+            margin: 0.75rem 0;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid #4ECDC4;
+        }
+        .holding-ticker {
+            font-weight: 700;
+            color: #2C3E50;
+            font-size: 1rem;
+        }
+        .holding-reasoning {
+            color: #555;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
         }
         </style>
         """, unsafe_allow_html=True)
 
-        st.markdown(formatted_output)
+        # Parse portfolio output to extract insights
+        import re
 
-    # Optimize Portfolio Button
-    st.markdown("---")
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if structured_portfolio['tickers']:
-            if st.button("🔧 Optimize Further", type="primary", use_container_width=True):
-                structured = structured_portfolio
-                with st.spinner("🔄 Optimizing portfolio allocation with AI crew..."):
-                    try:
-                        # Initialize quantitative analysis crew
-                        quant_crew = QuantitativeAnalysisCrew()
+        # Extract holdings with reasoning (format: TICKER (Category) - XX% ($X,XXX) - Reasoning)
+        holdings_pattern = r'([A-Z]{1,5})\s*\([^)]+\)\s*-\s*(\d+(?:\.\d+)?%)\s*\(\$[\d,]+\)\s*-\s*([^\n]+)'
+        holdings_matches = re.findall(holdings_pattern, str(portfolio_output))
 
-                        # Run optimization using AI crew
-                        opt_crew_result = quant_crew.optimize_portfolio(
-                            tickers=structured['tickers'],
-                            current_weights=structured['weights'],
-                            user_profile=user_profile,
-                            investment_amount=investment_amount
-                        )
-                        
-                        st.session_state.portfolio_optimization_crew = opt_crew_result
-                        st.success("✅ AI Portfolio optimization completed!")
-                        
-                    except Exception as e:
-                        st.error(f"AI Optimization failed: {str(e)}")
-                        st.info("🔄 Falling back to direct optimization tool...")
-                        
-                        # Fallback to direct tool call only if AI crew fails
-                        try:
-                            opt_tool = PortfolioOptimizationTool()
-                            opt_results = opt_tool._run(
-                                tickers=structured['tickers'],
-                                current_weights=structured['weights'],
-                                optimization_mode="enhance",
-                                user_risk_profile=user_profile,
-                                investment_amount=investment_amount
-                            )
-                            st.session_state.portfolio_optimization = opt_results
-                            st.success("✅ Fallback optimization completed!")
-                        except Exception as e2:
-                            st.error(f"Fallback optimization also failed: {str(e2)}")
+        # Extract expected return range
+        return_range_match = re.search(r'Expected annual return[^:]*:\s*(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*%', str(portfolio_output), re.IGNORECASE)
+
+        # Extract key risks section
+        risks_match = re.search(r'Key risks[^:]*:([^#\n]+(?:\n(?!#)[^\n]+)*)', str(portfolio_output), re.IGNORECASE)
+
+        # Extract performance outlook narrative (look for portfolio description paragraph)
+        outlook_match = re.search(r'This portfolio[^.]+\.[^.]+\.[^.]+\.', str(portfolio_output), re.IGNORECASE)
+
+        # Extract cost/fee related content
+        cost_matches = re.findall(r'(?:low[- ]cost|fee|expense ratio|tax[- ]efficient)[^.\n]*[.\n]', str(portfolio_output), re.IGNORECASE)
+
+        formatted_output = escape_markdown_latex(portfolio_output)
+
+        # Group insights into categories
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # Asset Allocation - Show each holding with reasoning
+            st.markdown('<div class="insight-category"><div class="insight-category-title">🎯 Asset Allocation</div>', unsafe_allow_html=True)
+            if holdings_matches:
+                for ticker, percentage, reasoning in holdings_matches:
+                    st.markdown(f'''
+                    <div class="holding-row">
+                        <div class="holding-ticker">{ticker} - {percentage}</div>
+                        <div class="holding-reasoning">{reasoning}</div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+            else:
+                # Fallback if pattern doesn't match
+                for alloc in structured_portfolio.get('allocations', []):
+                    ticker = alloc.get('ticker', 'N/A')
+                    percentage = alloc.get('percentage', 0)
+                    reasoning = alloc.get('reasoning', 'Diversification component')
+                    st.markdown(f'''
+                    <div class="holding-row">
+                        <div class="holding-ticker">{ticker} - {percentage}%</div>
+                        <div class="holding-reasoning">{reasoning}</div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # Performance Outlook - Show expected return and narrative
+            st.markdown('<div class="insight-category"><div class="insight-category-title">📊 Performance Outlook</div>', unsafe_allow_html=True)
+
+            if return_range_match:
+                low = return_range_match.group(1)
+                high = return_range_match.group(2)
+                st.markdown(f'<div class="insight-item">Expected annual return: {low}-{high}%</div>', unsafe_allow_html=True)
+
+            if outlook_match:
+                outlook_text = outlook_match.group(0)
+                st.markdown(f'<div class="insight-item">{outlook_text}</div>', unsafe_allow_html=True)
+            else:
+                # Fallback
+                st.markdown('<div class="insight-item">Portfolio designed to align with your investment goals and timeline</div>', unsafe_allow_html=True)
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col2:
+            # Risk Management - Show key risks from AI output
+            st.markdown('<div class="insight-category"><div class="insight-category-title">⚠️ Risk Management</div>', unsafe_allow_html=True)
+
+            if risks_match:
+                risks_text = risks_match.group(1).strip()
+                # Split by bullet points or newlines
+                risk_items = [r.strip() for r in re.split(r'[•\-\n]', risks_text) if r.strip()]
+                for risk in risk_items[:5]:  # Show up to 5 risks
+                    if risk:
+                        st.markdown(f'<div class="insight-item">{risk}</div>', unsafe_allow_html=True)
+            else:
+                # Fallback risks
+                st.markdown('<div class="insight-item">Monitor market volatility and economic conditions</div>', unsafe_allow_html=True)
+                st.markdown('<div class="insight-item">Maintain emergency fund before investing</div>', unsafe_allow_html=True)
+                st.markdown('<div class="insight-item">Review portfolio allocation quarterly</div>', unsafe_allow_html=True)
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # Cost Efficiency - Extract fee/cost related insights
+            st.markdown('<div class="insight-category"><div class="insight-category-title">💰 Cost Efficiency</div>', unsafe_allow_html=True)
+
+            if cost_matches:
+                for cost_item in cost_matches[:4]:  # Show up to 4 cost items
+                    st.markdown(f'<div class="insight-item">{cost_item.strip()}</div>', unsafe_allow_html=True)
+            else:
+                # Fallback cost insights
+                st.markdown('<div class="insight-item">Low-cost index funds prioritized</div>', unsafe_allow_html=True)
+                st.markdown('<div class="insight-item">Tax-efficient fund structure</div>', unsafe_allow_html=True)
+                st.markdown('<div class="insight-item">Minimal management fees</div>', unsafe_allow_html=True)
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Show full AI analysis in expander
+        with st.expander("📄 View Full AI Analysis"):
+            st.markdown(formatted_output)
             
             # Display optimization results (prioritize AI crew results)
             if 'portfolio_optimization_crew' in st.session_state:
