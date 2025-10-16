@@ -1688,6 +1688,10 @@ def show_portfolio_results():
     # ============================================
     with tab_overview:
 
+        # Always use the session state version to get latest updates (e.g., after optimization)
+        if 'structured_portfolio' in st.session_state:
+            structured_portfolio = st.session_state.structured_portfolio
+
         st.markdown("### 📊 Portfolio Allocation")
 
         # Display allocation table with enhanced design
@@ -2011,10 +2015,6 @@ def show_portfolio_results():
             # Parse portfolio output to extract insights using section headers
             import re
 
-            # Extract holdings with reasoning (format: TICKER (Category) - XX% ($X,XXX) - Reasoning)
-            holdings_pattern = r'([A-Z]{1,5})\s*\([^)]+\)\s*-\s*(\d+(?:\.\d+)?%)\s*\(\$[\d,]+\)\s*-\s*([^\n]+)'
-            holdings_matches = re.findall(holdings_pattern, str(portfolio_output))
-
             # Extract sections by headers
             # Risk Management section
             risk_section_match = re.search(r'##\s*RISK MANAGEMENT\s*\n(.*?)(?=##|\Z)', str(portfolio_output), re.IGNORECASE | re.DOTALL)
@@ -2069,26 +2069,19 @@ def show_portfolio_results():
             with col1:
                 # Asset Allocation - Show each holding with reasoning
                 st.markdown('<div class="insight-category"><div class="insight-category-title">🎯 Asset Allocation</div>', unsafe_allow_html=True)
-                if holdings_matches:
-                    for ticker, percentage, reasoning in holdings_matches:
-                        st.markdown(f'''
-                        <div class="holding-row">
-                            <div class="holding-ticker">{ticker} - {percentage}</div>
-                            <div class="holding-reasoning">{reasoning}</div>
-                        </div>
-                        ''', unsafe_allow_html=True)
-                else:
-                    # Fallback if pattern doesn't match
-                    for alloc in structured_portfolio.get('allocations', []):
-                        ticker = alloc.get('ticker', 'N/A')
-                        percentage = alloc.get('percentage', 0)
-                        reasoning = alloc.get('reasoning', 'Diversification component')
-                        st.markdown(f'''
-                        <div class="holding-row">
-                            <div class="holding-ticker">{ticker} - {percentage}%</div>
-                            <div class="holding-reasoning">{reasoning}</div>
-                        </div>
-                        ''', unsafe_allow_html=True)
+
+                # Use structured portfolio data (already parsed correctly)
+                for alloc in structured_portfolio.get('allocations', []):
+                    ticker = alloc.get('ticker', 'N/A')
+                    percentage = alloc.get('percentage', 0)
+                    reasoning = alloc.get('reasoning', 'Diversification component')
+                    st.markdown(f'''
+                    <div class="holding-row">
+                        <div class="holding-ticker">{ticker} - {percentage:.1f}%</div>
+                        <div class="holding-reasoning">{reasoning}</div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Performance Outlook - Show expected return and KPIs
@@ -2147,6 +2140,10 @@ def show_portfolio_results():
     # ============================================
     with tab_risk:
         #st.markdown("### ⚠️ Risk Analysis")
+
+        # Always use the session state version to get latest updates (e.g., after optimization)
+        if 'structured_portfolio' in st.session_state:
+            structured_portfolio = st.session_state.structured_portfolio
 
         if structured_portfolio['tickers']:
             structured = structured_portfolio
