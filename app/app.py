@@ -1817,10 +1817,10 @@ def show_portfolio_results():
 
             with col2:
                 if st.button("🔧 Optimize Further", type="primary", use_container_width=True):
-                    # Trigger optimization directly
-                    with st.spinner("🔄 Optimizing portfolio allocation with AI crew..."):
+                    # Trigger optimization
+                    with st.spinner("🔄 Optimizing portfolio allocation..."):
                         try:
-                            # Run optimization using AI crew
+                            # Run optimization using direct tool call + AI interpretation
                             opt_crew_result = QuantitativeAnalysisCrew().optimize_portfolio(
                                 tickers=structured_portfolio['tickers'],
                                 current_weights=structured_portfolio['weights'],
@@ -1829,37 +1829,129 @@ def show_portfolio_results():
                             )
 
                             st.session_state.portfolio_optimization_crew = opt_crew_result
-                            st.success("✅ AI Portfolio optimization completed!")
+                            st.success("✅ Portfolio optimization completed!")
                             st.rerun()
 
                         except Exception as e:
-                            st.error(f"AI Optimization failed: {str(e)}")
-                            st.info("🔄 Falling back to direct optimization tool...")
-
-                            # Fallback to direct tool call only if AI crew fails
-                            try:
-                                from tools.portfolio_optimization_tool import PortfolioOptimizationTool
-                                opt_tool = PortfolioOptimizationTool()
-                                opt_results = opt_tool._run(
-                                    tickers=structured_portfolio['tickers'],
-                                    current_weights=structured_portfolio['weights'],
-                                    optimization_mode="enhance",
-                                    user_risk_profile=user_profile,
-                                    investment_amount=investment_amount
-                                )
-                                st.session_state.portfolio_optimization = opt_results
-                                st.success("✅ Fallback optimization completed!")
-                                st.rerun()
-                            except Exception as e2:
-                                st.error(f"Fallback optimization also failed: {str(e2)}")
+                            st.error(f"Optimization failed: {str(e)}")
+                            import traceback
+                            st.code(traceback.format_exc())
 
         else:
             st.warning("No portfolio allocation data available.")
 
         # ============================================
-        # PORTFOLIO INSIGHTS (Inside Overview Tab)
+        # OPTIMIZATION METRICS OR PORTFOLIO INSIGHTS
         # ============================================
-        if portfolio_output:
+        # Check if optimization has been run
+        if 'portfolio_optimization_crew' in st.session_state:
+            opt_result = st.session_state.portfolio_optimization_crew
+
+            # Extract structured data
+            if isinstance(opt_result, dict) and 'tool_output' in opt_result:
+                tool_output = opt_result['tool_output']
+                recommendations = opt_result.get('recommendations', [])
+
+                st.markdown("---")
+                st.markdown("## 📊 Quantitative Optimization Metrics")
+
+                # SECTION A: Current vs Optimized Comparison
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.markdown("### Current Portfolio")
+                    # Calculate current portfolio metrics if we have weights
+                    if structured_portfolio.get('weights'):
+                        current_weights_list = structured_portfolio['weights']
+                        tickers_list = structured_portfolio['tickers']
+
+                        # Calculate current return from individual returns
+                        current_return = sum(
+                            w * tool_output['individual_returns'].get(t, 0)
+                            for t, w in zip(tickers_list, current_weights_list)
+                        )
+
+                        st.metric("Expected Return", f"{current_return*100:.1f}%")
+                        st.info("Volatility and Sharpe calculated from current weights")
+
+                with col2:
+                    st.markdown("### Optimized Portfolio (Max Sharpe)")
+                    opt_portfolio = tool_output['max_sharpe_portfolio']
+
+                    # Show improvement delta if we have current weights
+                    return_delta = None
+                    if structured_portfolio.get('weights'):
+                        return_delta = f"+{(opt_portfolio['expected_return']-current_return)*100:.1f}%"
+
+                    st.metric(
+                        "Expected Return",
+                        f"{opt_portfolio['expected_return']*100:.1f}%",
+                        delta=return_delta
+                    )
+                    st.metric("Volatility", f"{opt_portfolio['volatility']*100:.1f}%")
+                    st.metric("Sharpe Ratio", f"{opt_portfolio['sharpe_ratio']:.2f}")
+
+                # SECTION B: Recommendations Table
+                if recommendations:
+                    st.markdown("### 💡 Recommended Changes")
+                    for rec in recommendations:
+                        if rec['action'] == 'increase':
+                            st.success(
+                                f"📈 **{rec['ticker']}**: Increase from {rec['current_weight']*100:.1f}% to {rec['optimized_weight']*100:.1f}% "
+                                f"(+{rec['percentage_change']:.1f}% / ${rec['dollar_amount']:,.2f})"
+                            )
+                        else:
+                            st.warning(
+                                f"📉 **{rec['ticker']}**: Decrease from {rec['current_weight']*100:.1f}% to {rec['optimized_weight']*100:.1f}% "
+                                f"(-{rec['percentage_change']:.1f}% / ${rec['dollar_amount']:,.2f})"
+                            )
+
+                    # Apply button
+                    if st.button("✅ Apply Optimized Allocation", type="primary"):
+                        # Update portfolio with optimized weights
+                        optimized_weights = tool_output['max_sharpe_portfolio']['weights']
+
+                        # Create new structured portfolio
+                        new_tickers = list(optimized_weights.keys())
+                        new_weights = list(optimized_weights.values())
+                        new_amounts = [w * investment_amount for w in new_weights]
+
+                        # Reconstruct allocations for each ticker
+                        new_allocations = []
+                        for ticker, weight, amount in zip(new_tickers, new_weights, new_amounts):
+                            new_allocations.append({
+                                'ticker': ticker,
+                                'percentage': weight * 100,
+                                'amount': amount,
+                                'reasoning': 'Optimized allocation'
+                            })
+
+                        # Update structured portfolio
+                        structured_portfolio['tickers'] = new_tickers
+                        structured_portfolio['weights'] = new_weights
+                        structured_portfolio['amounts'] = new_amounts
+                        structured_portfolio['allocations'] = new_allocations
+
+                        # Update session state
+                        st.session_state.structured_portfolio = structured_portfolio
+
+                        # Clear optimization to return to Portfolio Insights view
+                        del st.session_state.portfolio_optimization_crew
+
+                        st.success("✅ Portfolio updated with optimized allocation!")
+                        st.rerun()
+
+                # SECTION C: AI Narrative (Expandable)
+                with st.expander("🤖 AI Portfolio Manager Recommendations", expanded=False):
+                    narrative = opt_result.get('narrative')
+                    if narrative:
+                        if hasattr(narrative, 'tasks_output') and narrative.tasks_output:
+                            st.markdown(escape_markdown_latex(narrative.tasks_output[0].raw))
+                        else:
+                            st.markdown(escape_markdown_latex(str(narrative)))
+
+        # Show Portfolio Insights if no optimization is active
+        elif portfolio_output:
             st.markdown("---")
             st.markdown("## 💡 Portfolio Insights")
 

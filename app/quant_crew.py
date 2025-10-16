@@ -5,7 +5,7 @@
 
 from crewai import Agent, Crew, Task, LLM
 import os
-from tools.portfolio_optimization_tool import portfolio_optimization
+from tools.portfolio_optimization_tool import portfolio_optimization, _portfolio_optimization_impl
 from tools.var_calculator_tool import var_calculator, _var_calculator_impl
 # Import existing tools
 from tools.yf_tech_analysis_tool import yf_tech_analysis
@@ -220,10 +220,7 @@ class QuantitativeAnalysisCrew:
         return result
 
     def optimize_portfolio(self, tickers, current_weights=None, user_profile=None, investment_amount=None):
-        """Specific function for portfolio optimization using quant crew."""
-
-        # Create portfolio manager agent
-        self.create_agents()
+        """Portfolio optimization using direct tool call + AI interpretation."""
 
         # Format tickers as comma-separated string for the tool
         tickers_string = ','.join(tickers) if isinstance(tickers, list) else str(tickers)
@@ -239,48 +236,84 @@ class QuantitativeAnalysisCrew:
         portfolio_value = investment_amount if investment_amount else 10000
         user_risk = user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'
 
-        # Create specific task for portfolio optimization
-        optimization_task = Task(
-            description=f"""Optimize the given portfolio allocation:
+        # CALL TOOL DIRECTLY (non-decorated version)
+        tool_result = _portfolio_optimization_impl(
+            tickers_string=tickers_string,
+            current_weights_string=current_weights_string,
+            investment_amount=portfolio_value,
+            user_risk_profile_string=user_risk
+        )
+
+        # Check for errors
+        if 'error' in tool_result:
+            return {
+                'tool_output': tool_result,
+                'recommendations': [],
+                'narrative': None,
+                'tasks_output': []
+            }
+
+        # Calculate recommendations (compare current vs optimized)
+        recommendations = []
+        if current_weights:
+            optimized_weights = tool_result['max_sharpe_portfolio']['weights']
+            for i, ticker in enumerate(tickers):
+                current_w = current_weights[i]
+                optimized_w = optimized_weights.get(ticker, 0)
+                change = optimized_w - current_w
+
+                if abs(change) > 0.001:  # Only show meaningful changes
+                    recommendations.append({
+                        'ticker': ticker,
+                        'action': 'increase' if change > 0 else 'decrease',
+                        'current_weight': current_w,
+                        'optimized_weight': optimized_w,
+                        'percentage_change': abs(change * 100),
+                        'dollar_amount': abs(change * portfolio_value)
+                    })
+
+        # Create AI narrative task (interpretation only)
+        self.create_agents()
+
+        narrative_task = Task(
+            description=f"""Interpret portfolio optimization results:
 
             PORTFOLIO DATA:
             - Tickers: {tickers_string}
             - Current Weights: {current_weights if current_weights else 'Equal weight'}
             - Investment Amount: ${portfolio_value:,.0f}
-            - User Risk Profile: {user_risk}
+            - Risk Profile: {user_risk}
 
-            OPTIMIZATION REQUIREMENTS:
-            1. Use the portfolio_optimization tool with these EXACT parameters:
-               - tickers_string="{tickers_string}"
-               - current_weights_string="{current_weights_string if current_weights_string else ''}"
-               - investment_amount={portfolio_value}
-               - user_risk_profile_string="{user_risk}"
-            2. Consider the user's risk tolerance and constraints
-            3. Provide before/after comparison if current weights provided
-            4. Analyze the max_sharpe_portfolio and min_volatility_portfolio results
-            5. Review the correlation matrix and efficient frontier data
-            6. Suggest specific allocation changes with reasoning
+            OPTIMIZATION RESULTS (already calculated):
+            {tool_result}
 
-            OUTPUT FORMAT:
-            Provide a clear, structured report with:
-            - Recommended Portfolio: Specific weights for each ticker
-            - Expected Metrics: Return, volatility, and Sharpe ratio
-            - Comparison: If current weights provided, show before/after metrics
-            - Diversification Analysis: Review correlation matrix insights
-            - Specific Recommendations: 3-5 actionable suggestions for improvements
+            YOUR TASK (interpretation only):
+            1. Executive Summary: Overall improvement assessment
+            2. Key Changes: Explain major weight shifts and why they make sense
+            3. Recommendations: 3-5 actionable next steps for the investor
+
+            DO NOT recalculate metrics. Use the values provided above.
             """,
             agent=self.portfolio_manager,
-            expected_output="Portfolio optimization results with specific weights and metrics"
+            expected_output="Optimization interpretation and recommendations"
         )
-        
-        # Run optimization
+
+        # Run narrative generation
         crew = Crew(
             agents=[self.portfolio_manager],
-            tasks=[optimization_task],
+            tasks=[narrative_task],
             verbose=True
         )
-        
-        return crew.kickoff()
+
+        narrative_result = crew.kickoff()
+
+        # Return structured data + narrative + recommendations
+        return {
+            'tool_output': tool_result,           # Raw tool results
+            'recommendations': recommendations,    # Calculated comparisons
+            'narrative': narrative_result,        # AI interpretation
+            'tasks_output': narrative_result.tasks_output if hasattr(narrative_result, 'tasks_output') else []
+        }
     
     def analyze_portfolio_risk(self, tickers, weights=None, user_profile=None, investment_amount=None):
         """Specific function for portfolio risk analysis using quant crew."""

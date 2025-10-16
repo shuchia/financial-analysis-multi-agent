@@ -7,12 +7,13 @@ from typing import List, Dict, Tuple, Optional
 from crewai.tools import tool
 
 
-@tool
-def portfolio_optimization(tickers_string: str, start_date: str = None,
-                          target_return: float = None, current_weights_string: str = None,
-                          optimization_mode: str = "full", user_risk_profile_string: str = None, 
-                          investment_amount: float = None) -> Dict:
+def _portfolio_optimization_impl(tickers_string: str, start_date: str = None,
+                                 target_return: float = None, current_weights_string: str = None,
+                                 optimization_mode: str = "full", user_risk_profile_string: str = None,
+                                 investment_amount: float = None) -> Dict:
     """
+    Internal implementation of portfolio optimization (non-decorated version for direct calls).
+
     Optimizes portfolio allocation using Modern Portfolio Theory (Markowitz).
 
     Args:
@@ -219,6 +220,31 @@ def portfolio_optimization(tickers_string: str, start_date: str = None,
         'individual_returns': dict(zip(tickers, mean_returns.round(4))),
         'correlation_matrix': returns.corr().round(4).to_dict()
     }
+
+
+@tool
+def portfolio_optimization(tickers_string: str, start_date: str = None,
+                          target_return: float = None, current_weights_string: str = None,
+                          optimization_mode: str = "full", user_risk_profile_string: str = None,
+                          investment_amount: float = None) -> Dict:
+    """
+    Optimizes portfolio allocation using Modern Portfolio Theory (Markowitz).
+
+    Args:
+        tickers_string (str): Comma-separated list of stock tickers
+        start_date (str): Start date for historical data (YYYY-MM-DD)
+        target_return (float): Target annual return
+        current_weights_string (str): Comma-separated current portfolio weights
+        optimization_mode (str): "full", "enhance", or "rebalance"
+        user_risk_profile_string (str): User risk profile (conservative|moderate|aggressive)
+        investment_amount (float): Total investment amount
+
+    Returns:
+        dict: Portfolio optimization results with weights and metrics
+    """
+    return _portfolio_optimization_impl(tickers_string, start_date, target_return,
+                                       current_weights_string, optimization_mode,
+                                       user_risk_profile_string, investment_amount)
 
 
 # Legacy class wrapper for backward compatibility
