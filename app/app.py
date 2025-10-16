@@ -1124,11 +1124,17 @@ def generate_portfolio_with_progress():
         
         # Extract investment amount from preferences
         investment_amount_str = user_preferences.get('investment_goals', {}).get('initial_investment_amount', '$100 - Beginner friendly')
+        logger.info(f"Raw investment_amount_str from user preferences: {investment_amount_str}")
+
         # Extract numeric amount (e.g., "$1,000 - Confident starter" -> 1000)
-        amount_match = investment_amount_str.split(' ')[0].replace('$', '').replace(',', '').replace('+', '')
+        # Handle formats like: "$100 - Description", "$10,000+ - Description", "$25 - Description"
         try:
+            # Split on space or dash, take first part, remove $ and commas
+            amount_match = investment_amount_str.split('-')[0].split(' ')[0].strip().replace('$', '').replace(',', '').replace('+', '')
             investment_amount = float(amount_match)
-        except:
+            logger.info(f"Successfully parsed investment amount: ${investment_amount}")
+        except Exception as e:
+            logger.warning(f"Failed to parse investment amount '{investment_amount_str}': {str(e)}, using default 100")
             investment_amount = 100.0  # Default fallback
         
         # Prepare user profile for crew
@@ -1143,14 +1149,17 @@ def generate_portfolio_with_progress():
             'loss_reaction': user_preferences.get('risk_assessment', {}).get('loss_reaction', 'Hold and wait it out')
         }
         
+        # Show parsed investment amount for user verification
+        st.info(f"💰 Generating portfolio for: **${investment_amount:,.0f}**")
+
         # Progress updates
         status_placeholder.write("🔄 Initializing portfolio analysis...")
         progress_bar.progress(10)
-        
+
         # Initialize crew
         status_placeholder.write("🤖 Setting up AI portfolio strategist...")
         progress_bar.progress(20)
-        
+
         # Create portfolio
         status_placeholder.write(f"💡 Analyzing best investments for ${investment_amount:,.0f}...")
         progress_bar.progress(40)
