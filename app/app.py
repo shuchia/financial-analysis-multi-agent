@@ -2380,6 +2380,34 @@ def show_portfolio_results():
                 st.markdown("---")
                 st.markdown("#### 💬 What This Means for You")
                 st.markdown(escape_markdown_latex(projection_narrative))
+            elif projection_data and 'summary' in projection_data:
+                # Fallback: Generate simple narrative from projection data
+                st.markdown("---")
+                st.markdown("#### 💬 What This Means for You")
+                summary = projection_data['summary']
+                timeline_years = projection_data.get('timeline_years', 5)
+
+                fallback_narrative = f"""
+**Investment Outlook**: Based on your ${investment_amount:,.0f} initial investment over {timeline_years} years:
+
+**Conservative Scenario** ({summary.get('conservative_final_value', 'N/A')}):
+- Even in challenging market conditions, your portfolio could grow to {summary.get('conservative_final_value', 'N/A')}
+- This represents a return of {summary.get('conservative_total_return', 'N/A')}
+
+**Expected Scenario** ({summary.get('expected_final_value', 'N/A')}):
+- Under normal market conditions, you're projected to reach {summary.get('expected_final_value', 'N/A')}
+- This would be a {summary.get('expected_total_return', 'N/A')} return on your investment
+
+**Optimistic Scenario** ({summary.get('optimistic_final_value', 'N/A')}):
+- In favorable market conditions, your portfolio could grow to {summary.get('optimistic_final_value', 'N/A')}
+- This represents a potential {summary.get('optimistic_total_return', 'N/A')} return
+
+**Key Takeaways**:
+- Your portfolio is designed to align with your **{user_profile.get('risk_profile', 'moderate')}** risk tolerance
+- Regular monitoring and rebalancing can help optimize returns
+- Consider dollar-cost averaging to reduce market timing risk
+                """
+                st.markdown(fallback_narrative)
         else:
             st.info("📊 Performance projections will be displayed here after generation.")
 
