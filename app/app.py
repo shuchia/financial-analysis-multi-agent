@@ -1856,6 +1856,200 @@ def show_portfolio_results():
         else:
             st.warning("No portfolio allocation data available.")
 
+        # ============================================
+        # PORTFOLIO INSIGHTS (Inside Overview Tab)
+        # ============================================
+        if portfolio_output:
+            st.markdown("---")
+            st.markdown("## 💡 Portfolio Insights")
+
+            # Add category styling
+            st.markdown("""
+            <style>
+            .insight-category {
+                background: #ffffff;
+                border: 1px solid #e0e0e0;
+                border-radius: 12px;
+                padding: 1.5rem;
+                margin: 1rem 0;
+            }
+            .insight-category-title {
+                font-size: 1.1rem;
+                font-weight: 700;
+                margin-bottom: 1rem;
+                color: #2C3E50;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .insight-item {
+                margin: 0.5rem 0;
+                padding-left: 1.5rem;
+                position: relative;
+                font-size: 0.95rem;
+                line-height: 1.5;
+            }
+            .insight-item:before {
+                content: "✓";
+                position: absolute;
+                left: 0;
+                color: #4ECDC4;
+                font-weight: bold;
+            }
+            .holding-row {
+                margin: 0.75rem 0;
+                padding: 0.75rem;
+                background: #f8f9fa;
+                border-radius: 6px;
+                border-left: 3px solid #4ECDC4;
+            }
+            .holding-ticker {
+                font-weight: 700;
+                color: #2C3E50;
+                font-size: 1rem;
+            }
+            .holding-reasoning {
+                color: #555;
+                font-size: 0.9rem;
+                margin-top: 0.25rem;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+            # Parse portfolio output to extract insights using section headers
+            import re
+
+            # Extract holdings with reasoning (format: TICKER (Category) - XX% ($X,XXX) - Reasoning)
+            holdings_pattern = r'([A-Z]{1,5})\s*\([^)]+\)\s*-\s*(\d+(?:\.\d+)?%)\s*\(\$[\d,]+\)\s*-\s*([^\n]+)'
+            holdings_matches = re.findall(holdings_pattern, str(portfolio_output))
+
+            # Extract sections by headers
+            # Risk Management section
+            risk_section_match = re.search(r'##\s*RISK MANAGEMENT\s*\n(.*?)(?=##|\Z)', str(portfolio_output), re.IGNORECASE | re.DOTALL)
+            risk_items = []
+            if risk_section_match:
+                risk_section = risk_section_match.group(1)
+                # Extract bullet points or dashes
+                risk_items = [r.strip() for r in re.findall(r'[-•]\s*([^\n]+)', risk_section) if r.strip()]
+
+            # Performance Outlook section
+            performance_section_match = re.search(r'##\s*PERFORMANCE OUTLOOK\s*\n(.*?)(?=##|\Z)', str(portfolio_output), re.IGNORECASE | re.DOTALL)
+            expected_return_range = None
+            rebalancing_trigger = None
+            monitoring_frequency = None
+            volatility_expectations = None
+
+            if performance_section_match:
+                performance_section = performance_section_match.group(1)
+                # Extract expected return
+                return_match = re.search(r'Expected Annual Return:\s*(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*%', performance_section, re.IGNORECASE)
+                if return_match:
+                    low = return_match.group(1)
+                    high = return_match.group(2)
+                    expected_return_range = f"{low}-{high}%"
+
+                # Extract monitoring points
+                rebalancing_match = re.search(r'Rebalancing trigger:\s*([^\n]+)', performance_section, re.IGNORECASE)
+                if rebalancing_match:
+                    rebalancing_trigger = rebalancing_match.group(1).strip()
+
+                frequency_match = re.search(r'Monitoring frequency:\s*([^\n]+)', performance_section, re.IGNORECASE)
+                if frequency_match:
+                    monitoring_frequency = frequency_match.group(1).strip()
+
+                volatility_match = re.search(r'Volatility expectations:\s*([^\n]+)', performance_section, re.IGNORECASE)
+                if volatility_match:
+                    volatility_expectations = volatility_match.group(1).strip()
+
+            # Cost Efficiency section
+            cost_section_match = re.search(r'##\s*COST EFFICIENCY\s*\n(.*?)(?=##|\Z)', str(portfolio_output), re.IGNORECASE | re.DOTALL)
+            cost_items = []
+            if cost_section_match:
+                cost_section = cost_section_match.group(1)
+                # Extract bullet points or dashes
+                cost_items = [c.strip() for c in re.findall(r'[-•]\s*([^\n]+)', cost_section) if c.strip()]
+
+            formatted_output = escape_markdown_latex(portfolio_output)
+
+            # Group insights into categories
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Asset Allocation - Show each holding with reasoning
+                st.markdown('<div class="insight-category"><div class="insight-category-title">🎯 Asset Allocation</div>', unsafe_allow_html=True)
+                if holdings_matches:
+                    for ticker, percentage, reasoning in holdings_matches:
+                        st.markdown(f'''
+                        <div class="holding-row">
+                            <div class="holding-ticker">{ticker} - {percentage}</div>
+                            <div class="holding-reasoning">{reasoning}</div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+                else:
+                    # Fallback if pattern doesn't match
+                    for alloc in structured_portfolio.get('allocations', []):
+                        ticker = alloc.get('ticker', 'N/A')
+                        percentage = alloc.get('percentage', 0)
+                        reasoning = alloc.get('reasoning', 'Diversification component')
+                        st.markdown(f'''
+                        <div class="holding-row">
+                            <div class="holding-ticker">{ticker} - {percentage}%</div>
+                            <div class="holding-reasoning">{reasoning}</div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+                # Performance Outlook - Show expected return and KPIs
+                st.markdown('<div class="insight-category"><div class="insight-category-title">📊 Performance Outlook</div>', unsafe_allow_html=True)
+
+                if expected_return_range:
+                    st.markdown(f'<div class="insight-item">Expected annual return: {expected_return_range}</div>', unsafe_allow_html=True)
+
+                if rebalancing_trigger:
+                    st.markdown(f'<div class="insight-item"><strong>Rebalancing:</strong> {rebalancing_trigger}</div>', unsafe_allow_html=True)
+
+                if monitoring_frequency:
+                    st.markdown(f'<div class="insight-item"><strong>Monitoring:</strong> {monitoring_frequency}</div>', unsafe_allow_html=True)
+
+                if volatility_expectations:
+                    st.markdown(f'<div class="insight-item"><strong>Volatility:</strong> {volatility_expectations}</div>', unsafe_allow_html=True)
+
+                # Fallback if no data extracted
+                if not expected_return_range and not rebalancing_trigger:
+                    st.markdown('<div class="insight-item">Portfolio designed to align with your investment goals and timeline</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="insight-item">Review quarterly and rebalance when allocations drift significantly</div>', unsafe_allow_html=True)
+
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with col2:
+                # Risk Management - Show portfolio-specific risks
+                st.markdown('<div class="insight-category"><div class="insight-category-title">⚠️ Risk Management</div>', unsafe_allow_html=True)
+
+                if risk_items:
+                    for risk in risk_items[:5]:  # Show up to 5 risks
+                        st.markdown(f'<div class="insight-item">{risk}</div>', unsafe_allow_html=True)
+                else:
+                    # Fallback risks
+                    st.markdown('<div class="insight-item">Monitor market volatility and economic conditions</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="insight-item">Maintain emergency fund before investing</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="insight-item">Review portfolio allocation quarterly</div>', unsafe_allow_html=True)
+
+                st.markdown('</div>', unsafe_allow_html=True)
+
+                # Cost Efficiency - Show specific expense ratios and fee insights
+                st.markdown('<div class="insight-category"><div class="insight-category-title">💰 Cost Efficiency</div>', unsafe_allow_html=True)
+
+                if cost_items:
+                    for cost_item in cost_items[:4]:  # Show up to 4 cost items
+                        st.markdown(f'<div class="insight-item">{cost_item}</div>', unsafe_allow_html=True)
+                else:
+                    # Fallback cost insights
+                    st.markdown('<div class="insight-item">Low-cost index funds prioritized</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="insight-item">Tax-efficient fund structure</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="insight-item">Minimal management fees</div>', unsafe_allow_html=True)
+
+                st.markdown('</div>', unsafe_allow_html=True)
+
     # ============================================
     # TAB 2: RISK ANALYSIS
     # ============================================
@@ -2120,13 +2314,10 @@ def show_portfolio_results():
             """.format(investment_amount))
 
     # ============================================
-    # PORTFOLIO INSIGHTS (After tabs)
+    # PORTFOLIO INSIGHTS SECTION (DISABLED)
+    # Now displayed inside Overview tab instead of after all tabs
     # ============================================
-    st.markdown("---")
-    st.markdown("## 💡 Portfolio Insights")
-
-    # Display AI recommendations grouped into categories
-    if portfolio_output:
+    if False:  # Disabled - moved to Overview tab
         # Add category styling
         st.markdown("""
         <style>
@@ -2376,24 +2567,26 @@ def show_portfolio_results():
                     if st.button("✅ Apply Optimized Allocation", type="primary"):
                         st.info("🚧 Feature coming soon: Apply optimization and rebalance portfolio")
 
-    # Quick Actions
-    st.markdown("---")
-    st.markdown("### 📌 Quick Actions")
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("📈 Analyze Individual Stocks", type="secondary", use_container_width=True):
-            st.session_state.show_portfolio_results = False
-            st.session_state.show_main_app = True
-            st.rerun()
-
-    with col2:
-        if st.button("📊 View Detailed Analysis", type="secondary", use_container_width=True):
-            st.info("Coming soon: Detailed stock-by-stock analysis")
-
-    with col3:
-        if st.button("📖 Educational Resources", type="secondary", use_container_width=True):
-            st.info("Scroll down to see educational content")
+    # ============================================
+    # QUICK ACTIONS SECTION (COMMENTED OUT)
+    # ============================================
+    # st.markdown("---")
+    # st.markdown("### 📌 Quick Actions")
+    #
+    # col1, col2, col3 = st.columns(3)
+    # with col1:
+    #     if st.button("📈 Analyze Individual Stocks", type="secondary", use_container_width=True):
+    #         st.session_state.show_portfolio_results = False
+    #         st.session_state.show_main_app = True
+    #         st.rerun()
+    #
+    # with col2:
+    #     if st.button("📊 View Detailed Analysis", type="secondary", use_container_width=True):
+    #         st.info("Coming soon: Detailed stock-by-stock analysis")
+    #
+    # with col3:
+    #     if st.button("📖 Educational Resources", type="secondary", use_container_width=True):
+    #         st.info("Scroll down to see educational content")
 
     # ============================================
     # SECTION 3: Education Content (Bottom, Collapsible)
