@@ -154,13 +154,24 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
             portfolio_data["tickers"].append(ticker)
             portfolio_data["weights"].append(data['percentage'] / 100)  # Convert to decimal
             portfolio_data["amounts"].append(data['amount'])
-            portfolio_data["reasoning"][ticker] = data['reasoning']
-            
+
+            # Ensure reasoning is never empty - add fallback
+            reasoning = data['reasoning']
+            if not reasoning or reasoning.strip() == "":
+                # Generate fallback reasoning based on category or generic
+                if data['category'] and data['category'] != "N/A":
+                    reasoning = f"Diversification in {data['category']} sector"
+                else:
+                    reasoning = f"Core portfolio holding for diversification"
+                logger.info(f"Added fallback reasoning for {ticker}: {reasoning}")
+
+            portfolio_data["reasoning"][ticker] = reasoning
+
             portfolio_data["allocations"].append({
                 "ticker": ticker,
                 "percentage": data['percentage'],
                 "amount": data['amount'],
-                "reasoning": data['reasoning'],
+                "reasoning": reasoning,
                 "category": data['category'] if data['category'] else "N/A"
             })
             total_percentage += data['percentage']
