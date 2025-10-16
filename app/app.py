@@ -1860,7 +1860,7 @@ def show_portfolio_results():
     # TAB 2: RISK ANALYSIS
     # ============================================
     with tab_risk:
-        st.markdown("### ⚠️ Risk Analysis")
+        #st.markdown("### ⚠️ Risk Analysis")
 
         if structured_portfolio['tickers']:
             structured = structured_portfolio
@@ -1896,7 +1896,7 @@ def show_portfolio_results():
                                     "annual_volatility": tool_output.get('portfolio_metrics', {}).get('annual_volatility', 0.0),
                                     "expected_annual_return": tool_output.get('portfolio_metrics', {}).get('annual_return', 0.0)
                                 },
-                                "risk_contributions": {},
+                                "risk_contributions": tool_output.get('risk_contributions', {}),
                                 "risk_alignment": {
                                     "user_profile": user_profile.get('risk_profile', 'moderate'),
                                     "risk_score": user_profile.get('risk_score', 0.5),
@@ -2022,38 +2022,8 @@ def show_portfolio_results():
                         else:
                             crew_output = str(crew_risk_result)
 
-                        # Extract only summary and recommendations sections (skip metrics already shown)
-                        import re
-
-                        # Try to extract Executive Summary
-                        summary_match = re.search(r'(?:Executive\s+Summary|Summary)[:\s]+(.*?)(?=(?:\n\n|Value\s+at\s+Risk|Portfolio\s+Risk\s+Metrics|Risk\s+Alignment|Recommendations|\Z))', str(crew_output), re.IGNORECASE | re.DOTALL)
-
-                        # Try to extract Recommendations section
-                        recommendations_match = re.search(r'(?:Recommendations|Actions|Suggestions)[:\s]+(.*?)(?=\Z)', str(crew_output), re.IGNORECASE | re.DOTALL)
-
-                        # Try to extract Risk Alignment narrative (not just the level)
-                        alignment_match = re.search(r'Risk\s+Alignment[:\s]+(.*?)(?=(?:\n\n|Recommendations|\Z))', str(crew_output), re.IGNORECASE | re.DOTALL)
-
-                        # Display extracted sections
-                        if summary_match or recommendations_match or alignment_match:
-                            if summary_match:
-                                st.markdown("**Executive Summary:**")
-                                st.markdown(escape_markdown_latex(summary_match.group(1).strip()))
-                                st.markdown("")
-
-                            if alignment_match:
-                                st.markdown("**Risk Profile Alignment:**")
-                                st.markdown(escape_markdown_latex(alignment_match.group(1).strip()))
-                                st.markdown("")
-
-                            if recommendations_match:
-                                st.markdown("**Recommendations:**")
-                                st.markdown(escape_markdown_latex(recommendations_match.group(1).strip()))
-                            else:
-                                # Fallback: show full output if parsing fails
-                                st.markdown(escape_markdown_latex(crew_output))
-                        else:
-                            st.markdown(escape_markdown_latex(str(crew_risk_result)))
+                        # Display the full narrative cleanly (no parsing needed)
+                        st.markdown(escape_markdown_latex(crew_output))
             else:
                 st.info("📊 Risk analysis will appear here once portfolio is parsed")
 

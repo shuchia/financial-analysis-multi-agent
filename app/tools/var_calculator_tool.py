@@ -200,6 +200,33 @@ def _var_calculator_impl(tickers_string: str, portfolio_value: float = 100000,
         actual_tickers = data.columns.tolist() if len(tickers) > 1 else tickers
         actual_weights = weights[:len(actual_tickers)]
 
+        # Calculate individual stock volatilities and risk contributions
+        individual_volatilities = {}
+        risk_contributions = {}
+
+        for i, ticker in enumerate(actual_tickers):
+            # Get individual stock returns
+            if len(tickers) == 1:
+                stock_returns = returns.iloc[:, 0]
+            else:
+                stock_returns = returns[ticker]
+
+            # Calculate annual volatility for this stock
+            stock_volatility = stock_returns.std() * np.sqrt(252)
+            individual_volatilities[ticker] = stock_volatility
+
+            # Calculate risk contribution (weight * volatility / portfolio volatility)
+            if annual_volatility > 0:
+                risk_contribution_pct = (actual_weights[i] * stock_volatility) / annual_volatility * 100
+            else:
+                risk_contribution_pct = 0
+
+            risk_contributions[ticker] = {
+                'weight': float(actual_weights[i]),
+                'volatility': float(stock_volatility),
+                'percentage_of_risk': float(risk_contribution_pct)
+            }
+
         return {
             'portfolio_composition': {
                 'tickers': actual_tickers,
@@ -213,6 +240,7 @@ def _var_calculator_impl(tickers_string: str, portfolio_value: float = 100000,
             'cvar_parametric': {k: round(v, 2) for k, v in parametric_cvar.items()},
             'var_monte_carlo': {k: round(v, 2) for k, v in mc_var.items()},
             'cvar_monte_carlo': {k: round(v, 2) for k, v in mc_cvar.items()},
+            'risk_contributions': risk_contributions,
             'portfolio_metrics': {
                 'annual_return': round(annual_return * 100, 2),
                 'annual_volatility': round(annual_volatility * 100, 2),
