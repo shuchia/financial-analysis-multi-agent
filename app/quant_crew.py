@@ -294,7 +294,7 @@ class QuantitativeAnalysisCrew:
         user_risk = user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'
 
         # Call VaR calculator tool directly to get structured data
-        tool_result = var_calculator(
+        tool_result = _var_calculator_impl(
             tickers_string=tickers_string,
             portfolio_value=portfolio_value,
             holding_period=10,
