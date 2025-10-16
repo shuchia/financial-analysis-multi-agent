@@ -2225,6 +2225,21 @@ def show_portfolio_results():
             else:
                 risk_results = st.session_state.portfolio_risk_analysis
 
+            # Check for excluded tickers warning
+            if 'portfolio_risk_crew_result' in st.session_state:
+                crew_risk_result = st.session_state.portfolio_risk_crew_result
+                if isinstance(crew_risk_result, dict):
+                    # Check if tickers were excluded
+                    invalid_tickers = crew_risk_result.get('invalid_tickers', [])
+                    valid_tickers = crew_risk_result.get('valid_tickers', [])
+
+                    if invalid_tickers:
+                        st.warning(
+                            f"⚠️ **Data Limitation**: {len(invalid_tickers)} ticker(s) excluded from risk analysis due to insufficient historical data: "
+                            f"**{', '.join(invalid_tickers)}**\n\n"
+                            f"Risk metrics calculated using: **{', '.join(valid_tickers)}**"
+                        )
+
             # Display Risk Metrics Dashboard FIRST
             if risk_results:
                 st.markdown("#### 📊 Risk Metrics Dashboard")

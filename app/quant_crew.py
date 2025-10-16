@@ -5,6 +5,9 @@
 
 from crewai import Agent, Crew, Task, LLM
 import os
+import yfinance as yf
+import logging
+from datetime import datetime, timedelta
 from tools.portfolio_optimization_tool import portfolio_optimization, _portfolio_optimization_impl
 from tools.var_calculator_tool import var_calculator, _var_calculator_impl
 # Import existing tools
@@ -14,9 +17,51 @@ from tools.yf_fundamental_analysis_tool import yf_fundamental_analysis
 # For now, use only the tools we know work
 # TODO: Fix the other tools when needed
 MonteCarloSimulationTool = None
-BacktestingTool = None  
+BacktestingTool = None
 PairsTradingTool = None
 OptionsPricingTool = None
+
+logger = logging.getLogger(__name__)
+
+
+def validate_tickers_data_availability(tickers, min_days=30):
+    """
+    Check which tickers have sufficient historical data for risk analysis.
+
+    Args:
+        tickers: List of ticker symbols
+        min_days: Minimum number of trading days required
+
+    Returns:
+        tuple: (valid_tickers, invalid_tickers)
+    """
+    valid_tickers = []
+    invalid_tickers = []
+
+    # Get date range for checking
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=90)  # Check last 3 months
+
+    for ticker in tickers:
+        try:
+            logger.info(f"Validating data availability for {ticker}")
+            data = yf.download(ticker, start=start_date, end=end_date, progress=False)
+
+            if data.empty:
+                logger.warning(f"{ticker}: No data available")
+                invalid_tickers.append(ticker)
+            elif len(data) < min_days:
+                logger.warning(f"{ticker}: Insufficient data ({len(data)} days < {min_days} required)")
+                invalid_tickers.append(ticker)
+            else:
+                logger.info(f"{ticker}: Valid ({len(data)} days of data)")
+                valid_tickers.append(ticker)
+
+        except Exception as e:
+            logger.error(f"{ticker}: Error fetching data - {str(e)}")
+            invalid_tickers.append(ticker)
+
+    return valid_tickers, invalid_tickers
 
 
 class QuantitativeAnalysisCrew:
@@ -318,15 +363,36 @@ class QuantitativeAnalysisCrew:
     def analyze_portfolio_risk(self, tickers, weights=None, user_profile=None, investment_amount=None):
         """Specific function for portfolio risk analysis using quant crew."""
 
-        # BETTER APPROACH: Call the tool directly for structured data
-        # Then optionally use AI for narrative interpretation
+        # STEP 1: Validate tickers have sufficient data
+        logger.info(f"Validating data availability for tickers: {tickers}")
+        valid_tickers, invalid_tickers = validate_tickers_data_availability(tickers, min_days=30)
 
-        # Format tickers as comma-separated string for the VaR tool
-        tickers_string = ','.join(tickers) if isinstance(tickers, list) else str(tickers)
+        # If no valid tickers, return error
+        if not valid_tickers:
+            error_msg = f"None of the portfolio tickers have sufficient historical data for risk analysis"
+            logger.error(error_msg)
+            return {
+                'raw': error_msg,
+                'tool_output': {
+                    'error': 'No valid tickers for risk analysis',
+                    'invalid_tickers': invalid_tickers,
+                    'suggestion': 'The portfolio contains delisted or newly listed securities. Please choose more established tickers with longer trading history.'
+                },
+                'invalid_tickers': invalid_tickers,
+                'tasks_output': []
+            }
+
+        # STEP 2: If some tickers are invalid, log warning and use only valid ones
+        if invalid_tickers:
+            logger.warning(f"Excluding tickers from risk analysis due to insufficient data: {invalid_tickers}")
+            logger.info(f"Proceeding with valid tickers: {valid_tickers}")
+
+        # Format valid tickers as comma-separated string for the VaR tool
+        tickers_string = ','.join(valid_tickers)
         portfolio_value = investment_amount if investment_amount else 10000
         user_risk = user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'
 
-        # Call VaR calculator tool directly to get structured data
+        # STEP 3: Call VaR calculator tool with valid tickers only
         tool_result = _var_calculator_impl(
             tickers_string=tickers_string,
             portfolio_value=portfolio_value,
@@ -339,8 +405,14 @@ class QuantitativeAnalysisCrew:
             return {
                 'raw': f"Error calculating risk metrics: {tool_result['error']}",
                 'tool_output': tool_result,
+                'invalid_tickers': invalid_tickers,
                 'tasks_output': []
             }
+
+        # Add invalid tickers info to result for UI display
+        if invalid_tickers:
+            tool_result['excluded_tickers'] = invalid_tickers
+            tool_result['warning'] = f"Risk analysis excludes {len(invalid_tickers)} ticker(s) due to insufficient data"
 
         # Create agents for narrative interpretation
         self.create_agents()
@@ -382,6 +454,8 @@ class QuantitativeAnalysisCrew:
         return {
             'tool_output': tool_result,  # Structured data
             'narrative': narrative_result,  # AI interpretation
+            'invalid_tickers': invalid_tickers,  # Tickers excluded from analysis
+            'valid_tickers': valid_tickers,  # Tickers used in analysis
             'tasks_output': narrative_result.tasks_output if hasattr(narrative_result, 'tasks_output') else []
         }
 
