@@ -28,6 +28,7 @@ from quant_crew import QuantitativeAnalysisCrew
 import asyncio
 import threading
 import portfoliocrew
+from portfoliocrew import interpret_optimized_portfolio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1720,7 +1721,11 @@ def show_portfolio_results():
         if 'structured_portfolio' in st.session_state:
             structured_portfolio = st.session_state.structured_portfolio
 
-        st.markdown("### 📊 Portfolio Allocation")
+        # Conditional header based on whether portfolio was optimized
+        if st.session_state.get('portfolio_was_optimized', False):
+            st.markdown("### 📊 Optimized Portfolio Allocation")
+        else:
+            st.markdown("### 📊 Suggested Portfolio Allocation")
 
         # Display allocation table with enhanced design
         if structured_portfolio['tickers']:
@@ -1848,26 +1853,31 @@ def show_portfolio_results():
                     st.success("✅ Saved!")
 
             with col2:
-                if st.button("🔧 Optimize Further", type="primary", use_container_width=True):
-                    # Trigger optimization
-                    with st.spinner("🔄 Optimizing portfolio allocation..."):
-                        try:
-                            # Run optimization using direct tool call + AI interpretation
-                            opt_crew_result = QuantitativeAnalysisCrew().optimize_portfolio(
-                                tickers=structured_portfolio['tickers'],
-                                current_weights=structured_portfolio['weights'],
-                                user_profile=user_profile,
-                                investment_amount=investment_amount
-                            )
+                # Hide optimize button if portfolio was already optimized
+                if not st.session_state.get('portfolio_was_optimized', False):
+                    if st.button("🎯 Smart Optimize", type="primary", use_container_width=True,
+                                help="Uses quantitative models to improve your returns"):
+                        # Trigger optimization
+                        with st.spinner("🔄 Optimizing portfolio allocation..."):
+                            try:
+                                # Run optimization using direct tool call + AI interpretation
+                                opt_crew_result = QuantitativeAnalysisCrew().optimize_portfolio(
+                                    tickers=structured_portfolio['tickers'],
+                                    current_weights=structured_portfolio['weights'],
+                                    user_profile=user_profile,
+                                    investment_amount=investment_amount
+                                )
 
-                            st.session_state.portfolio_optimization_crew = opt_crew_result
-                            st.success("✅ Portfolio optimization completed!")
-                            st.rerun()
+                                st.session_state.portfolio_optimization_crew = opt_crew_result
+                                st.success("✅ Portfolio optimization completed!")
+                                st.rerun()
 
-                        except Exception as e:
-                            st.error(f"Optimization failed: {str(e)}")
-                            import traceback
-                            st.code(traceback.format_exc())
+                            except Exception as e:
+                                st.error(f"Optimization failed: {str(e)}")
+                                import traceback
+                                st.code(traceback.format_exc())
+                else:
+                    st.info("✅ Portfolio is already optimized")
 
         else:
             st.warning("No portfolio allocation data available.")
@@ -1978,40 +1988,193 @@ def show_portfolio_results():
                                 f"(-{rec['percentage_change']:.1f}% / ${rec['dollar_amount']:,.2f})"
                             )
 
-                    # Apply button
+                    # Apply button - Show confirmation dialog
+                    @st.dialog("Confirm Portfolio Optimization")
+                    def confirm_apply_optimization():
+                        """Confirmation dialog for applying optimized portfolio."""
+                        st.markdown("### ⚠️ This will replace your original portfolio")
+
+                        # Show before/after comparison
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+                            st.markdown("**Current Portfolio**")
+                            if 'current_portfolio' in tool_output:
+                                current_return = tool_output['current_portfolio']['expected_return']
+                                # Use portfolio's stated return if available
+                                if structured_portfolio.get('expected_return'):
+                                    return_match = re.search(r'(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)',
+                                                            str(structured_portfolio['expected_return']))
+                                    if return_match:
+                                        low = float(return_match.group(1))
+                                        high = float(return_match.group(2))
+                                        current_return = (low + high) / 2 / 100
+                                st.metric("Expected Return", f"{current_return*100:.1f}%")
+                            else:
+                                st.info("No metrics available")
+
+                        with col2:
+                            st.markdown("**Optimized Portfolio**")
+                            opt_return = tool_output['max_sharpe_portfolio']['expected_return']
+                            improvement = opt_return - (current_return if 'current_portfolio' in tool_output else opt_return)
+                            st.metric("Expected Return", f"{opt_return*100:.1f}%",
+                                     delta=f"+{improvement*100:.1f}%" if improvement > 0 else None)
+
+                        st.markdown("---")
+                        st.markdown("**Changes that will be applied:**")
+                        st.markdown("- Portfolio allocation will be updated to optimized weights")
+                        st.markdown("- Portfolio insights will be regenerated")
+                        st.markdown("- Risk analysis will be recalculated")
+                        st.markdown("- Performance projections will be updated")
+
+                        st.warning("⚠️ **Note:** This action cannot be undone.")
+
+                        # Confirmation buttons
+                        col1, col2 = st.columns([1, 1])
+                        with col1:
+                            if st.button("✅ Confirm & Apply", type="primary", use_container_width=True):
+                                apply_optimized_portfolio()
+                                st.rerun()
+                        with col2:
+                            if st.button("❌ Cancel", use_container_width=True):
+                                st.rerun()
+
+                    def apply_optimized_portfolio():
+                        """Apply the optimized portfolio and regenerate all components."""
+                        with st.spinner("🔄 Applying optimized portfolio..."):
+                            try:
+                                # STEP 1: Update portfolio with optimized weights
+                                optimized_weights = tool_output['max_sharpe_portfolio']['weights']
+                                opt_portfolio = tool_output['max_sharpe_portfolio']
+
+                                # Create new structured portfolio
+                                new_tickers = list(optimized_weights.keys())
+                                new_weights = list(optimized_weights.values())
+                                new_amounts = [w * investment_amount for w in new_weights]
+
+                                # Reconstruct allocations with placeholder reasoning (will be updated by Portfolio Insights)
+                                new_allocations = []
+                                for ticker, weight, amount in zip(new_tickers, new_weights, new_amounts):
+                                    new_allocations.append({
+                                        'ticker': ticker,
+                                        'percentage': weight * 100,
+                                        'amount': amount,
+                                        'reasoning': 'Optimized allocation for improved risk-adjusted returns',
+                                        'category': 'N/A'  # Will be updated by Portfolio Insights
+                                    })
+
+                                # Update structured portfolio
+                                structured_portfolio['tickers'] = new_tickers
+                                structured_portfolio['weights'] = new_weights
+                                structured_portfolio['amounts'] = new_amounts
+                                structured_portfolio['allocations'] = new_allocations
+
+                                # Update expected return from optimization
+                                opt_return = opt_portfolio['expected_return']
+                                structured_portfolio['expected_return'] = f"{opt_return*100-1:.0f}-{opt_return*100+1:.0f}%"
+
+                                # Update session state
+                                st.session_state.structured_portfolio = structured_portfolio
+
+                                # STEP 2: Regenerate Portfolio Insights with specialized interpretation task
+                                with st.spinner("🔄 Regenerating portfolio insights..."):
+                                    try:
+                                        # Call the portfolio interpretation function from portfoliocrew
+                                        portfolio_insights_result = interpret_optimized_portfolio(
+                                            optimized_weights=optimized_weights,
+                                            optimization_metrics={
+                                                'expected_return': opt_return,
+                                                'volatility': opt_portfolio['volatility'],
+                                                'sharpe_ratio': opt_portfolio['sharpe_ratio']
+                                            },
+                                            investment_amount=investment_amount,
+                                            user_profile=user_profile
+                                        )
+
+                                        # Parse the result and update structured_portfolio with better reasoning
+                                        parsed_insights = parse_portfolio_output(portfolio_insights_result, investment_amount)
+
+                                        # Update allocations with parsed reasoning and categories
+                                        if parsed_insights['allocations']:
+                                            for alloc in structured_portfolio['allocations']:
+                                                # Find matching allocation from parsed insights
+                                                matching = next((p for p in parsed_insights['allocations']
+                                                               if p['ticker'] == alloc['ticker']), None)
+                                                if matching:
+                                                    alloc['reasoning'] = matching['reasoning']
+                                                    alloc['category'] = matching.get('category', 'N/A')
+
+                                        # Store the full output for Portfolio Insights display
+                                        st.session_state.portfolio_output = portfolio_insights_result
+                                        st.session_state.structured_portfolio = structured_portfolio
+
+                                    except Exception as e:
+                                        logger.error(f"Error regenerating portfolio insights: {str(e)}")
+                                        # Continue anyway with basic reasoning
+                                        st.session_state.portfolio_output = f"Optimized portfolio with {len(new_tickers)} holdings"
+
+                                # STEP 3: Regenerate Risk Analysis
+                                with st.spinner("🔄 Recalculating risk analysis..."):
+                                    try:
+                                        risk_result = QuantitativeAnalysisCrew().analyze_portfolio_risk(
+                                            tickers=new_tickers,
+                                            weights=new_weights,
+                                            user_profile=user_profile,
+                                            investment_amount=investment_amount
+                                        )
+                                        st.session_state.portfolio_risk_analysis = risk_result
+                                    except Exception as e:
+                                        logger.error(f"Error regenerating risk analysis: {str(e)}")
+                                        # Clear old risk analysis to force regeneration later
+                                        if 'portfolio_risk_analysis' in st.session_state:
+                                            del st.session_state.portfolio_risk_analysis
+
+                                # STEP 4: Regenerate Projections
+                                with st.spinner("🔄 Updating performance projections..."):
+                                    try:
+                                        from tools.performance_projection_tool import calculate_portfolio_projections
+                                        from portfoliocrew import parse_timeline_to_years
+
+                                        timeline_years = parse_timeline_to_years(user_profile.get('timeline', '5-10 years'))
+                                        risk_profile = user_profile.get('risk_profile', 'moderate').lower()
+                                        volatility_map = {
+                                            'conservative': 0.10,
+                                            'moderate': 0.15,
+                                            'aggressive': 0.20
+                                        }
+                                        annual_volatility = volatility_map.get(risk_profile, 0.15)
+
+                                        projection_result = calculate_portfolio_projections(
+                                            investment_amount=investment_amount,
+                                            expected_annual_return=opt_return,  # Use optimized return
+                                            timeline_years=timeline_years,
+                                            annual_volatility=annual_volatility
+                                        )
+
+                                        st.session_state.projection_data = projection_result
+                                    except Exception as e:
+                                        logger.error(f"Error regenerating projections: {str(e)}")
+                                        # Clear old projections to force regeneration later
+                                        if 'projection_data' in st.session_state:
+                                            del st.session_state.projection_data
+
+                                # STEP 5: Set flag to hide optimize button and clear optimization result
+                                st.session_state.portfolio_was_optimized = True
+                                if 'portfolio_optimization_crew' in st.session_state:
+                                    del st.session_state.portfolio_optimization_crew
+
+                                st.success("✅ Portfolio successfully updated with optimized allocation!")
+                                st.info("📊 Portfolio insights, risk analysis, and projections have been regenerated.")
+
+                            except Exception as e:
+                                logger.error(f"Error applying optimized portfolio: {str(e)}")
+                                st.error(f"Failed to apply optimization: {str(e)}")
+                                import traceback
+                                st.code(traceback.format_exc())
+
+                    # Show the apply button
                     if st.button("✅ Apply Optimized Allocation", type="primary"):
-                        # Update portfolio with optimized weights
-                        optimized_weights = tool_output['max_sharpe_portfolio']['weights']
-
-                        # Create new structured portfolio
-                        new_tickers = list(optimized_weights.keys())
-                        new_weights = list(optimized_weights.values())
-                        new_amounts = [w * investment_amount for w in new_weights]
-
-                        # Reconstruct allocations for each ticker
-                        new_allocations = []
-                        for ticker, weight, amount in zip(new_tickers, new_weights, new_amounts):
-                            new_allocations.append({
-                                'ticker': ticker,
-                                'percentage': weight * 100,
-                                'amount': amount,
-                                'reasoning': 'Optimized allocation'
-                            })
-
-                        # Update structured portfolio
-                        structured_portfolio['tickers'] = new_tickers
-                        structured_portfolio['weights'] = new_weights
-                        structured_portfolio['amounts'] = new_amounts
-                        structured_portfolio['allocations'] = new_allocations
-
-                        # Update session state
-                        st.session_state.structured_portfolio = structured_portfolio
-
-                        # Clear optimization to return to Portfolio Insights view
-                        del st.session_state.portfolio_optimization_crew
-
-                        st.success("✅ Portfolio updated with optimized allocation!")
-                        st.rerun()
+                        confirm_apply_optimization()
 
                 # SECTION C: AI Narrative (Expandable)
                 with st.expander("🤖 AI Portfolio Manager Recommendations", expanded=False):

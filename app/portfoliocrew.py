@@ -410,3 +410,140 @@ def extract_action_items(education_content: str) -> list:
         "Continue learning about investing",
         "Monitor but don't panic during volatility"
     ]
+
+
+def interpret_optimized_portfolio(optimized_weights: dict, optimization_metrics: dict,
+                                  investment_amount: float, user_profile: dict = None):
+    """
+    Create interpretation of an optimized portfolio allocation.
+
+    This function uses the Portfolio Strategist agent to explain WHY optimization
+    chose specific allocations, rather than creating a new portfolio from scratch.
+
+    Args:
+        optimized_weights: Dict of {ticker: weight} from optimization
+        optimization_metrics: Dict with expected_return, volatility, sharpe_ratio
+        investment_amount: Total investment amount
+        user_profile: User profile dict with age_range, risk_profile, timeline, etc.
+
+    Returns:
+        CrewAI result with portfolio interpretation
+    """
+    logger = logging.getLogger(__name__)
+
+    # Set default user profile if none provided
+    if user_profile is None:
+        user_profile = {
+            'age_range': '25-35',
+            'risk_profile': 'moderate',
+            'timeline': '5-10 years',
+            'primary_goal': 'wealth_building'
+        }
+
+    logger.info(f"Creating portfolio interpretation for optimized allocation")
+
+    # Initialize AWS Bedrock LLM
+    llm = LLM(
+        model="anthropic.claude-3-haiku-20240307-v1:0",
+        region_name=os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
+    )
+
+    # Create Portfolio Strategist agent
+    strategist = Agent(
+        role='Portfolio Strategist',
+        goal='Explain optimized investment portfolios to help investors understand allocation decisions',
+        backstory="""You are an expert portfolio manager who explains portfolio allocations
+                    to investors. You understand modern portfolio theory and can clearly explain
+                    why optimization algorithms choose specific weights. You always address
+                    investors directly using 'you' and 'your' instead of third person.
+
+                    Your specialty is taking quantitatively optimized portfolios and making them
+                    understandable and actionable for individual investors.""",
+        tools=[],
+        llm=llm,
+        verbose=True
+    )
+
+    # Format allocation for the task description
+    allocation_details = "\n".join([
+        f"- {ticker}: {weight*100:.1f}% (${weight*investment_amount:,.0f})"
+        for ticker, weight in optimized_weights.items()
+    ])
+
+    # Format optimization metrics
+    opt_return = optimization_metrics.get('expected_return', 0.08)
+    opt_volatility = optimization_metrics.get('volatility', 0.12)
+    opt_sharpe = optimization_metrics.get('sharpe_ratio', 0.6)
+
+    opt_metrics_text = f"""
+    Expected Return: {opt_return*100:.1f}%
+    Volatility: {opt_volatility*100:.1f}%
+    Sharpe Ratio: {opt_sharpe:.2f}
+    """
+
+    # Create interpretation task
+    interpret_task = Task(
+        description=f"""
+        Explain this OPTIMIZED portfolio allocation to the investor:
+
+        OPTIMIZED ALLOCATION (from Modern Portfolio Theory optimization):
+        {allocation_details}
+
+        OPTIMIZATION METRICS:
+        {opt_metrics_text}
+
+        USER PROFILE:
+        - Age: {user_profile.get('age_range', '25-35')}
+        - Risk Tolerance: {user_profile.get('risk_profile', 'moderate')}
+        - Timeline: {user_profile.get('timeline', '5-10 years')}
+        - Goal: {user_profile.get('primary_goal', 'wealth_building')}
+
+        YOUR TASK:
+        Explain this optimized portfolio using the SAME format as original portfolio creation.
+        Address the investor directly as 'you/your'.
+
+        OUTPUT FORMAT (CRITICAL - EXACT MATCH REQUIRED):
+        For each holding, provide in this EXACT format:
+        TICKER (Category) - XX% ($X,XXX) - Brief reasoning why this optimized allocation benefits you
+
+        Categories should be: ETF, Dividend ETF, Technology, Healthcare, Financial, Consumer, Energy, Industrial, Real Estate, Growth, Value, International
+
+        Then provide these sections with exact headers:
+
+        ## RISK MANAGEMENT
+        Key Risks to Watch:
+        - [3-5 specific risks based on THIS optimized portfolio's composition]
+        - [Focus on concentration risks, sector exposures, correlation issues specific to these holdings]
+
+        ## PERFORMANCE OUTLOOK
+        Expected Annual Return: {opt_return*100-1:.0f}-{opt_return*100+1:.0f}%
+
+        Key Monitoring Points:
+        - Rebalancing trigger: [When to rebalance, e.g., "When any position drifts more than 5%"]
+        - Monitoring frequency: [Based on timeline, e.g., "Quarterly review"]
+        - Volatility expectations: [Expected volatility, e.g., "Moderate volatility (10-15% annual)"]
+
+        ## COST EFFICIENCY
+        - [Actual expense ratios of the funds you chose]
+        - [Tax efficiency considerations for these specific holdings]
+        - [Fee minimization achieved through optimization]
+
+        REMEMBER: You are EXPLAINING why optimization chose these allocations, not creating new ones.
+        """,
+        agent=strategist,
+        expected_output="Portfolio interpretation with all structured sections",
+        max_retries=1
+    )
+
+    # Create and run interpretation crew
+    interpretation_crew = Crew(
+        agents=[strategist],
+        tasks=[interpret_task],
+        process=Process.sequential
+    )
+
+    logger.info("Starting portfolio interpretation crew...")
+    result = interpretation_crew.kickoff()
+    logger.info("Portfolio interpretation completed")
+
+    return result
