@@ -107,11 +107,14 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
                 # Priority: category in parentheses, then category after amount
                 if 'category_in_parens' in locals() and category_in_parens:
                     category = category_in_parens.strip()
+                    # The reasoning should be in the next section
+                    if 'category_after' in locals() and category_after:
+                        reasoning = category_after.strip()
                 elif 'category_after' in locals() and category_after:
                     # Check if this looks like a category (short, title case, common sectors)
-                    category_keywords = ['Technology', 'Healthcare', 'Financial', 'Consumer', 'Energy', 
-                                       'Industrial', 'ETF', 'Bond', 'Real Estate', 'Growth', 'Value',
-                                       'Large Cap', 'Small Cap', 'International', 'Emerging Markets']
+                    category_keywords = ['Technology', 'Healthcare', 'Financial', 'Consumer', 'Energy',
+                                       'Industrial', 'ETF', 'Dividend ETF', 'Bond', 'Real Estate', 'Growth',
+                                       'Value', 'Large Cap', 'Small Cap', 'International', 'Emerging Markets']
                     if any(keyword in category_after for keyword in category_keywords):
                         category = category_after.strip()
                         reasoning = locals().get('reasoning', '').strip()
@@ -119,7 +122,7 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
                         reasoning = category_after.strip()
                 elif 'category_or_reasoning' in locals() and category_or_reasoning:
                     # Check if it's likely a category
-                    if len(category_or_reasoning.split()) <= 3 and any(word in category_or_reasoning for word in ['ETF', 'Tech', 'Health', 'Financial', 'Consumer', 'Growth']):
+                    if len(category_or_reasoning.split()) <= 4 and any(word in category_or_reasoning for word in ['ETF', 'Tech', 'Health', 'Financial', 'Consumer', 'Growth', 'Dividend', 'Value']):
                         category = category_or_reasoning.strip()
                     else:
                         reasoning = category_or_reasoning.strip()

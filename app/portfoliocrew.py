@@ -109,14 +109,22 @@ def create_initial_crew(amount,user_profile=None):
             10. Address the investor directly as 'you/your' (never 'the investor/their')
 
             OUTPUT FORMAT:
-            Provide a clear portfolio with each holding formatted as:
-            TICKER (Category) - XX% ($X,XXX) - One-line reasoning
+            CRITICAL: You MUST provide each holding in this EXACT format on a single line:
+            TICKER (Category) - XX% ($X,XXX) - Brief reasoning why this benefits you
 
-            For example:
-            VTI (ETF) - 40% ($4,000) - Provides you with broad market exposure
-            AAPL (Technology) - 15% ($1,500) - Gives you exposure to strong growth potential
+            REQUIRED COMPONENTS FOR EACH HOLDING:
+            1. TICKER symbol (2-5 letters)
+            2. (Category) in parentheses immediately after ticker
+            3. Percentage with % symbol
+            4. Dollar amount in parentheses with $ symbol
+            5. Dash followed by reasoning (one clear sentence about the benefit to this investor)
 
-            Categories should be one of: ETF, Technology, Healthcare, Financial, Consumer, Energy, Industrial, Real Estate, or specific fund types
+            EXAMPLES:
+            VTI (ETF) - 40% ($4,000) - Provides you with broad US market exposure for core growth
+            AAPL (Technology) - 15% ($1,500) - Gives you exposure to strong tech sector growth potential
+            SCHD (Dividend ETF) - 25% ($2,500) - Delivers you reliable dividend income for portfolio stability
+
+            Categories should be one of: ETF, Dividend ETF, Technology, Healthcare, Financial, Consumer, Energy, Industrial, Real Estate, Growth, Value, International
 
             Then provide these additional sections using the exact headers shown:
 
