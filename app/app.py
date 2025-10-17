@@ -2043,6 +2043,10 @@ def show_portfolio_results():
                         """Apply the optimized portfolio and regenerate all components."""
                         with st.spinner("🔄 Applying optimized portfolio..."):
                             try:
+                                # Get optimization result from session state
+                                opt_result = st.session_state.portfolio_optimization_crew
+                                tool_output = opt_result['tool_output']
+
                                 # STEP 1: Update portfolio with optimized weights
                                 optimized_weights = tool_output['max_sharpe_portfolio']['weights']
                                 opt_portfolio = tool_output['max_sharpe_portfolio']
