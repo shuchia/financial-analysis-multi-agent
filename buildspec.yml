@@ -44,6 +44,15 @@ phases:
       - echo "============================================="
       - echo Cleaning up intermediate images...
       - docker system prune -f
+      - echo "Deploying to ECS..."
+      - |
+        # Force new deployment with the latest image
+        aws ecs update-service \
+          --cluster financial-analysis-cluster \
+          --service financial-analysis-service \
+          --force-new-deployment \
+          --region $AWS_DEFAULT_REGION
+      - echo "ECS deployment triggered successfully!"
 
 artifacts:
   files:
