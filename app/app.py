@@ -2123,7 +2123,11 @@ def show_portfolio_results():
                                                     alloc['category'] = matching.get('category', 'N/A')
 
                                         # Store the full output for Portfolio Insights display
-                                        st.session_state.portfolio_output = portfolio_insights_result
+                                        # Extract raw text from CrewOutput before storing
+                                        if hasattr(portfolio_insights_result, 'tasks_output') and portfolio_insights_result.tasks_output:
+                                            st.session_state.portfolio_output = portfolio_insights_result.tasks_output[0].raw
+                                        else:
+                                            st.session_state.portfolio_output = str(portfolio_insights_result)
                                         st.session_state.structured_portfolio = updated_portfolio
                                         logger.info("Updated portfolio with insights reasoning and categories")
 
