@@ -2116,13 +2116,60 @@ def show_portfolio_results():
                                 # STEP 3: Regenerate Risk Analysis
                                 with st.spinner("🔄 Recalculating risk analysis..."):
                                     try:
-                                        risk_result = QuantitativeAnalysisCrew().analyze_portfolio_risk(
+                                        crew_risk_result = QuantitativeAnalysisCrew().analyze_portfolio_risk(
                                             tickers=new_tickers,
                                             weights=new_weights,
                                             user_profile=user_profile,
                                             investment_amount=investment_amount
                                         )
-                                        st.session_state.portfolio_risk_analysis = risk_result
+
+                                        # Store the raw crew output for narrative display
+                                        st.session_state.portfolio_risk_crew_result = crew_risk_result
+
+                                        # Transform to UI-expected format (same as initial portfolio)
+                                        if isinstance(crew_risk_result, dict) and 'tool_output' in crew_risk_result:
+                                            tool_output = crew_risk_result['tool_output']
+
+                                            # Convert to the format expected by the UI
+                                            risk_results = {
+                                                "portfolio_metrics": {
+                                                    "beta": 1.0,  # Default, VaR tool doesn't calculate beta
+                                                    "sharpe_ratio": tool_output.get('portfolio_metrics', {}).get('sharpe_ratio', 0.0),
+                                                    "value_at_risk_95": float(tool_output.get('var_historical', {}).get('95%', 0.0)) / investment_amount * 100,
+                                                    "value_at_risk_99": float(tool_output.get('var_historical', {}).get('99%', 0.0)) / investment_amount * 100,
+                                                    "max_drawdown": tool_output.get('portfolio_metrics', {}).get('max_drawdown', 0.0),
+                                                    "annual_volatility": tool_output.get('portfolio_metrics', {}).get('annual_volatility', 0.0),
+                                                    "expected_annual_return": tool_output.get('portfolio_metrics', {}).get('annual_return', 0.0)
+                                                },
+                                                "risk_contributions": tool_output.get('risk_contributions', {}),
+                                                "risk_alignment": {
+                                                    "user_profile": user_profile.get('risk_profile', 'moderate'),
+                                                    "risk_score": user_profile.get('risk_score', 0.5),
+                                                    "portfolio_risk_level": "aligned",
+                                                    "expected_volatility_range": "12%-18%",
+                                                    "actual_volatility": f"{tool_output.get('portfolio_metrics', {}).get('annual_volatility', 0.0):.1f}%",
+                                                    "adjustment_recommendation": None
+                                                },
+                                                "diversification_metrics": {
+                                                    "number_of_positions": len(new_tickers),
+                                                    "effective_number_of_stocks": 0,
+                                                    "concentration_risk": "moderate"
+                                                },
+                                                "value_at_risk_interpretation": {
+                                                    "95%": tool_output.get('interpretation', {}).get('95%_var_interpretation', 'Data pending'),
+                                                    "99%": f"1% chance of losing more than ${tool_output.get('var_historical', {}).get('99%', 0.0):,.2f} over 10 days"
+                                                }
+                                            }
+                                            st.session_state.portfolio_risk_analysis = risk_results
+                                        else:
+                                            # Fallback: Parse the narrative output
+                                            risk_results = parse_risk_output(
+                                                crew_risk_result,
+                                                user_profile=user_profile,
+                                                investment_amount=investment_amount
+                                            )
+                                            st.session_state.portfolio_risk_analysis = risk_results
+
                                     except Exception as e:
                                         logger.error(f"Error regenerating risk analysis: {str(e)}")
                                         # Clear old risk analysis to force regeneration later

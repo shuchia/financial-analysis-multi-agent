@@ -8,7 +8,8 @@ from crewai.tools import tool
 
 
 def _var_calculator_impl(tickers_string: str, portfolio_value: float = 100000,
-                         holding_period: int = 10, confidence_levels_string: str = "0.90,0.95,0.99") -> Dict:
+                         holding_period: int = 10, confidence_levels_string: str = "0.90,0.95,0.99",
+                         weights_string: str = None) -> Dict:
     """
     Internal implementation of VaR calculator (non-decorated version for direct calls).
 
@@ -19,6 +20,7 @@ def _var_calculator_impl(tickers_string: str, portfolio_value: float = 100000,
         portfolio_value (float): Total portfolio value
         holding_period (int): Holding period in days
         confidence_levels_string (str): Comma-separated confidence levels (e.g., "0.90,0.95,0.99")
+        weights_string (str): Comma-separated portfolio weights (optional, defaults to equal weights)
 
     Returns:
         dict: VaR and CVaR results using historical, parametric, and Monte Carlo methods
@@ -39,8 +41,14 @@ def _var_calculator_impl(tickers_string: str, portfolio_value: float = 100000,
         end_date = datetime.now()
         start_date = end_date - timedelta(days=365 * 2)  # 2 years
 
-        # Equal weights for simplicity (can be modified)
-        weights = np.array([1 / len(tickers)] * len(tickers))
+        # Parse weights or use equal weights
+        if weights_string:
+            weights = np.array([float(w.strip()) for w in weights_string.split(',')])
+            # Normalize weights to sum to 1
+            weights = weights / weights.sum()
+        else:
+            # Equal weights as fallback
+            weights = np.array([1 / len(tickers)] * len(tickers))
 
         # Get price data with better error handling
         print(f"Fetching data for: {tickers}")
@@ -276,7 +284,8 @@ def _var_calculator_impl(tickers_string: str, portfolio_value: float = 100000,
 
 @tool
 def var_calculator(tickers_string: str, portfolio_value: float = 100000,
-                   holding_period: int = 10, confidence_levels_string: str = "0.90,0.95,0.99") -> Dict:
+                   holding_period: int = 10, confidence_levels_string: str = "0.90,0.95,0.99",
+                   weights_string: str = None) -> Dict:
     """
     Calculates Value at Risk (VaR) and Conditional VaR (CVaR) using multiple methods.
 
@@ -285,11 +294,12 @@ def var_calculator(tickers_string: str, portfolio_value: float = 100000,
         portfolio_value (float): Total portfolio value
         holding_period (int): Holding period in days
         confidence_levels_string (str): Comma-separated confidence levels (e.g., "0.90,0.95,0.99")
+        weights_string (str): Comma-separated portfolio weights (optional, defaults to equal weights)
 
     Returns:
         dict: VaR and CVaR results using historical, parametric, and Monte Carlo methods
     """
-    return _var_calculator_impl(tickers_string, portfolio_value, holding_period, confidence_levels_string)
+    return _var_calculator_impl(tickers_string, portfolio_value, holding_period, confidence_levels_string, weights_string)
 
 
 def _interpret_risk_level(volatility: float, sharpe: float, max_dd: float) -> str:

@@ -392,12 +392,29 @@ class QuantitativeAnalysisCrew:
         portfolio_value = investment_amount if investment_amount else 10000
         user_risk = user_profile.get('risk_profile', 'moderate') if user_profile else 'moderate'
 
-        # STEP 3: Call VaR calculator tool with valid tickers only
+        # STEP 3: Extract weights for valid tickers only
+        weights_string = None
+        if weights:
+            # Build mapping of ticker to weight
+            ticker_to_weight = {}
+            for i, ticker in enumerate(tickers):
+                if i < len(weights):
+                    ticker_to_weight[ticker] = weights[i]
+
+            # Extract weights for valid tickers only
+            valid_weights = [ticker_to_weight.get(t, 0) for t in valid_tickers]
+
+            # Format as comma-separated string
+            if valid_weights:
+                weights_string = ','.join([str(w) for w in valid_weights])
+
+        # STEP 4: Call VaR calculator tool with valid tickers and their weights
         tool_result = _var_calculator_impl(
             tickers_string=tickers_string,
             portfolio_value=portfolio_value,
             holding_period=10,
-            confidence_levels_string="0.95,0.99"
+            confidence_levels_string="0.95,0.99",
+            weights_string=weights_string
         )
 
         # Check if tool returned an error
