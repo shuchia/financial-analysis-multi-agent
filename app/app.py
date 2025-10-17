@@ -1892,36 +1892,76 @@ def show_portfolio_results():
 
                 with col1:
                     st.markdown("### Current Portfolio")
-                    # Calculate current portfolio metrics if we have weights
-                    if structured_portfolio.get('weights'):
+                    # Display current portfolio metrics if available
+                    if 'current_portfolio' in tool_output:
+                        current_portfolio = tool_output['current_portfolio']
+
+                        # Use portfolio's stated expected return (from agent) instead of calculated historical return
+                        # This matches what's shown in Portfolio Overview
+                        portfolio_expected_return = None
+                        if structured_portfolio.get('expected_return'):
+                            # Extract midpoint from range like "7-9%"
+                            return_match = re.search(r'(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)', str(structured_portfolio['expected_return']))
+                            if return_match:
+                                low = float(return_match.group(1))
+                                high = float(return_match.group(2))
+                                portfolio_expected_return = (low + high) / 2 / 100  # Convert to decimal
+
+                        # Display expected return (use portfolio's stated return if available, otherwise use calculated)
+                        display_return = portfolio_expected_return if portfolio_expected_return else current_portfolio['expected_return']
+
+                        st.metric("Expected Return", f"{display_return*100:.1f}%")
+                        st.metric("Volatility", f"{current_portfolio['volatility']*100:.1f}%")
+                        st.metric("Sharpe Ratio", f"{current_portfolio['sharpe_ratio']:.2f}")
+
+                        # Add tooltip explaining the return source
+                        if portfolio_expected_return:
+                            st.caption("📊 Expected return from portfolio strategy; volatility & Sharpe from historical data")
+                    elif structured_portfolio.get('weights'):
+                        # Fallback if current_portfolio not in tool_output
                         current_weights_list = structured_portfolio['weights']
                         tickers_list = structured_portfolio['tickers']
 
-                        # Calculate current return from individual returns
                         current_return = sum(
                             w * tool_output['individual_returns'].get(t, 0)
                             for t, w in zip(tickers_list, current_weights_list)
                         )
-
                         st.metric("Expected Return", f"{current_return*100:.1f}%")
-                        st.info("Volatility and Sharpe calculated from current weights")
+                        st.warning("⚠️ Volatility and Sharpe ratio not available for current portfolio")
 
                 with col2:
                     st.markdown("### Optimized Portfolio (Max Sharpe)")
                     opt_portfolio = tool_output['max_sharpe_portfolio']
 
-                    # Show improvement delta if we have current weights
+                    # Show improvement delta if we have current portfolio metrics
                     return_delta = None
-                    if structured_portfolio.get('weights'):
-                        return_delta = f"+{(opt_portfolio['expected_return']-current_return)*100:.1f}%"
+                    volatility_delta = None
+                    sharpe_delta = None
+
+                    if 'current_portfolio' in tool_output:
+                        current = tool_output['current_portfolio']
+                        # Use the same display_return calculated above for consistent comparison
+                        current_return_for_comparison = display_return if 'display_return' in locals() else current['expected_return']
+                        return_delta = f"+{(opt_portfolio['expected_return']-current_return_for_comparison)*100:.1f}%"
+                        volatility_delta = f"{(opt_portfolio['volatility']-current['volatility'])*100:.1f}%"
+                        sharpe_delta = f"+{opt_portfolio['sharpe_ratio']-current['sharpe_ratio']:.2f}"
 
                     st.metric(
                         "Expected Return",
                         f"{opt_portfolio['expected_return']*100:.1f}%",
                         delta=return_delta
                     )
-                    st.metric("Volatility", f"{opt_portfolio['volatility']*100:.1f}%")
-                    st.metric("Sharpe Ratio", f"{opt_portfolio['sharpe_ratio']:.2f}")
+                    st.metric(
+                        "Volatility",
+                        f"{opt_portfolio['volatility']*100:.1f}%",
+                        delta=volatility_delta,
+                        delta_color="inverse"  # Lower volatility is better
+                    )
+                    st.metric(
+                        "Sharpe Ratio",
+                        f"{opt_portfolio['sharpe_ratio']:.2f}",
+                        delta=sharpe_delta
+                    )
 
                 # SECTION B: Recommendations Table
                 if recommendations:

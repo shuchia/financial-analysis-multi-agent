@@ -203,7 +203,7 @@ def _portfolio_optimization_impl(tickers_string: str, start_date: str = None,
     max_sharpe_stats = portfolio_stats(max_sharpe.x)
     min_vol_stats = portfolio_stats(min_vol.x)
 
-    return {
+    result = {
         'max_sharpe_portfolio': {
             'weights': dict(zip(tickers, max_sharpe.x.round(4))),
             'expected_return': round(max_sharpe_stats[0], 4),
@@ -220,6 +220,23 @@ def _portfolio_optimization_impl(tickers_string: str, start_date: str = None,
         'individual_returns': dict(zip(tickers, mean_returns.round(4))),
         'correlation_matrix': returns.corr().round(4).to_dict()
     }
+
+    # If current weights provided, calculate current portfolio metrics
+    if current_weights:
+        # Convert current weights to numpy array (ensure they match tickers order)
+        current_weights_array = np.array(current_weights)
+
+        # Calculate current portfolio stats
+        current_stats = portfolio_stats(current_weights_array)
+
+        result['current_portfolio'] = {
+            'weights': dict(zip(tickers, [round(w, 4) for w in current_weights])),
+            'expected_return': round(current_stats[0], 4),
+            'volatility': round(current_stats[1], 4),
+            'sharpe_ratio': round(current_stats[2], 4)
+        }
+
+    return result
 
 
 @tool
