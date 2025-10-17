@@ -2183,7 +2183,7 @@ def show_portfolio_results():
                                 # STEP 4: Regenerate Projections
                                 with st.spinner("🔄 Updating performance projections..."):
                                     try:
-                                        from tools.performance_projection_tool import calculate_portfolio_projections
+                                        from tools.performance_projection_tool import _calculate_projections_impl
                                         from portfoliocrew import parse_timeline_to_years
 
                                         timeline_years = parse_timeline_to_years(user_profile.get('timeline', '5-10 years'))
@@ -2195,7 +2195,7 @@ def show_portfolio_results():
                                         }
                                         annual_volatility = volatility_map.get(risk_profile, 0.15)
 
-                                        projection_result = calculate_portfolio_projections(
+                                        projection_result = _calculate_projections_impl(
                                             investment_amount=investment_amount,
                                             expected_annual_return=opt_return,  # Use optimized return
                                             timeline_years=timeline_years,

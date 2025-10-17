@@ -317,8 +317,18 @@ class QuantitativeAnalysisCrew:
                         'dollar_amount': abs(change * portfolio_value)
                     })
 
-        # Create AI narrative task (interpretation only)
-        self.create_agents()
+        # Create narrative-only agent without tools (to prevent tool calling during interpretation)
+        narrative_agent = Agent(
+            role="Portfolio Advisor",
+            goal="Interpret portfolio optimization results and provide clear recommendations to investors",
+            backstory="""You are an experienced portfolio advisor who explains complex
+            quantitative results to individual investors. You translate optimization data
+            into actionable insights without performing calculations.""",
+            verbose=True,
+            allow_delegation=False,
+            tools=[],  # No tools - interpretation only
+            llm=self.llm
+        )
 
         narrative_task = Task(
             description=f"""Interpret portfolio optimization results:
@@ -339,13 +349,13 @@ class QuantitativeAnalysisCrew:
 
             DO NOT recalculate metrics. Use the values provided above.
             """,
-            agent=self.portfolio_manager,
+            agent=narrative_agent,
             expected_output="Optimization interpretation and recommendations"
         )
 
         # Run narrative generation
         crew = Crew(
-            agents=[self.portfolio_manager],
+            agents=[narrative_agent],
             tasks=[narrative_task],
             verbose=True
         )
@@ -431,8 +441,18 @@ class QuantitativeAnalysisCrew:
             tool_result['excluded_tickers'] = invalid_tickers
             tool_result['warning'] = f"Risk analysis excludes {len(invalid_tickers)} ticker(s) due to insufficient data"
 
-        # Create agents for narrative interpretation
-        self.create_agents()
+        # Create narrative-only agent without tools (to prevent tool calling during interpretation)
+        narrative_agent = Agent(
+            role="Risk Advisor",
+            goal="Interpret portfolio risk metrics and provide clear risk management guidance to investors",
+            backstory="""You are an experienced risk advisor who explains complex
+            risk metrics to individual investors. You translate VaR and other risk data
+            into actionable insights without performing calculations.""",
+            verbose=True,
+            allow_delegation=False,
+            tools=[],  # No tools - interpretation only
+            llm=self.llm
+        )
 
         # Create task that uses the tool output for narrative
         risk_task = Task(
@@ -454,13 +474,13 @@ class QuantitativeAnalysisCrew:
 
             DO NOT recalculate metrics. Use the values provided above.
             """,
-            agent=self.risk_analyst,
+            agent=narrative_agent,
             expected_output="Risk interpretation and recommendations based on calculated metrics"
         )
 
         # Run narrative generation
         crew = Crew(
-            agents=[self.risk_analyst],
+            agents=[narrative_agent],
             tasks=[risk_task],
             verbose=True
         )
