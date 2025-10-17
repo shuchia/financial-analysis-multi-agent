@@ -2059,9 +2059,18 @@ def show_portfolio_results():
                                 optimized_weights = tool_output['max_sharpe_portfolio']['weights']
                                 opt_portfolio = tool_output['max_sharpe_portfolio']
 
-                                # Create new structured portfolio
-                                new_tickers = list(optimized_weights.keys())
-                                new_weights = list(optimized_weights.values())
+                                # Filter out holdings with exactly 0% allocation
+                                # This removes holdings the optimization suggests eliminating
+                                # Using a very small threshold (1e-10) to handle floating point precision
+                                MIN_ALLOCATION_THRESHOLD = 1e-10  # Effectively 0%
+                                filtered_weights = {ticker: weight for ticker, weight in optimized_weights.items()
+                                                   if weight > MIN_ALLOCATION_THRESHOLD}
+
+                                logger.info(f"Filtered out {len(optimized_weights) - len(filtered_weights)} holdings with 0% allocation")
+
+                                # Create new structured portfolio (only non-zero holdings)
+                                new_tickers = list(filtered_weights.keys())
+                                new_weights = list(filtered_weights.values())
                                 new_amounts = [w * investment_amount for w in new_weights]
 
                                 # Reconstruct allocations with placeholder reasoning (will be updated by Portfolio Insights)
