@@ -799,14 +799,26 @@ def show_onboarding():
             
             # Question 3: Initial Investment Amount
             st.markdown("### 💰 How much can you comfortably invest to start?")
-            
-            # Get dynamic amount options based on age (as proxy for income)
-            amount_options = get_investment_amount_options(age_range)
-            
+
+            # Use fixed amount options to avoid form state issues
+            # (Dynamic options based on age can cause selectbox value mismatches in Streamlit forms)
+            amount_options = [
+                "$25 - Just getting started",
+                "$50 - Small but steady start",
+                "$100 - Beginner friendly",
+                "$250 - Ready to learn",
+                "$500 - Serious about investing",
+                "$1,000 - Confident starter",
+                "$2,500 - Experienced beginner",
+                "$5,000 - Substantial commitment",
+                "$10,000+ - Experienced investor"
+            ]
+
             initial_investment = st.selectbox(
                 "Choose your starting investment amount:",
                 amount_options,
-                index=1,  # Default to second option
+                index=2,  # Default to $100
+                key="initial_investment_amount",  # Unique key for proper state tracking
                 help="💡 Remember: only invest what you can afford to lose. You can always add more later!"
             )
             
@@ -1124,15 +1136,22 @@ def generate_portfolio_with_progress():
         
         # Extract investment amount from preferences
         investment_amount_str = user_preferences.get('investment_goals', {}).get('initial_investment_amount', '$100 - Beginner friendly')
-        logger.info(f"Raw investment_amount_str from user preferences: {investment_amount_str}")
+        logger.info(f"Raw investment_amount_str from user preferences: '{investment_amount_str}'")
 
-        # Extract numeric amount (e.g., "$1,000 - Confident starter" -> 1000)
-        # Handle formats like: "$100 - Description", "$10,000+ - Description", "$25 - Description"
+        # Extract numeric amount using regex (e.g., "$1,000 - Confident starter" -> 1000)
+        # Handle formats: "$100 - Description", "$10,000+ - Description", "$25 - Description"
         try:
-            # Split on space or dash, take first part, remove $ and commas
-            amount_match = investment_amount_str.split('-')[0].split(' ')[0].strip().replace('$', '').replace(',', '').replace('+', '')
-            investment_amount = float(amount_match)
-            logger.info(f"Successfully parsed investment amount: ${investment_amount}")
+            import re
+            # Extract first number (with optional commas and +) from the string
+            match = re.search(r'\$?([\d,]+)\+?', str(investment_amount_str))
+            if match:
+                # Remove commas and convert to float
+                amount_str = match.group(1).replace(',', '')
+                investment_amount = float(amount_str)
+                logger.info(f"Successfully parsed investment amount: ${investment_amount:,.2f}")
+            else:
+                logger.warning(f"No numeric value found in '{investment_amount_str}', using default 100")
+                investment_amount = 100.0
         except Exception as e:
             logger.warning(f"Failed to parse investment amount '{investment_amount_str}': {str(e)}, using default 100")
             investment_amount = 100.0  # Default fallback
