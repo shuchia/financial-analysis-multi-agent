@@ -2067,18 +2067,24 @@ def show_portfolio_results():
                                         'category': 'N/A'  # Will be updated by Portfolio Insights
                                     })
 
-                                # Update structured portfolio
-                                structured_portfolio['tickers'] = new_tickers
-                                structured_portfolio['weights'] = new_weights
-                                structured_portfolio['amounts'] = new_amounts
-                                structured_portfolio['allocations'] = new_allocations
-
                                 # Update expected return from optimization
                                 opt_return = opt_portfolio['expected_return']
-                                structured_portfolio['expected_return'] = f"{opt_return*100-1:.0f}-{opt_return*100+1:.0f}%"
 
-                                # Update session state
-                                st.session_state.structured_portfolio = structured_portfolio
+                                # Create a completely NEW structured portfolio dictionary
+                                # (don't modify the existing one to avoid closure issues)
+                                updated_portfolio = {
+                                    'tickers': new_tickers,
+                                    'weights': new_weights,
+                                    'amounts': new_amounts,
+                                    'allocations': new_allocations,
+                                    'expected_return': f"{opt_return*100-1:.0f}-{opt_return*100+1:.0f}%",
+                                    'investment_amount': investment_amount,
+                                    'user_profile': user_profile
+                                }
+
+                                # Update session state with new portfolio
+                                st.session_state.structured_portfolio = updated_portfolio
+                                logger.info(f"Updated structured_portfolio in session state with optimized tickers: {new_tickers}")
 
                                 # STEP 2: Regenerate Portfolio Insights with specialized interpretation task
                                 with st.spinner("🔄 Regenerating portfolio insights..."):
@@ -2100,7 +2106,7 @@ def show_portfolio_results():
 
                                         # Update allocations with parsed reasoning and categories
                                         if parsed_insights['allocations']:
-                                            for alloc in structured_portfolio['allocations']:
+                                            for alloc in updated_portfolio['allocations']:
                                                 # Find matching allocation from parsed insights
                                                 matching = next((p for p in parsed_insights['allocations']
                                                                if p['ticker'] == alloc['ticker']), None)
@@ -2110,7 +2116,8 @@ def show_portfolio_results():
 
                                         # Store the full output for Portfolio Insights display
                                         st.session_state.portfolio_output = portfolio_insights_result
-                                        st.session_state.structured_portfolio = structured_portfolio
+                                        st.session_state.structured_portfolio = updated_portfolio
+                                        logger.info("Updated portfolio with insights reasoning and categories")
 
                                     except Exception as e:
                                         logger.error(f"Error regenerating portfolio insights: {str(e)}")
