@@ -1799,8 +1799,14 @@ def show_portfolio_results():
     projection_data = None
     projection_narrative = None
 
-    if hasattr(result, 'tasks_output') and len(result.tasks_output) > 1:
-        # The second task contains the projection data
+    # Check if projections were regenerated after optimization (if so, don't use old narrative)
+    if 'projection_data' in st.session_state:
+        # Use regenerated projection data (from optimization)
+        projection_data = st.session_state.projection_data
+        projection_narrative = None  # Force use of fallback narrative generation with new data
+        logger.info("Using regenerated projection data from optimization")
+    elif hasattr(result, 'tasks_output') and len(result.tasks_output) > 1:
+        # The second task contains the projection data (original portfolio generation)
         projection_task_output = result.tasks_output[1]
         projection_narrative = projection_task_output.raw if hasattr(projection_task_output, 'raw') else str(projection_task_output)
 
@@ -2436,6 +2442,7 @@ def show_portfolio_results():
                     # Show the apply button
                     if st.button("✅ Apply Optimized Allocation", type="primary"):
                         confirm_apply_optimization()
+                        st.rerun()  # Refresh UI to show updated risk analysis and other regenerated data
 
                 # SECTION C: AI Narrative (Expandable)
                 with st.expander("🤖 AI Portfolio Manager Recommendations", expanded=False):
