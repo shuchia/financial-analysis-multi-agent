@@ -97,16 +97,23 @@ def create_initial_crew(amount,user_profile=None):
                              {user_profile.get('risk_profile', 'moderate')} {user_profile.get('risk_score')}- Amount: {amount_display} - Timeline: {user_profile.get('timeline', '5-10 years')} -
                              Goal: {user_profile.get('primary_goal', 'wealth_building')} - Emergency Fund: {user_profile.get('emergency_fund_status', 'Getting there')}
                              REQUIREMENTS:
-            1. Suggest specific ETFs/stocks with exact percentages
-            2. Match the risk tolerance (don't exceed it)
-            3. For {amount_display}, suggest {get_position_count(amount_numeric)} positions maximum
-            4. Include dollar amounts for each holding
-            5. Provide brief reasoning for each pick
-            6. Use only ETFs and stocks available for fractional shares
-            7. Minimize fees - prioritize low-cost index funds
-            8. Consider tax efficiency if applicable
-            9. Ensure proper diversification for the amount
-            10. Address the investor directly as 'you/your' (never 'the investor/their')
+            1. Suggest specific ETFs (stock, bond, international) and/or individual stocks with exact percentages
+            2. Match the risk tolerance (don't exceed it) and include appropriate bond allocation:
+               - Conservative: 40-60% bonds (BND, AGG, VGIT, TLT) for stability
+               - Moderate: 20-40% bonds for balanced risk/return
+               - Aggressive: 0-20% bonds (optional - can focus on growth)
+            3. Adjust allocation based on timeline:
+               - Short timeline (1-2 years): Increase bond allocation by 10-20% for capital preservation
+               - Long timeline (10+ years): Can reduce bonds for growth focus
+            4. Include international diversification: 15-30% in international ETFs (VXUS, VEU, VWO)
+            5. For {amount_display}, suggest {get_position_count(amount_numeric)} positions maximum
+            6. Include dollar amounts for each holding
+            7. Provide brief reasoning for each pick
+            8. Use only ETFs and stocks available for fractional shares
+            9. Minimize fees - prioritize low-cost index funds
+            10. Consider tax efficiency if applicable
+            11. Ensure proper diversification across asset classes
+            12. Address the investor directly as 'you/your' (never 'the investor/their')
 
             OUTPUT FORMAT:
             CRITICAL: You MUST provide each holding in this EXACT format on a single line:
@@ -120,11 +127,12 @@ def create_initial_crew(amount,user_profile=None):
             5. Dash followed by reasoning (one clear sentence about the benefit to this investor)
 
             EXAMPLES:
-            VTI (ETF) - 40% ($4,000) - Provides you with broad US market exposure for core growth
-            AAPL (Technology) - 15% ($1,500) - Gives you exposure to strong tech sector growth potential
-            SCHD (Dividend ETF) - 25% ($2,500) - Delivers you reliable dividend income for portfolio stability
+            VTI (Stock ETF) - 40% ($4,000) - Provides you with broad US market exposure for core growth
+            BND (Bond ETF) - 30% ($3,000) - Gives you stability and income for your {user_profile.get('risk_profile', 'moderate')} profile
+            VXUS (International ETF) - 20% ($2,000) - Diversifies you globally beyond US markets
+            AAPL (Technology) - 10% ($1,000) - Adds targeted tech sector growth potential
 
-            Categories should be one of: ETF, Dividend ETF, Technology, Healthcare, Financial, Consumer, Energy, Industrial, Real Estate, Growth, Value, International
+            Categories should be one of: Stock ETF, Bond ETF, International ETF, REIT ETF, Dividend ETF, Technology, Healthcare, Financial, Consumer, Energy, Industrial, Real Estate, Growth, Value
 
             Then provide these additional sections using the exact headers shown:
 
@@ -506,7 +514,7 @@ def interpret_optimized_portfolio(optimized_weights: dict, optimization_metrics:
         For each holding, provide in this EXACT format:
         TICKER (Category) - XX% ($X,XXX) - Brief reasoning why this optimized allocation benefits you
 
-        Categories should be: ETF, Dividend ETF, Technology, Healthcare, Financial, Consumer, Energy, Industrial, Real Estate, Growth, Value, International
+        Categories should be: Stock ETF, Bond ETF, International ETF, REIT ETF, Dividend ETF, Technology, Healthcare, Financial, Consumer, Energy, Industrial, Real Estate, Growth, Value
 
         Then provide these sections with exact headers:
 

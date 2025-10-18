@@ -114,8 +114,9 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
                 elif 'category_after' in locals() and category_after:
                     # Check if this looks like a category (short, title case, common sectors)
                     category_keywords = ['Technology', 'Healthcare', 'Financial', 'Consumer', 'Energy',
-                                       'Industrial', 'ETF', 'Dividend ETF', 'Bond', 'Real Estate', 'Growth',
-                                       'Value', 'Large Cap', 'Small Cap', 'International', 'Emerging Markets']
+                                       'Industrial', 'ETF', 'Stock ETF', 'Bond ETF', 'International ETF', 'REIT ETF',
+                                       'Dividend ETF', 'Bond', 'Treasury', 'Fixed Income', 'Real Estate', 'REIT', 'Growth',
+                                       'Value', 'Large Cap', 'Small Cap', 'International', 'Global', 'Emerging Markets']
                     if any(keyword in category_after for keyword in category_keywords):
                         category = category_after.strip()
                         reasoning = locals().get('reasoning', '').strip()
@@ -123,7 +124,7 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
                         reasoning = category_after.strip()
                 elif 'category_or_reasoning' in locals() and category_or_reasoning:
                     # Check if it's likely a category
-                    if len(category_or_reasoning.split()) <= 4 and any(word in category_or_reasoning for word in ['ETF', 'Tech', 'Health', 'Financial', 'Consumer', 'Growth', 'Dividend', 'Value']):
+                    if len(category_or_reasoning.split()) <= 4 and any(word in category_or_reasoning for word in ['ETF', 'Bond', 'International', 'REIT', 'Tech', 'Health', 'Financial', 'Consumer', 'Growth', 'Dividend', 'Value', 'Treasury']):
                         category = category_or_reasoning.strip()
                     else:
                         reasoning = category_or_reasoning.strip()
