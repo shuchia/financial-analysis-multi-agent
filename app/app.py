@@ -2459,6 +2459,10 @@ def show_portfolio_results():
                 word-wrap: break-word;
                 overflow-wrap: break-word;
                 line-height: 1.5;
+                display: block;
+                overflow: visible;
+                max-width: 100%;
+                text-overflow: clip;
             }
             </style>
             """, unsafe_allow_html=True)
@@ -2954,6 +2958,10 @@ def show_portfolio_results():
             word-wrap: break-word;
             overflow-wrap: break-word;
             line-height: 1.5;
+            display: block;
+            overflow: visible;
+            max-width: 100%;
+            text-overflow: clip;
         }
         </style>
         """, unsafe_allow_html=True)
