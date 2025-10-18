@@ -2455,6 +2455,10 @@ def show_portfolio_results():
                 color: #555;
                 font-size: 0.9rem;
                 margin-top: 0.25rem;
+                white-space: normal;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                line-height: 1.5;
             }
             </style>
             """, unsafe_allow_html=True)
@@ -2946,6 +2950,10 @@ def show_portfolio_results():
             color: #555;
             font-size: 0.9rem;
             margin-top: 0.25rem;
+            white-space: normal;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.5;
         }
         </style>
         """, unsafe_allow_html=True)
