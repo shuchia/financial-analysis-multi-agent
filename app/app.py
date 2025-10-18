@@ -683,64 +683,235 @@ def get_investment_amount_options(age_range: str) -> list:
             "$25,000+ - Experienced investor"
         ]
 
+
+def show_portfolio_generation_overlay():
+    """Display loading overlay while generating portfolio."""
+    st.markdown("""
+    <style>
+        /* Full-screen overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(248, 249, 250, 0.98);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Loading content container */
+        .loading-content {
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            max-width: 500px;
+            border: 2px solid #E1E8ED;
+        }
+
+        /* Animated spinner */
+        .spinner {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #FF6B35;
+            border-right: 6px solid #1A759F;
+            border-radius: 50%;
+            animation: spin 1.5s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Loading text */
+        .loading-title {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FF6B35 0%, #1A759F 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+
+        .loading-subtitle {
+            font-size: 1.1rem;
+            color: #7F8C8D;
+            margin-bottom: 2rem;
+        }
+
+        /* Progress dots animation */
+        .progress-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .progress-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF6B35 0%, #1A759F 100%);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .progress-dot:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+
+        .progress-dot:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.3;
+                transform: scale(0.8);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+    </style>
+
+    <div class="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <div class="loading-title">Crafting Your Portfolio</div>
+            <div class="loading-subtitle">Our AI is analyzing thousands of market scenarios to create your personalized investment strategy</div>
+            <div class="progress-dots">
+                <div class="progress-dot"></div>
+                <div class="progress-dot"></div>
+                <div class="progress-dot"></div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 def show_onboarding():
     """Display streamlined single-screen onboarding flow."""
-    
+
     # Check if we should show results instead of form
     if st.session_state.get('show_onboarding_results', False) and st.session_state.get('onboarding_data'):
+        # Show loading overlay
+        show_portfolio_generation_overlay()
+
         # Process and show results
         data = st.session_state.onboarding_data
-        process_streamlined_onboarding(data['age_range'], data['timeline'], 
-                                     data['emergency_fund'], data['initial_investment'], 
+        process_streamlined_onboarding(data['age_range'], data['timeline'],
+                                     data['emergency_fund'], data['initial_investment'],
                                      data['loss_reaction'])
         # Clear the flags
         st.session_state.show_onboarding_results = False
         st.session_state.onboarding_data = None
         return
-    
-    # Custom CSS for improved styling
+
+    # Custom CSS for InvestForge styling
     st.markdown("""
     <style>
         /* Import Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        /* Onboarding specific styles */
+
+        /* InvestForge color scheme */
+        :root {
+            --primary-color: #FF6B35;
+            --secondary-color: #004E89;
+            --accent-color: #1A759F;
+            --success-color: #00BA6D;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8F9FA;
+            --border-color: #E1E8ED;
+        }
+
+        /* Global background matching InvestForge */
+        .stApp {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* Onboarding container with InvestForge styling */
         .onboarding-container {
-            background: white;
+            background: var(--bg-primary);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            margin: 2rem auto;
+            max-width: 800px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Question cards with InvestForge accent */
+        .question-group {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             border-radius: 16px;
             padding: 2rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            margin: 1rem 0;
+            margin: 1.5rem 0;
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
         }
-        
-        .onboarding-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        
-        .question-group {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            border: 2px solid #e9ecef;
-        }
-        
+
         .question-group:hover {
-            border-color: #FF6B35;
-            transition: border-color 0.3s ease;
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 20px rgba(255, 107, 53, 0.15);
+            transform: translateY(-2px);
         }
-        
-        .logo-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
+
+        /* Section headers with InvestForge gradient */
+        .section-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 600;
             margin-bottom: 1rem;
+        }
+
+        /* Submit button styling */
+        .stButton > button[kind="primary"] {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .stButton > button[kind="primary"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255, 107, 53, 0.4);
+        }
+
+        /* Selectbox and radio styling */
+        .stSelectbox > div > div, .stRadio > div {
+            border-radius: 10px;
+        }
+
+        /* Divider styling */
+        hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, var(--border-color) 50%, transparent 100%);
+            margin: 2rem 0;
         }
     </style>
     """, unsafe_allow_html=True)
-    
-    # Use InvestForge logo from landing page
+
+    # Use InvestForge logo from landing page - centered layout
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         # Logo and branding
