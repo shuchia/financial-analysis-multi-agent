@@ -817,96 +817,32 @@ def show_onboarding():
         st.session_state.onboarding_data = None
         return
 
-    # Custom CSS for InvestForge styling
+    # Minimal CSS - fix dropdown styling and prevent KaTeX rendering
     st.markdown("""
     <style>
-        /* Import Google Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-        /* InvestForge color scheme */
-        :root {
-            --primary-color: #FF6B35;
-            --secondary-color: #004E89;
-            --accent-color: #1A759F;
-            --success-color: #00BA6D;
-            --text-primary: #2C3E50;
-            --text-secondary: #7F8C8D;
-            --bg-primary: #FFFFFF;
-            --bg-secondary: #F8F9FA;
-            --border-color: #E1E8ED;
+        /* Reset selectbox styling to default */
+        .stSelectbox > div > div {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
 
-        /* Global background matching InvestForge */
-        .stApp {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        /* Reset radio button styling */
+        .stRadio > div {
+            background-color: transparent;
         }
 
-        /* Onboarding container with InvestForge styling */
-        .onboarding-container {
-            background: var(--bg-primary);
-            border-radius: 20px;
-            padding: 3rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-            margin: 2rem auto;
-            max-width: 800px;
-            border: 1px solid var(--border-color);
-        }
-
-        /* Question cards with InvestForge accent */
-        .question-group {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            border-radius: 16px;
-            padding: 2rem;
-            margin: 1.5rem 0;
-            border: 2px solid var(--border-color);
-            transition: all 0.3s ease;
-        }
-
-        .question-group:hover {
-            border-color: var(--primary-color);
-            box-shadow: 0 4px 20px rgba(255, 107, 53, 0.15);
-            transform: translateY(-2px);
-        }
-
-        /* Section headers with InvestForge gradient */
-        .section-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-
-        /* Submit button styling */
+        /* Simple button styling */
         .stButton > button[kind="primary"] {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            background-color: #FF6B35;
+            color: white;
             border: none;
-            border-radius: 12px;
-            padding: 1rem 2rem;
-            font-weight: 600;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
         }
 
         .stButton > button[kind="primary"]:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(255, 107, 53, 0.4);
-        }
-
-        /* Selectbox and radio styling */
-        .stSelectbox > div > div, .stRadio > div {
-            border-radius: 10px;
-        }
-
-        /* Divider styling */
-        hr {
-            border: none;
-            height: 1px;
-            background: linear-gradient(90deg, transparent 0%, var(--border-color) 50%, transparent 100%);
-            margin: 2rem 0;
+            background-color: #E55A2B;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -916,19 +852,19 @@ def show_onboarding():
     with col2:
         # Logo and branding
         render_investforge_header("Welcome to InvestForge! 🚀", "Let's personalize your experience in 30 seconds")
-        
+
         # Single form with all questions
         with st.form("streamlined_onboarding"):
             # Question 1: Age + Timeline Combo
             st.markdown("### 🎯 I'm investing for...")
-            
+
             col1, col2 = st.columns(2)
             with col1:
                 age_range = st.selectbox(
                     "My age:",
                     [
                         "16-20 (High school/Early college)",
-                        "21-25 (College/Entry career)", 
+                        "21-25 (College/Entry career)",
                         "26-30 (Early career)",
                         "31-35 (Establishing career)",
                         "36+ (Experienced)"
@@ -936,39 +872,39 @@ def show_onboarding():
                     index=2,  # Default to 26-30
                     help="Your age helps determine your investment capacity"
                 )
-            
+
             with col2:
                 timeline = st.selectbox(
                     "Investment timeline:",
                     [
                         "Learning only (no timeline)",
                         "1-2 years",
-                        "3-5 years", 
+                        "3-5 years",
                         "5-10 years",
                         "10+ years"
                     ],
                     index=2,  # Default to 3-5 years
                     help="How long before you need this money"
                 )
-            
+
             st.markdown("---")
-            
-            # Question 2: Emergency Fund Status  
+
+            # Question 2: Emergency Fund Status
             st.markdown("### 💰 My emergency savings situation:")
             emergency_fund = st.radio(
                 "Current emergency fund status:",
                 [
                     "I'm set (3+ months expenses saved)",
-                    "Getting there (1-3 months saved)", 
+                    "Getting there (1-3 months saved)",
                     "Just starting (less than 1 month)",
                     "I'll build it while investing"
                 ],
                 index=1,  # Default to "Getting there"
                 help="Emergency funds help you avoid panic selling during market downturns"
             )
-            
+
             st.markdown("---")
-            
+
             # Question 3: Initial Investment Amount
             st.markdown("### 💰 How much can you comfortably invest to start?")
 
@@ -993,43 +929,44 @@ def show_onboarding():
                 key="initial_investment_amount",  # Unique key for proper state tracking
                 help="💡 Remember: only invest what you can afford to lose. You can always add more later!"
             )
-            
+
             st.markdown("---")
-            
+
             # Question 4: Loss Reaction Test
-            st.markdown("### 📉 If I invested $100 and it dropped to $70 next month, I'd probably:")
+            # Use escaped text to prevent KaTeX rendering of dollar signs
+            st.markdown("### 📉 If I invested \\$100 and it dropped to \\$70 next month, I'd probably:")
             loss_reaction = st.radio(
                 "My likely reaction:",
                 [
                     "Buy more - it's on sale!",
-                    "Hold and wait it out", 
+                    "Hold and wait it out",
                     "Worry but hold on",
                     "Sell before I lose more"
                 ],
                 index=1,  # Default to "Hold and wait it out"
                 help="This helps us understand your natural response to market volatility"
             )
-            
+
             st.markdown("---")
-            
+
             # Submit button
             submitted = st.form_submit_button(
-                "🚀 Start Investing", 
-                type="primary", 
+                "🚀 Start Investing",
+                type="primary",
                 use_container_width=True
             )
-            
-            if submitted:
-                # Process the streamlined onboarding
-                st.session_state.onboarding_data = {
-                    'age_range': age_range,
-                    'timeline': timeline,
-                    'emergency_fund': emergency_fund,
-                    'initial_investment': initial_investment,
-                    'loss_reaction': loss_reaction
-                }
-                st.session_state.show_onboarding_results = True
-                st.rerun()
+
+        if submitted:
+            # Process the streamlined onboarding
+            st.session_state.onboarding_data = {
+                'age_range': age_range,
+                'timeline': timeline,
+                'emergency_fund': emergency_fund,
+                'initial_investment': initial_investment,
+                'loss_reaction': loss_reaction
+            }
+            st.session_state.show_onboarding_results = True
+            st.rerun()
 
 
 def process_streamlined_onboarding(age_range: str, timeline: str, emergency_fund: str, initial_investment: str, loss_reaction: str):
