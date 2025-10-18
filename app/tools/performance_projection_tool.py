@@ -67,11 +67,14 @@ def _calculate_projections_impl(
             'annual_volatility': annual_volatility,
             'scenarios': scenarios,
             'summary': {
-                'conservative_final_value': round(scenarios['conservative']['final_value'], 2),
+                'conservative_final_value': f"${scenarios['conservative']['final_value']:,.2f}",
+                'conservative_final_value_raw': round(scenarios['conservative']['final_value'], 2),
                 'conservative_total_return': f"{scenarios['conservative']['total_return_pct']:.1f}%",
-                'expected_final_value': round(scenarios['expected']['final_value'], 2),
+                'expected_final_value': f"${scenarios['expected']['final_value']:,.2f}",
+                'expected_final_value_raw': round(scenarios['expected']['final_value'], 2),
                 'expected_total_return': f"{scenarios['expected']['total_return_pct']:.1f}%",
-                'optimistic_final_value': round(scenarios['optimistic']['final_value'], 2),
+                'optimistic_final_value': f"${scenarios['optimistic']['final_value']:,.2f}",
+                'optimistic_final_value_raw': round(scenarios['optimistic']['final_value'], 2),
                 'optimistic_total_return': f"{scenarios['optimistic']['total_return_pct']:.1f}%"
             }
         }
