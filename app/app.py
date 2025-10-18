@@ -2188,6 +2188,15 @@ def show_portfolio_results():
                     @st.dialog("Confirm Portfolio Optimization")
                     def confirm_apply_optimization():
                         """Confirmation dialog for applying optimized portfolio."""
+                        # Fetch data from session state (don't rely on closure variables)
+                        if 'portfolio_optimization_crew' not in st.session_state:
+                            st.error("Optimization data not found")
+                            return
+
+                        opt_result = st.session_state.portfolio_optimization_crew
+                        tool_output = opt_result.get('tool_output', {})
+                        structured_portfolio = st.session_state.get('structured_portfolio', {})
+
                         st.markdown("### ⚠️ This will replace your original portfolio")
 
                         # Show before/after comparison
@@ -2239,9 +2248,12 @@ def show_portfolio_results():
                         """Apply the optimized portfolio and regenerate all components."""
                         with st.spinner("🔄 Applying optimized portfolio..."):
                             try:
-                                # Get optimization result from session state
+                                # Get all data from session state (don't rely on closure)
                                 opt_result = st.session_state.portfolio_optimization_crew
                                 tool_output = opt_result['tool_output']
+                                portfolio_data = st.session_state.get('portfolio_result', {})
+                                investment_amount = portfolio_data.get('investment_amount', 10000)
+                                user_profile = portfolio_data.get('user_profile', {})
 
                                 # STEP 1: Update portfolio with optimized weights
                                 optimized_weights = tool_output['max_sharpe_portfolio']['weights']
