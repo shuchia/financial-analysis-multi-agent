@@ -804,8 +804,8 @@ def show_onboarding():
 
     # Check if we should show results instead of form
     if st.session_state.get('show_onboarding_results', False) and st.session_state.get('onboarding_data'):
-        # Show loading overlay
-        show_portfolio_generation_overlay()
+        # Set flag to show overlay during generation
+        st.session_state.generating_from_onboarding = True
 
         # Process and show results
         data = st.session_state.onboarding_data
@@ -1281,22 +1281,31 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
 
 def generate_portfolio_with_progress():
     """Generate portfolio with progress tracking."""
-    
-    # Add navigation menu
-    st.markdown("## 🎯 InvestForge Portfolio Creator")
-    
-    # Simple navigation
-    col1, col2 = st.columns([1, 3])
-    with col1:
-        if st.button("📊 Analyze Stocks", use_container_width=True):
-            # Switch to stock analysis mode
-            st.session_state.show_portfolio_generation = False
-            st.session_state.show_main_app = True
-            st.rerun()
-    
-    st.markdown("---")
-    st.markdown("### 💼 Your Personalized Portfolio")
-    
+
+    # Check if we're generating from onboarding - show overlay instead of standard UI
+    if st.session_state.get('generating_from_onboarding', False):
+        # Show the overlay
+        show_portfolio_generation_overlay()
+
+        # Continue with generation in the background
+        # The overlay will stay visible until generation completes
+    else:
+        # Standard UI for direct portfolio generation (not from onboarding)
+        # Add navigation menu
+        st.markdown("## 🎯 InvestForge Portfolio Creator")
+
+        # Simple navigation
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            if st.button("📊 Analyze Stocks", use_container_width=True):
+                # Switch to stock analysis mode
+                st.session_state.show_portfolio_generation = False
+                st.session_state.show_main_app = True
+                st.rerun()
+
+        st.markdown("---")
+        st.markdown("### 💼 Your Personalized Portfolio")
+
     # Initialize progress tracking
     progress_placeholder = st.empty()
     status_placeholder = st.empty()
@@ -1388,6 +1397,8 @@ def generate_portfolio_with_progress():
         # Navigate to portfolio results
         st.session_state.show_portfolio_generation = False
         st.session_state.show_portfolio_results = True
+        # Clear the overlay flag
+        st.session_state.generating_from_onboarding = False
         st.rerun()
         
     except Exception as e:
