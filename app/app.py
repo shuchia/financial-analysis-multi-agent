@@ -2442,7 +2442,6 @@ def show_portfolio_results():
                     # Show the apply button
                     if st.button("✅ Apply Optimized Allocation", type="primary"):
                         confirm_apply_optimization()
-                        st.rerun()  # Refresh UI to show updated risk analysis and other regenerated data
 
                 # SECTION C: AI Narrative (Expandable)
                 with st.expander("🤖 AI Portfolio Manager Recommendations", expanded=False):
