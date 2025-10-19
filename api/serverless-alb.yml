@@ -24,6 +24,7 @@ provider:
     DYNAMODB_TABLE_USAGE: ${self:service}-${self:provider.stage}-usage
     DYNAMODB_TABLE_ANALYTICS: ${self:service}-${self:provider.stage}-analytics
     DYNAMODB_TABLE_WAITLIST: ${self:service}-${self:provider.stage}-waitlist
+    DYNAMODB_TABLE_PORTFOLIOS: ${self:service}-${self:provider.stage}-portfolios
     
   iam:
     role:
@@ -216,7 +217,35 @@ functions:
           conditions:
             path: ${self:custom.albBasePath}/emails/welcome
             method: POST
-          
+
+  # Portfolio endpoints
+  save_portfolio:
+    handler: handlers/portfolios.save_portfolio
+    events:
+      - alb:
+          priority: 16
+          conditions:
+            path: ${self:custom.albBasePath}/portfolio/save
+            method: POST
+
+  get_portfolio:
+    handler: handlers/portfolios.get_portfolio
+    events:
+      - alb:
+          priority: 17
+          conditions:
+            path: ${self:custom.albBasePath}/portfolio/*
+            method: GET
+
+  get_latest_portfolio:
+    handler: handlers/portfolios.get_latest_portfolio
+    events:
+      - alb:
+          priority: 18
+          conditions:
+            path: ${self:custom.albBasePath}/portfolio/latest
+            method: GET
+
   # Health check endpoint
   health:
     handler: handlers/health.check
@@ -306,6 +335,45 @@ resources:
         KeySchema:
           - AttributeName: email
             KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    PortfoliosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-portfolios
+        AttributeDefinitions:
+          - AttributeName: portfolio_id
+            AttributeType: S
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: created_at
+            AttributeType: S
+          - AttributeName: status
+            AttributeType: S
+        KeySchema:
+          - AttributeName: portfolio_id
+            KeyType: HASH
+          - AttributeName: user_id
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: UserPortfoliosByDate
+            KeySchema:
+              - AttributeName: user_id
+                KeyType: HASH
+              - AttributeName: created_at
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+          - IndexName: UserPortfoliosByStatus
+            KeySchema:
+              - AttributeName: user_id
+                KeyType: HASH
+              - AttributeName: status
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
         BillingMode: PAY_PER_REQUEST
 
   Outputs:

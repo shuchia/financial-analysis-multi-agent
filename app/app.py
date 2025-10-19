@@ -18,6 +18,7 @@ from plotly.subplots import make_subplots
 from utils.api_client import api_client
 from components.analysis import render_analysis_page
 from components.fractional_analysis import render_fractional_analysis_page
+from components.save_portfolio_dialog import render_save_button
 import traceback
 import logging
 from utils.portfolio_parser import parse_portfolio_output, validate_portfolio_data
@@ -2405,6 +2406,11 @@ def show_portfolio_results():
         elif portfolio_output:
             st.markdown("---")
             st.markdown("## 💡 Portfolio Insights")
+
+            # Render save portfolio button
+            if 'structured_portfolio' in st.session_state and st.session_state['structured_portfolio']:
+                render_save_button()
+                st.markdown("")  # Add spacing
 
             # Add category styling
             st.markdown("""
