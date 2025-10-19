@@ -6,12 +6,30 @@ Compatible with existing Lambda infrastructure.
 import json
 import os
 import logging
+from decimal import Decimal
 import boto3
 from boto3.dynamodb.conditions import Key
 
 # Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+def convert_decimals_to_float(obj):
+    """
+    Recursively convert all Decimal values to float for JSON serialization.
+    """
+    if isinstance(obj, list):
+        return [convert_decimals_to_float(item) for item in obj]
+    elif isinstance(obj, dict):
+        return {key: convert_decimals_to_float(value) for key, value in obj.items()}
+    elif isinstance(obj, Decimal):
+        # Convert to int if it's a whole number, otherwise float
+        if obj % 1 == 0:
+            return int(obj)
+        else:
+            return float(obj)
+    else:
+        return obj
 
 def lambda_handler(event, context):
     """
@@ -76,6 +94,8 @@ def lambda_handler(event, context):
                 }
 
             portfolio = items[0]
+            # Convert Decimals to float/int for JSON serialization
+            portfolio = convert_decimals_to_float(portfolio)
             logger.info(f"Latest portfolio retrieved for user: {user_id}")
 
         except Exception as e:

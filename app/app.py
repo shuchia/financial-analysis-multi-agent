@@ -1536,6 +1536,16 @@ def show_portfolio_results():
     investment_amount = portfolio_data['investment_amount']
     user_profile = portfolio_data.get('user_profile', {})
 
+    # Debug logging
+    logger.info(f"Result type: {type(result)}")
+    logger.info(f"Result has tasks_output: {hasattr(result, 'tasks_output')}")
+    if hasattr(result, 'tasks_output'):
+        logger.info(f"Tasks output: {result.tasks_output}")
+        if result.tasks_output:
+            logger.info(f"First task output type: {type(result.tasks_output[0])}")
+            if hasattr(result.tasks_output[0], 'raw'):
+                logger.info(f"First task raw preview: {result.tasks_output[0].raw[:500]}")
+
     # ============================================
     # SUCCESS HEADER - InvestForge Style
     # ============================================
@@ -1559,12 +1569,33 @@ def show_portfolio_results():
         portfolio_output = result.tasks_output[0].raw if result.tasks_output else "No portfolio data"
         structured_portfolio = parse_portfolio_output(result, investment_amount)
         st.session_state.structured_portfolio = structured_portfolio
-        logger.info("Parsed original portfolio from result")
+        logger.info(f"Parsed original portfolio from result: {len(structured_portfolio.get('tickers', []))} tickers")
     else:
+        logger.error(f"Unable to parse portfolio - result structure: {result}")
         st.error("Unable to parse portfolio results.")
         if st.button("🔄 Try Again", type="primary"):
             st.session_state.show_portfolio_results = False
             st.session_state.show_portfolio_generation = True
+            st.rerun()
+        return
+
+    # Validate that we have tickers
+    if not structured_portfolio.get('tickers'):
+        logger.error("No tickers found in structured portfolio")
+        st.error("❌ Portfolio generation failed - no investments were selected.")
+        st.warning("This may be due to:")
+        st.markdown("""
+        - Invalid or empty response from AI portfolio strategist
+        - Parsing error in portfolio output
+        - Network or API issues
+        """)
+        st.info("💡 Please try generating the portfolio again or contact support if the issue persists.")
+        if st.button("🔄 Try Again", type="primary"):
+            st.session_state.show_portfolio_results = False
+            st.session_state.show_portfolio_generation = True
+            # Clear the problematic result
+            if 'portfolio_result' in st.session_state:
+                del st.session_state.portfolio_result
             st.rerun()
         return
 
@@ -4566,14 +4597,22 @@ def check_user_has_portfolio():
     """Check if user has any saved portfolios."""
     user_email = st.session_state.get('user_email')
     if not user_email:
+        logger.warning("check_user_has_portfolio: No user_email in session")
         return False
 
     # Call API to get latest portfolio
+    logger.info(f"Checking for portfolios for user: {user_email}")
     latest_portfolio = api_client.get_latest_portfolio(user_email)
+
+    logger.info(f"API returned portfolio: {latest_portfolio is not None}")
+    if latest_portfolio:
+        logger.info(f"Portfolio found: {latest_portfolio.get('portfolio_id', 'NO_ID')}")
 
     if latest_portfolio:
         st.session_state.latest_portfolio = latest_portfolio
         return True
+
+    logger.info(f"No portfolio found for user: {user_email}")
     return False
 
 
