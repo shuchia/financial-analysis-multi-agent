@@ -45,8 +45,8 @@ def _call_save_portfolio_api(
     """
     try:
         # Get API base URL from environment
-        api_base_url = os.environ.get('API_BASE_URL', 'https://api.investforge.ai')
-        endpoint = f"{api_base_url}/api/portfolio/save"
+        api_base_url = os.environ.get('API_BASE_URL', 'https://uniy9g4q4m.execute-api.us-east-1.amazonaws.com/prod')
+        endpoint = f"{api_base_url}/portfolio/save"
 
         # Prepare request payload
         payload = {
