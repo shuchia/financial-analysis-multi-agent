@@ -778,12 +778,80 @@ class APIClient:
         user_id = st.session_state.get('user_data', {}).get('user_id')
         if not user_id:
             return False
-        
+
         return self.track_event('beginner_interface_interaction', {
             'interface_type': interface_type,
             'action': action,
             'timestamp': datetime.now().isoformat()
         })
+
+    # Portfolio management endpoints
+
+    def get_latest_portfolio(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user's most recent portfolio from portfolios table."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/portfolio/latest",
+                headers=self._get_headers(include_auth=False),
+                params={'user_id': user_id},
+                timeout=self.timeout
+            )
+
+            result = self._handle_response(response)
+            if result and result.get('success'):
+                return result['data'].get('portfolio')
+
+            return None
+
+        except Exception as e:
+            st.error(f"Failed to get latest portfolio: {str(e)}")
+            return None
+
+    def get_portfolio_by_id(self, portfolio_id: str) -> Optional[Dict[str, Any]]:
+        """Get specific portfolio by ID."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/portfolio/{portfolio_id}",
+                headers=self._get_headers(include_auth=False),
+                timeout=self.timeout
+            )
+
+            result = self._handle_response(response)
+            if result and result.get('success'):
+                return result['data'].get('portfolio')
+
+            return None
+
+        except Exception as e:
+            st.error(f"Failed to get portfolio: {str(e)}")
+            return None
+
+    def save_portfolio(self, user_id: str, portfolio_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Save portfolio to portfolios table."""
+        try:
+            response = requests.post(
+                f"{self.base_url}/portfolio/save",
+                headers=self._get_headers(include_auth=False),
+                json={
+                    'user_id': user_id,
+                    'name': portfolio_data.get('name'),
+                    'preferences': portfolio_data.get('preferences', {}),
+                    'allocations': portfolio_data.get('allocations', []),
+                    'tags': portfolio_data.get('tags', []),
+                    'notes': portfolio_data.get('notes', '')
+                },
+                timeout=self.timeout
+            )
+
+            result = self._handle_response(response)
+            if result and result.get('success'):
+                return result['data']
+
+            return None
+
+        except Exception as e:
+            st.error(f"Failed to save portfolio: {str(e)}")
+            return None
 
 
 # Global API client instance

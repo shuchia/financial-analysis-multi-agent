@@ -58,6 +58,10 @@ def _call_save_portfolio_api(
             'notes': notes
         }
 
+        # Debug logging
+        print(f"Saving portfolio to: {endpoint}")
+        print(f"Payload: user_id={user_id}, name={portfolio_name}, allocations_count={len(payload['allocations'])}")
+
         # Add optional fields if present
         if 'risk_metrics' in portfolio_data:
             payload['risk_metrics'] = portfolio_data['risk_metrics']
@@ -73,20 +77,36 @@ def _call_save_portfolio_api(
             timeout=10
         )
 
-        if response.status_code == 200:
-            data = response.json()
-            return True, data.get('message', 'Portfolio saved successfully'), data.get('data')
+        # Check for success (200 or 201)
+        if response.status_code in [200, 201]:
+            try:
+                data = response.json()
+                return True, data.get('message', 'Portfolio saved successfully'), data.get('data')
+            except Exception as e:
+                # Success but couldn't parse response
+                return True, 'Portfolio saved successfully', None
         else:
-            error_data = response.json() if response.headers.get('content-type') == 'application/json' else {}
-            error_msg = error_data.get('message', f'Server returned status {response.status_code}')
+            # Try to extract error message from response
+            try:
+                error_data = response.json()
+                error_msg = error_data.get('message', f'Server error: {response.status_code}')
+            except:
+                error_msg = f'Server error: {response.status_code} - {response.text[:200]}'
+
+            print(f"Save portfolio API error: {error_msg}")  # Log to console
             return False, error_msg, None
 
     except requests.exceptions.Timeout:
         return False, 'Request timed out. Please try again.', None
     except requests.exceptions.ConnectionError:
         return False, 'Could not connect to server. Please check your connection.', None
+    except requests.exceptions.RequestException as e:
+        return False, f'Network error: {str(e)}', None
     except Exception as e:
-        return False, f'Unexpected error: {str(e)}', None
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Save portfolio error: {error_details}")  # Log to console
+        return False, f'Error: {str(e)}', None
 
 
 @st.dialog("Save Portfolio", width="large")

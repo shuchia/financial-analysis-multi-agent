@@ -18,7 +18,7 @@ from plotly.subplots import make_subplots
 from utils.api_client import api_client
 from components.analysis import render_analysis_page
 from components.fractional_analysis import render_fractional_analysis_page
-from components.save_portfolio_dialog import render_save_button
+from components.save_portfolio_dialog import render_save_button, show_save_portfolio_dialog
 import traceback
 import logging
 from utils.portfolio_parser import parse_portfolio_output, validate_portfolio_data
@@ -300,10 +300,14 @@ def render_horizontal_nav():
             """, unsafe_allow_html=True)
 
     with cols[1]:
-        if st.button("📊 Portfolio", key="nav_portfolio", use_container_width=True):
-            st.session_state.show_portfolio_generation = True
-            st.session_state.show_portfolio_results = False
+        if st.button("🏠 Portfolio", key="nav_portfolio", use_container_width=True):
+            # Reset all nav flags and route to portfolio dashboard
             st.session_state.show_main_app = False
+            st.session_state.show_portfolio_generation = False
+            st.session_state.show_portfolio_results = False
+            st.session_state.show_portfolio_landing = False
+            # Route based on user's portfolio status
+            route_after_login()
             st.rerun()
 
     with cols[2]:
@@ -311,10 +315,12 @@ def render_horizontal_nav():
             st.info("Watchlist feature coming soon!")
 
     with cols[3]:
-        if st.button("🔍 Discover", key="nav_discover", use_container_width=True):
+        if st.button("🔍 Analyze Stocks", key="nav_discover", use_container_width=True):
+            # Goes to stock analysis (old main app)
             st.session_state.show_main_app = True
             st.session_state.show_portfolio_generation = False
             st.session_state.show_portfolio_results = False
+            st.session_state.show_portfolio_landing = False
             st.rerun()
 
     with cols[4]:
@@ -384,6 +390,12 @@ def init_session_state():
         st.session_state.show_portfolio_generation = False
     if 'show_portfolio_results' not in st.session_state:
         st.session_state.show_portfolio_results = False
+    if 'show_portfolio_landing' not in st.session_state:
+        st.session_state.show_portfolio_landing = False
+    if 'latest_portfolio' not in st.session_state:
+        st.session_state.latest_portfolio = None
+    if 'current_portfolio_id' not in st.session_state:
+        st.session_state.current_portfolio_id = None
     if 'show_main_app' not in st.session_state:
         st.session_state.show_main_app = False
 
@@ -531,8 +543,9 @@ def show_login_signup():
                         st.session_state.user_email = email
                         if remember:
                             save_session_cookie(email)
-                        # Load user preferences
+                        # Load user preferences and route to appropriate page
                         load_user_preferences()
+                        route_after_login()
                         st.rerun()
                     else:
                         st.error(error_message)
@@ -574,10 +587,10 @@ def show_login_signup():
                                 st.success("Account created successfully! Welcome to InvestForge!")
                                 st.session_state.authenticated = True
                                 st.session_state.user_email = email
-                                st.session_state.show_onboarding = True
                                 track_signup(email, plan)
-                                # Load user preferences (will be empty for new users)
+                                # Load user preferences and route to appropriate page
                                 load_user_preferences()
+                                route_after_login()
                                 st.rerun()
                             # Note: Error messages are now handled by the API client
 
@@ -1977,14 +1990,31 @@ def show_portfolio_results():
 
             with col1:
                 if st.button("💾 Save Portfolio", type="secondary", use_container_width=True):
-                    if 'user_preferences' in st.session_state:
-                        st.session_state.user_preferences['portfolio'] = {
-                            'allocation': portfolio_output,
-                            'amount': investment_amount,
-                            'generated_at': portfolio_data['generated_at']
+                    # Prepare portfolio data for save dialog
+                    try:
+                        portfolio_data_to_save = {
+                            'user_profile': user_profile,
+                            'allocations': [
+                                {
+                                    'ticker': str(ticker),
+                                    'percentage': float(weight * 100),
+                                    'amount': float(weight * investment_amount),
+                                    'category': structured_portfolio.get('allocations', [{}])[i].get('category', 'Stock') if i < len(structured_portfolio.get('allocations', [])) else 'Stock'
+                                }
+                                for i, (ticker, weight) in enumerate(zip(structured_portfolio['tickers'], structured_portfolio['weights']))
+                            ],
+                            'investment_amount': float(investment_amount),
+                            'expected_return': structured_portfolio.get('expected_return', 'N/A')
                         }
-                        save_user_preferences_to_api(st.session_state.user_preferences)
-                    st.success("✅ Saved!")
+
+                        user_id = st.session_state.get('user_email', 'demo@investforge.ai')
+                        if not user_id or user_id == 'demo@investforge.ai':
+                            st.error("Please log in to save portfolios")
+                        else:
+                            show_save_portfolio_dialog(portfolio_data_to_save, user_id)
+                    except Exception as e:
+                        st.error(f"Error preparing portfolio data: {str(e)}")
+                        logger.error(f"Portfolio save preparation error: {str(e)}")
 
             with col2:
                 # Hide optimize button if portfolio was already optimized
@@ -2406,11 +2436,6 @@ def show_portfolio_results():
         elif portfolio_output:
             st.markdown("---")
             st.markdown("## 💡 Portfolio Insights")
-
-            # Render save portfolio button
-            if 'structured_portfolio' in st.session_state and st.session_state['structured_portfolio']:
-                render_save_button()
-                st.markdown("")  # Add spacing
 
             # Add category styling
             st.markdown("""
@@ -3252,6 +3277,201 @@ def show_portfolio_results():
             3. Review and rebalance quarterly
             4. Continue learning about each investment
             """)
+
+
+def show_portfolio_landing():
+    """Portfolio landing page - shows latest saved portfolio."""
+
+    st.title("📊 My Portfolio")
+
+    portfolio = st.session_state.get('latest_portfolio')
+
+    if not portfolio:
+        st.info("No saved portfolios found.")
+        if st.button("Create Your First Portfolio", type="primary"):
+            st.session_state.show_portfolio_generation = True
+            st.session_state.show_portfolio_landing = False
+            st.rerun()
+        return
+
+    # Display portfolio header
+    st.markdown(f"### {portfolio.get('name', 'My Portfolio')}")
+    created_at = portfolio.get('created_at', 'N/A')
+    st.caption(f"Created: {created_at}")
+
+    # Quick metrics
+    col1, col2, col3 = st.columns(3)
+
+    allocations = portfolio.get('allocations', [])
+    total_amount = sum(float(a.get('amount', 0)) for a in allocations)
+
+    with col1:
+        st.metric("Portfolio Value", f"${total_amount:,.2f}")
+    with col2:
+        # Extract from preferences or default
+        prefs = portfolio.get('preferences', {})
+        risk = prefs.get('risk_tolerance', 'Moderate')
+        st.metric("Risk Profile", risk.title())
+    with col3:
+        st.metric("Holdings", len(allocations))
+
+    # Action buttons
+    st.markdown("---")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("🔍 View Full Analysis", type="primary", use_container_width=True):
+            # Will be implemented in Phase 4
+            load_and_refresh_portfolio(portfolio)
+
+    with col2:
+        if st.button("✏️ Create New Portfolio", use_container_width=True):
+            st.session_state.show_portfolio_generation = True
+            st.session_state.show_portfolio_landing = False
+            st.rerun()
+
+    with col3:
+        if st.button("🗑️ Delete Portfolio", use_container_width=True):
+            st.warning("Delete functionality coming soon")
+
+    # Asset allocation summary
+    st.markdown("---")
+    st.markdown("### 📋 Asset Allocation")
+
+    for alloc in allocations[:5]:  # Show top 5
+        ticker = alloc.get('ticker', 'N/A')
+        percentage = float(alloc.get('percentage', 0))
+        amount = float(alloc.get('amount', 0))
+        st.markdown(f"**{ticker}**: {percentage:.1f}% (${amount:,.2f})")
+
+    if len(allocations) > 5:
+        st.caption(f"...and {len(allocations) - 5} more holdings")
+
+
+def load_and_refresh_portfolio(portfolio):
+    """Load saved portfolio and regenerate AI analysis with fresh data."""
+
+    with st.spinner("🔄 Loading portfolio and refreshing analysis..."):
+
+        # Extract data from saved portfolio
+        allocations = portfolio.get('allocations', [])
+        tickers = [a['ticker'] for a in allocations]
+        weights = [float(a['percentage']) / 100 for a in allocations]  # Convert % to decimal
+        investment_amount = sum(float(a.get('amount', 0)) for a in allocations)
+        user_profile = portfolio.get('preferences', {})
+
+        # Reconstruct structured portfolio
+        structured_portfolio = {
+            'tickers': tickers,
+            'weights': weights,
+            'categories': [a.get('category', 'Stock') for a in allocations]
+        }
+
+        st.session_state.structured_portfolio = structured_portfolio
+        st.session_state.investment_amount = investment_amount
+        st.session_state.user_profile = user_profile
+        st.session_state.current_portfolio_id = portfolio.get('portfolio_id')
+
+        # STEP 1: Regenerate portfolio insights
+        with st.spinner("🤖 Regenerating portfolio insights with latest market data..."):
+            try:
+                from portfoliocrew import PortfolioCrew
+
+                portfolio_output = PortfolioCrew().generate_portfolio(
+                    user_profile=user_profile,
+                    preferences=user_profile,
+                    override_allocation={'tickers': tickers, 'weights': weights}
+                )
+                st.session_state.portfolio_output = portfolio_output
+            except Exception as e:
+                logger.error(f"Error regenerating insights: {str(e)}")
+                st.session_state.portfolio_output = "Portfolio loaded successfully."
+
+        # STEP 2: Regenerate risk analysis
+        with st.spinner("⚠️ Analyzing current risk metrics..."):
+            try:
+                crew_risk_result = QuantitativeAnalysisCrew().analyze_portfolio_risk(
+                    tickers=tickers,
+                    weights=weights,
+                    user_profile=user_profile,
+                    investment_amount=investment_amount
+                )
+                st.session_state.portfolio_risk_crew_result = crew_risk_result
+
+                # Transform to expected format (same as in show_portfolio_results)
+                if isinstance(crew_risk_result, dict) and 'tool_output' in crew_risk_result:
+                    tool_output = crew_risk_result['tool_output']
+                    risk_results = {
+                        "portfolio_metrics": {
+                            "beta": 1.0,
+                            "sharpe_ratio": tool_output.get('portfolio_metrics', {}).get('sharpe_ratio', 0.0),
+                            "value_at_risk_95": float(tool_output.get('var_historical', {}).get('95%', 0.0)) / investment_amount * 100,
+                            "value_at_risk_99": float(tool_output.get('var_historical', {}).get('99%', 0.0)) / investment_amount * 100,
+                            "max_drawdown": tool_output.get('portfolio_metrics', {}).get('max_drawdown', 0.0),
+                            "annual_volatility": tool_output.get('portfolio_metrics', {}).get('annual_volatility', 0.0),
+                            "expected_annual_return": tool_output.get('portfolio_metrics', {}).get('annual_return', 0.0)
+                        },
+                        "risk_contributions": tool_output.get('risk_contributions', {}),
+                        "risk_alignment": {
+                            "user_profile": user_profile.get('risk_profile', 'moderate'),
+                            "risk_score": user_profile.get('risk_score', 0.5),
+                            "portfolio_risk_level": "aligned",
+                            "expected_volatility_range": "12%-18%",
+                            "actual_volatility": f"{tool_output.get('portfolio_metrics', {}).get('annual_volatility', 0.0):.1f}%",
+                            "adjustment_recommendation": None
+                        },
+                        "diversification_metrics": {
+                            "number_of_positions": len(tickers),
+                            "effective_number_of_stocks": 0,
+                            "concentration_risk": "moderate"
+                        },
+                        "value_at_risk_interpretation": {
+                            "95%": tool_output.get('interpretation', {}).get('95%_var_interpretation', 'Data pending'),
+                            "99%": f"1% chance of losing more than ${tool_output.get('var_historical', {}).get('99%', 0.0):,.2f} over 10 days"
+                        }
+                    }
+                    st.session_state.portfolio_risk_analysis = risk_results
+                else:
+                    # Fallback: Parse the narrative output
+                    risk_results = parse_risk_output(
+                        crew_risk_result,
+                        user_profile=user_profile,
+                        investment_amount=investment_amount
+                    )
+                    st.session_state.portfolio_risk_analysis = risk_results
+
+            except Exception as e:
+                logger.error(f"Error regenerating risk: {str(e)}")
+
+        # STEP 3: Regenerate projections
+        with st.spinner("📈 Calculating updated performance projections..."):
+            try:
+                from tools.performance_projection_tool import _calculate_projections_impl
+                from portfoliocrew import parse_timeline_to_years
+
+                timeline_years = parse_timeline_to_years(user_profile.get('timeline', '5-10 years'))
+                risk_profile = user_profile.get('risk_profile', 'moderate').lower()
+                volatility_map = {
+                    'conservative': 0.10,
+                    'moderate': 0.15,
+                    'aggressive': 0.20
+                }
+                annual_volatility = volatility_map.get(risk_profile, 0.15)
+
+                projection_result = _calculate_projections_impl(
+                    investment_amount=investment_amount,
+                    expected_annual_return=0.097,  # Default, can be extracted from portfolio
+                    timeline_years=timeline_years,
+                    annual_volatility=annual_volatility
+                )
+                st.session_state.projection_data = projection_result
+            except Exception as e:
+                logger.error(f"Error regenerating projections: {str(e)}")
+
+        # Navigate to results page
+        st.session_state.show_portfolio_results = True
+        st.session_state.show_portfolio_landing = False
+        st.rerun()
 
 
 def save_user_preferences_to_api(preferences: dict):
@@ -4342,6 +4562,59 @@ def load_user_preferences():
     return None
 
 
+def check_user_has_portfolio():
+    """Check if user has any saved portfolios."""
+    user_email = st.session_state.get('user_email')
+    if not user_email:
+        return False
+
+    # Call API to get latest portfolio
+    latest_portfolio = api_client.get_latest_portfolio(user_email)
+
+    if latest_portfolio:
+        st.session_state.latest_portfolio = latest_portfolio
+        return True
+    return False
+
+
+def needs_onboarding():
+    """Check if user needs to complete onboarding."""
+    user_prefs = st.session_state.get('user_preferences', {})
+
+    # Check for essential onboarding fields
+    has_risk = user_prefs.get('risk_tolerance') is not None
+    has_goals = user_prefs.get('investment_goals') is not None
+    has_experience = user_prefs.get('experience') is not None
+
+    return not (has_risk and has_goals and has_experience)
+
+
+def route_after_login():
+    """Route user to appropriate page after login based on their data."""
+
+    # Priority 1: Check for saved portfolios
+    if check_user_has_portfolio():
+        st.session_state.show_portfolio_landing = True
+        st.session_state.show_onboarding = False
+        st.session_state.show_portfolio_generation = False
+        st.session_state.show_main_app = False
+        return
+
+    # Priority 2: Check if needs onboarding
+    if needs_onboarding():
+        st.session_state.show_onboarding = True
+        st.session_state.show_portfolio_landing = False
+        st.session_state.show_portfolio_generation = False
+        st.session_state.show_main_app = False
+        return
+
+    # Priority 3: Has onboarding but no portfolio - auto-generate
+    st.session_state.show_portfolio_generation = True
+    st.session_state.show_onboarding = False
+    st.session_state.show_portfolio_landing = False
+    st.session_state.show_main_app = False
+
+
 def save_user_preferences(experience, goals, risk, amount):
     """Save user onboarding preferences."""
     preferences = {
@@ -5356,19 +5629,24 @@ if __name__ == "__main__":
         else:
             show_login_signup()
     else:
-        # Render horizontal navigation bar for authenticated users
-        render_horizontal_nav()
-
-        if st.session_state.get('show_portfolio_generation', False):
-            # Check portfolio generation FIRST before onboarding
-            generate_portfolio_with_progress()
-        elif st.session_state.get('show_portfolio_results', False):
-            show_portfolio_results()
-        elif st.session_state.get('show_onboarding', False):
+        # Check if showing onboarding (full screen, no nav bar)
+        if st.session_state.get('show_onboarding', False):
             show_onboarding()
-        elif st.session_state.get('show_main_app', False):
-            # User explicitly wants stock analysis
-            main_app()
         else:
-            # Default to portfolio generation instead of stock analysis
-            generate_portfolio_with_progress()
+            # Render horizontal navigation bar for authenticated users
+            render_horizontal_nav()
+
+            if st.session_state.get('show_portfolio_landing', False):
+                # Show portfolio landing page
+                show_portfolio_landing()
+            elif st.session_state.get('show_portfolio_generation', False):
+                # Check portfolio generation FIRST before onboarding
+                generate_portfolio_with_progress()
+            elif st.session_state.get('show_portfolio_results', False):
+                show_portfolio_results()
+            elif st.session_state.get('show_main_app', False):
+                # User explicitly wants stock analysis
+                main_app()
+            else:
+                # Default to portfolio generation instead of stock analysis
+                generate_portfolio_with_progress()
