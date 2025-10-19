@@ -4610,6 +4610,7 @@ def route_after_login():
 
     # Priority 3: Has onboarding but no portfolio - auto-generate
     st.session_state.show_portfolio_generation = True
+    st.session_state.generating_from_onboarding = True  # Show overlay instead of nav bar
     st.session_state.show_onboarding = False
     st.session_state.show_portfolio_landing = False
     st.session_state.show_main_app = False
@@ -5629,9 +5630,12 @@ if __name__ == "__main__":
         else:
             show_login_signup()
     else:
-        # Check if showing onboarding (full screen, no nav bar)
+        # Check if showing onboarding or portfolio generation (full screen, no nav bar)
         if st.session_state.get('show_onboarding', False):
             show_onboarding()
+        elif st.session_state.get('show_portfolio_generation', False):
+            # Portfolio generation with overlay (no nav bar)
+            generate_portfolio_with_progress()
         else:
             # Render horizontal navigation bar for authenticated users
             render_horizontal_nav()
@@ -5639,14 +5643,11 @@ if __name__ == "__main__":
             if st.session_state.get('show_portfolio_landing', False):
                 # Show portfolio landing page
                 show_portfolio_landing()
-            elif st.session_state.get('show_portfolio_generation', False):
-                # Check portfolio generation FIRST before onboarding
-                generate_portfolio_with_progress()
             elif st.session_state.get('show_portfolio_results', False):
                 show_portfolio_results()
             elif st.session_state.get('show_main_app', False):
                 # User explicitly wants stock analysis
                 main_app()
             else:
-                # Default to portfolio generation instead of stock analysis
-                generate_portfolio_with_progress()
+                # Default fallback - should rarely hit this
+                st.info("Initializing...")
