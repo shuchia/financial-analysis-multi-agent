@@ -4,10 +4,14 @@ API client for communicating with the InvestForge backend.
 
 import os
 import json
+import logging
 import requests
 from typing import Dict, Any, Optional
 import streamlit as st
 from datetime import datetime, timedelta
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class APIClient:
@@ -387,20 +391,32 @@ class APIClient:
     def get_user_preferences(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user preferences."""
         try:
+            logger.info(f"API: Getting user preferences for {email}")
+            logger.info(f"API: Calling {self.base_url}/users/preferences")
+
             response = requests.post(
                 f"{self.base_url}/users/preferences",
                 headers=self._get_headers(include_auth=False),
                 json={'email': email, 'action': 'get'},
                 timeout=self.timeout
             )
-            
+
+            logger.info(f"API: Preferences response status: {response.status_code}")
+            logger.info(f"API: Preferences response text: {response.text[:500]}")
+
             result = self._handle_response(response)
+            logger.info(f"API: Preferences parsed result success={result.get('success') if result else None}")
+
             if result and result.get('success'):
-                return result['data']
-            
+                prefs = result['data']
+                logger.info(f"API: Preferences data keys: {list(prefs.keys()) if prefs else None}")
+                return prefs
+
+            logger.warning(f"API: No preferences found or unsuccessful response")
             return None
-            
+
         except Exception as e:
+            logger.error(f"API: Exception getting preferences: {str(e)}")
             st.error(f"Failed to get preferences: {str(e)}")
             return None
     
@@ -790,6 +806,9 @@ class APIClient:
     def get_latest_portfolio(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user's most recent portfolio from portfolios table."""
         try:
+            logger.info(f"API: Getting latest portfolio for user {user_id}")
+            logger.info(f"API: Calling {self.base_url}/portfolio/latest")
+
             response = requests.get(
                 f"{self.base_url}/portfolio/latest",
                 headers=self._get_headers(include_auth=False),
@@ -797,13 +816,22 @@ class APIClient:
                 timeout=self.timeout
             )
 
-            result = self._handle_response(response)
-            if result and result.get('success'):
-                return result['data'].get('portfolio')
+            logger.info(f"API: Response status code: {response.status_code}")
+            logger.info(f"API: Response text: {response.text[:500]}")
 
+            result = self._handle_response(response)
+            logger.info(f"API: Parsed result success={result.get('success') if result else None}")
+
+            if result and result.get('success'):
+                portfolio = result['data'].get('portfolio')
+                logger.info(f"API: Portfolio found: {portfolio is not None}")
+                return portfolio
+
+            logger.warning(f"API: No portfolio found or unsuccessful response")
             return None
 
         except Exception as e:
+            logger.error(f"API: Exception getting latest portfolio: {str(e)}")
             st.error(f"Failed to get latest portfolio: {str(e)}")
             return None
 

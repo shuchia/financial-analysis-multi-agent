@@ -4585,11 +4585,23 @@ def create_user_account(email: str, password: str, plan: str) -> bool:
 
 def load_user_preferences():
     """Load user preferences from API."""
-    if st.session_state.user_email:
-        preferences = api_client.get_user_preferences(st.session_state.user_email)
+    logger.info("=== load_user_preferences called ===")
+    user_email = st.session_state.get('user_email')
+    logger.info(f"User email: {user_email}")
+
+    if user_email:
+        logger.info(f"Fetching preferences for {user_email}")
+        preferences = api_client.get_user_preferences(user_email)
+        logger.info(f"Preferences retrieved: {preferences is not None}")
         if preferences:
+            logger.info(f"Preferences keys: {list(preferences.keys())}")
             st.session_state.user_preferences = preferences
             return preferences
+        else:
+            logger.warning("No preferences returned from API")
+    else:
+        logger.warning("No user email in session state")
+
     return None
 
 
@@ -4619,13 +4631,18 @@ def check_user_has_portfolio():
 def needs_onboarding():
     """Check if user needs to complete onboarding."""
     user_prefs = st.session_state.get('user_preferences', {})
+    logger.info(f"Checking onboarding status. Preferences: {user_prefs}")
 
     # Check for essential onboarding fields
     has_risk = user_prefs.get('risk_tolerance') is not None
     has_goals = user_prefs.get('investment_goals') is not None
     has_experience = user_prefs.get('experience') is not None
 
-    return not (has_risk and has_goals and has_experience)
+    logger.info(f"Onboarding check: has_risk={has_risk}, has_goals={has_goals}, has_experience={has_experience}")
+
+    needs_ob = not (has_risk and has_goals and has_experience)
+    logger.info(f"needs_onboarding result: {needs_ob}")
+    return needs_ob
 
 
 def route_after_login():
