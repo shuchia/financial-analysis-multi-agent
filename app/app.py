@@ -1864,7 +1864,7 @@ def show_portfolio_results():
         # Display allocation table with enhanced design
         if structured_portfolio['tickers']:
             # Get ticker names and create enhanced portfolio table
-            portfolio_data = []
+            portfolio_table_data = []
             for i, ticker in enumerate(structured_portfolio['tickers']):
                 # Get category
                 category = "N/A"
@@ -1890,7 +1890,7 @@ def show_portfolio_results():
                 except:
                     shares = 0
 
-                portfolio_data.append({
+                portfolio_table_data.append({
                     'Ticker': ticker,
                     'Asset Name': asset_name,
                     'Type': category,
@@ -1950,7 +1950,7 @@ def show_portfolio_results():
             table_html += '<th>Ticker</th><th>Asset Name</th><th>Type</th><th>Allocation</th><th>Amount</th><th>Shares</th>'
             table_html += '</tr></thead><tbody>'
 
-            for item in portfolio_data:
+            for item in portfolio_table_data:
                 # Determine badge class
                 badge_class = "badge-other"
                 if "ETF" in item['Type'].upper():
