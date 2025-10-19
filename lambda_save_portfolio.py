@@ -7,12 +7,26 @@ import json
 import os
 import logging
 from datetime import datetime
+from decimal import Decimal
 import boto3
 import uuid
 
 # Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+def convert_floats_to_decimal(obj):
+    """
+    Recursively convert all float values to Decimal for DynamoDB compatibility.
+    """
+    if isinstance(obj, list):
+        return [convert_floats_to_decimal(item) for item in obj]
+    elif isinstance(obj, dict):
+        return {key: convert_floats_to_decimal(value) for key, value in obj.items()}
+    elif isinstance(obj, float):
+        return Decimal(str(obj))
+    else:
+        return obj
 
 def lambda_handler(event, context):
     """
@@ -82,6 +96,9 @@ def lambda_handler(event, context):
             'tags': body.get('tags', []),
             'notes': body.get('notes', '')
         }
+
+        # Convert all floats to Decimals for DynamoDB compatibility
+        portfolio = convert_floats_to_decimal(portfolio)
 
         # Store in DynamoDB
         dynamodb = boto3.resource('dynamodb')
