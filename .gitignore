@@ -55,3 +55,11 @@ test_*.py
 # Logs
 *.log
 task-definition.json
+
+# Lambda deployment packages
+*.zip
+
+# Serverless
+.serverless/
+node_modules/
+package-lock.json
