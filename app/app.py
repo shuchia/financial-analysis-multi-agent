@@ -4630,29 +4630,55 @@ def needs_onboarding():
 
 def route_after_login():
     """Route user to appropriate page after login based on their data."""
+    try:
+        logger.info("=== route_after_login called ===")
 
-    # Priority 1: Check for saved portfolios
-    if check_user_has_portfolio():
-        st.session_state.show_portfolio_landing = True
+        # Priority 1: Check for saved portfolios
+        logger.info("Checking Priority 1: Saved portfolios")
+        has_portfolio = check_user_has_portfolio()
+        logger.info(f"Has portfolio: {has_portfolio}")
+
+        if has_portfolio:
+            logger.info("Routing to portfolio landing page")
+            st.session_state.show_portfolio_landing = True
+            st.session_state.show_onboarding = False
+            st.session_state.show_portfolio_generation = False
+            st.session_state.show_main_app = False
+            logger.info(f"Set show_portfolio_landing={st.session_state.show_portfolio_landing}")
+            return
+
+        # Priority 2: Check if needs onboarding
+        logger.info("Checking Priority 2: Needs onboarding")
+        needs_ob = needs_onboarding()
+        logger.info(f"Needs onboarding: {needs_ob}")
+
+        if needs_ob:
+            logger.info("Routing to onboarding")
+            st.session_state.show_onboarding = True
+            st.session_state.show_portfolio_landing = False
+            st.session_state.show_portfolio_generation = False
+            st.session_state.show_main_app = False
+            logger.info(f"Set show_onboarding={st.session_state.show_onboarding}")
+            return
+
+        # Priority 3: Has onboarding but no portfolio - auto-generate
+        logger.info("Routing to portfolio generation (Priority 3)")
+        st.session_state.show_portfolio_generation = True
+        st.session_state.generating_from_onboarding = True  # Show overlay instead of nav bar
         st.session_state.show_onboarding = False
-        st.session_state.show_portfolio_generation = False
+        st.session_state.show_portfolio_landing = False
         st.session_state.show_main_app = False
-        return
+        logger.info(f"Set show_portfolio_generation={st.session_state.show_portfolio_generation}")
 
-    # Priority 2: Check if needs onboarding
-    if needs_onboarding():
+    except Exception as e:
+        logger.error(f"Error in route_after_login: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        # Fallback: send to onboarding
+        logger.warning("Falling back to onboarding due to error")
         st.session_state.show_onboarding = True
         st.session_state.show_portfolio_landing = False
         st.session_state.show_portfolio_generation = False
         st.session_state.show_main_app = False
-        return
-
-    # Priority 3: Has onboarding but no portfolio - auto-generate
-    st.session_state.show_portfolio_generation = True
-    st.session_state.generating_from_onboarding = True  # Show overlay instead of nav bar
-    st.session_state.show_onboarding = False
-    st.session_state.show_portfolio_landing = False
-    st.session_state.show_main_app = False
 
 
 def save_user_preferences(experience, goals, risk, amount):
