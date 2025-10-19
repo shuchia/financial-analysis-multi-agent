@@ -22,8 +22,7 @@ phases:
       - echo Building ultra-fast Docker image with exact package versions...
       - |
         docker build \
-          --cache-from $REPOSITORY_URI:latest \
-          --build-arg BUILDKIT_INLINE_CACHE=1 \
+          --no-cache \
           -f ./app/Dockerfile.fast \
           -t $IMAGE_REPO_NAME:latest \
           ./app
