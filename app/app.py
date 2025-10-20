@@ -3499,6 +3499,21 @@ def load_and_refresh_portfolio(portfolio):
             except Exception as e:
                 logger.error(f"Error regenerating projections: {str(e)}")
 
+        # Create portfolio_result object for show_portfolio_results()
+        # This is a minimal mock object since we're loading an existing portfolio
+        class MockResult:
+            def __init__(self):
+                self.tasks_output = None
+
+        st.session_state.portfolio_result = {
+            'result': MockResult(),
+            'investment_amount': investment_amount,
+            'user_profile': user_profile
+        }
+
+        # Mark that portfolio was "optimized" (loaded from saved)
+        st.session_state.portfolio_was_optimized = True
+
         # Navigate to results page
         st.session_state.show_portfolio_results = True
         st.session_state.show_portfolio_landing = False
