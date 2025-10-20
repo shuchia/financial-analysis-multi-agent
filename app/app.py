@@ -4633,14 +4633,24 @@ def needs_onboarding():
     user_prefs = st.session_state.get('user_preferences', {})
     logger.info(f"Checking onboarding status. Preferences: {user_prefs}")
 
-    # Check for essential onboarding fields
-    has_risk = user_prefs.get('risk_tolerance') is not None
-    has_goals = user_prefs.get('investment_goals') is not None
-    has_experience = user_prefs.get('experience') is not None
+    # Check if onboarding was completed (new streamlined flow)
+    if user_prefs.get('onboarding_complete'):
+        logger.info("Onboarding marked as complete")
+        return False
 
-    logger.info(f"Onboarding check: has_risk={has_risk}, has_goals={has_goals}, has_experience={has_experience}")
+    # Fallback: Check for essential onboarding fields (old format compatibility)
+    risk_assessment = user_prefs.get('risk_assessment', {})
+    has_risk = risk_assessment.get('risk_profile') is not None or user_prefs.get('risk_tolerance') is not None
 
-    needs_ob = not (has_risk and has_goals and has_experience)
+    investment_goals = user_prefs.get('investment_goals', {})
+    has_goals = investment_goals.get('primary_goal') is not None or isinstance(user_prefs.get('investment_goals'), list)
+
+    demographics = user_prefs.get('demographics', {})
+    has_demographics = demographics.get('age_range') is not None
+
+    logger.info(f"Onboarding check: has_risk={has_risk}, has_goals={has_goals}, has_demographics={has_demographics}")
+
+    needs_ob = not (has_risk and has_goals)
     logger.info(f"needs_onboarding result: {needs_ob}")
     return needs_ob
 

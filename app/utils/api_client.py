@@ -18,8 +18,8 @@ class APIClient:
     """Client for InvestForge API communication."""
     
     def __init__(self):
-        # Use the unified domain with /api path
-        self.base_url = os.getenv('API_BASE_URL', 'https://investforge.io/api')
+        # Use API Gateway directly to avoid timeout issues with investforge.io proxy
+        self.base_url = os.getenv('API_BASE_URL', 'https://uniy9g4q4m.execute-api.us-east-1.amazonaws.com/prod')
         if 'localhost' in self.base_url:
             self.base_url = 'http://localhost:8080/api'
         self.timeout = 30
