@@ -7,6 +7,7 @@ import json
 import os
 import logging
 from decimal import Decimal
+from urllib.parse import unquote
 import boto3
 from boto3.dynamodb.conditions import Key
 
@@ -53,9 +54,19 @@ def lambda_handler(event, context):
                 'body': json.dumps({'message': 'CORS preflight'})
             }
 
+        # Log the incoming event for debugging
+        logger.info(f"Event keys: {list(event.keys())}")
+        logger.info(f"Path params: {event.get('pathParameters')}")
+
         # Extract portfolio_id from path parameters
         path_parameters = event.get('pathParameters', {})
         portfolio_id = path_parameters.get('portfolio_id')
+
+        # URL-decode the portfolio_id (ALB may URL-encode path parameters)
+        if portfolio_id:
+            portfolio_id = unquote(portfolio_id)
+
+        logger.info(f"Extracted portfolio_id: {portfolio_id}")
 
         if not portfolio_id:
             return {

@@ -7,6 +7,7 @@ import json
 import os
 import logging
 from decimal import Decimal
+from urllib.parse import unquote
 import boto3
 from boto3.dynamodb.conditions import Key
 
@@ -53,9 +54,18 @@ def lambda_handler(event, context):
                 'body': json.dumps({'message': 'CORS preflight'})
             }
 
+        # Log the incoming event for debugging
+        logger.info(f"Event keys: {list(event.keys())}")
+        logger.info(f"Query string params: {event.get('queryStringParameters')}")
+
         # Extract user_id from query parameters
         query_parameters = event.get('queryStringParameters', {}) or {}
         user_id = query_parameters.get('user_id', 'demo@investforge.ai')
+
+        # URL-decode the user_id (ALB may URL-encode query parameters)
+        user_id = unquote(user_id)
+
+        logger.info(f"Extracted user_id: {user_id}")
 
         if not user_id:
             return {
