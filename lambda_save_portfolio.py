@@ -94,7 +94,9 @@ def lambda_handler(event, context):
             'allocations': allocations,
             'status': 'active',
             'tags': body.get('tags', []),
-            'notes': body.get('notes', '')
+            'notes': body.get('notes', ''),
+            'last_analysis_date': None,  # Will be set when AI analysis runs
+            'cached_analysis': None  # Will store AI analysis results
         }
 
         # Convert all floats to Decimals for DynamoDB compatibility

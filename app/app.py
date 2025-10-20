@@ -1738,13 +1738,18 @@ def show_portfolio_results():
         total_return = investment_amount * ((1 + avg_annual_return/100) ** timeline_years) - investment_amount
         expected_return_amount = f"+${total_return:,.0f}"
 
+    # Determine header text based on whether this is a saved portfolio or new portfolio
+    is_saved_portfolio = st.session_state.get('current_portfolio_id') is not None
+    header_title = "💼 Your Saved Portfolio" if is_saved_portfolio else "🧠 AI Portfolio Created Successfully!"
+    header_subtitle = "AI analysis updated with current market data and risk assessment" if is_saved_portfolio else "Powered by specialized AI agents analyzing market data, risk factors, and your personal goals"
+
     st.markdown(f"""
     <div class="success-header">
         <div class="success-title">
-            🧠 AI Portfolio Created Successfully!
+            {header_title}
         </div>
         <div class="success-subtitle">
-            Powered by specialized AI agents analyzing market data, risk factors, and your personal goals
+            {header_subtitle}
         </div>
         <div class="badge-row">
             <div class="badge">📊 Risk Profile: {risk_profile}</div>
@@ -3382,13 +3387,63 @@ def show_portfolio_landing():
 def load_and_refresh_portfolio(portfolio):
     """Load saved portfolio and regenerate AI analysis with fresh data."""
 
-    with st.spinner("🔄 Loading portfolio and refreshing analysis..."):
+    # Extract data from saved portfolio
+    allocations = portfolio.get('allocations', [])
+    tickers = [a['ticker'] for a in allocations]
+    weights = [float(a['percentage']) / 100 for a in allocations]  # Convert % to decimal
+    investment_amount = sum(float(a.get('amount', 0)) for a in allocations)
+    user_profile = portfolio.get('preferences', {})
 
-        # Extract data from saved portfolio
-        allocations = portfolio.get('allocations', [])
-        tickers = [a['ticker'] for a in allocations]
-        weights = [float(a['percentage']) / 100 for a in allocations]  # Convert % to decimal
-        investment_amount = sum(float(a.get('amount', 0)) for a in allocations)
+    # Check if we have cached analysis from today
+    from datetime import datetime, date
+    last_analysis_date = portfolio.get('last_analysis_date')
+    cached_analysis = portfolio.get('cached_analysis')
+    today = date.today().isoformat()
+
+    if last_analysis_date == today and cached_analysis:
+        # Use cached analysis from today
+        logger.info("Loading cached portfolio analysis from today")
+        with st.spinner("🔄 Loading your saved portfolio..."):
+            # Load cached data into session state
+            st.session_state.portfolio_output = cached_analysis.get('portfolio_output', 'Portfolio loaded.')
+            st.session_state.portfolio_risk_analysis = cached_analysis.get('risk_analysis')
+            st.session_state.portfolio_risk_crew_result = cached_analysis.get('risk_crew_result')
+            st.session_state.projection_data = cached_analysis.get('projection_data')
+
+            # Set up structured portfolio
+            structured_portfolio = {
+                'tickers': tickers,
+                'weights': weights,
+                'categories': [a.get('category', 'Stock') for a in allocations],
+                'allocations': allocations
+            }
+            st.session_state.structured_portfolio = structured_portfolio
+            st.session_state.investment_amount = investment_amount
+            st.session_state.user_profile = user_profile
+            st.session_state.current_portfolio_id = portfolio.get('portfolio_id')
+
+            # Create mock portfolio_result object
+            class MockResult:
+                def __init__(self):
+                    self.tasks_output = None
+
+            st.session_state.portfolio_result = {
+                'result': MockResult(),
+                'investment_amount': investment_amount,
+                'user_profile': user_profile
+            }
+            st.session_state.portfolio_was_optimized = True
+
+            # Navigate to results
+            st.session_state.show_portfolio_results = True
+            st.session_state.show_portfolio_landing = False
+            st.rerun()
+            return
+
+    # If no cache or stale, regenerate analysis
+    logger.info("Regenerating portfolio analysis (cache miss or stale)")
+    with st.spinner("🔄 Analyzing your portfolio with AI advisors..."):
+
         user_profile = portfolio.get('preferences', {})
 
         # Reconstruct structured portfolio
@@ -3404,16 +3459,47 @@ def load_and_refresh_portfolio(portfolio):
         st.session_state.current_portfolio_id = portfolio.get('portfolio_id')
 
         # STEP 1: Regenerate portfolio insights
-        with st.spinner("🤖 Regenerating portfolio insights with latest market data..."):
+        with st.spinner("🤖 Analyzing your portfolio with AI advisors..."):
             try:
-                from portfoliocrew import PortfolioCrew
+                from portfoliocrew import interpret_optimized_portfolio, parse_portfolio_output
 
-                portfolio_output = PortfolioCrew().generate_portfolio(
-                    user_profile=user_profile,
-                    preferences=user_profile,
-                    override_allocation={'tickers': tickers, 'weights': weights}
+                # Convert weights to dict format
+                weights_dict = {ticker: weight for ticker, weight in zip(tickers, weights)}
+
+                # Estimate metrics for the saved portfolio
+                # These are reasonable defaults; real metrics will be calculated by risk analysis
+                optimization_metrics = {
+                    'expected_return': 0.09,  # 9% default return
+                    'volatility': 0.15,  # 15% volatility
+                    'sharpe_ratio': 0.6
+                }
+
+                # Generate AI narrative for the saved portfolio
+                portfolio_insights_result = interpret_optimized_portfolio(
+                    optimized_weights=weights_dict,
+                    optimization_metrics=optimization_metrics,
+                    investment_amount=investment_amount,
+                    user_profile=user_profile
                 )
-                st.session_state.portfolio_output = portfolio_output
+
+                # Parse and store the insights
+                parsed_insights = parse_portfolio_output(portfolio_insights_result, investment_amount)
+
+                # Update allocations with reasoning from AI
+                if parsed_insights.get('allocations'):
+                    for alloc in allocations:
+                        matching = next((p for p in parsed_insights['allocations']
+                                       if p['ticker'] == alloc['ticker']), None)
+                        if matching:
+                            alloc['reasoning'] = matching.get('reasoning', alloc.get('reasoning', ''))
+                            alloc['category'] = matching.get('category', alloc.get('category', 'Stock'))
+
+                # Store the raw output for display
+                if hasattr(portfolio_insights_result, 'tasks_output') and portfolio_insights_result.tasks_output:
+                    st.session_state.portfolio_output = portfolio_insights_result.tasks_output[0].raw
+                else:
+                    st.session_state.portfolio_output = str(portfolio_insights_result)
+
             except Exception as e:
                 logger.error(f"Error regenerating insights: {str(e)}")
                 st.session_state.portfolio_output = "Portfolio loaded successfully."
@@ -3513,6 +3599,50 @@ def load_and_refresh_portfolio(portfolio):
 
         # Mark that portfolio was "optimized" (loaded from saved)
         st.session_state.portfolio_was_optimized = True
+
+        # Save cached analysis to DynamoDB for faster future loads
+        try:
+            import boto3
+            from decimal import Decimal
+
+            # Helper to convert to Decimal
+            def convert_to_decimal(obj):
+                if isinstance(obj, list):
+                    return [convert_to_decimal(item) for item in obj]
+                elif isinstance(obj, dict):
+                    return {key: convert_to_decimal(value) for key, value in obj.items()}
+                elif isinstance(obj, float):
+                    return Decimal(str(obj))
+                else:
+                    return obj
+
+            # Prepare cached data (only store serializable data)
+            cached_data = {
+                'portfolio_output': st.session_state.get('portfolio_output', ''),
+                'risk_analysis': st.session_state.get('portfolio_risk_analysis'),
+                'projection_data': st.session_state.get('projection_data')
+            }
+
+            # Convert floats to Decimals
+            cached_data = convert_to_decimal(cached_data)
+
+            # Update portfolio in DynamoDB
+            dynamodb = boto3.resource('dynamodb')
+            table_name = os.environ.get('DYNAMODB_TABLE_PORTFOLIOS', 'investforge-portfolios-simple')
+            table = dynamodb.Table(table_name)
+
+            table.update_item(
+                Key={'portfolio_id': portfolio.get('portfolio_id')},
+                UpdateExpression='SET last_analysis_date = :date, cached_analysis = :cache',
+                ExpressionAttributeValues={
+                    ':date': today,
+                    ':cache': cached_data
+                }
+            )
+            logger.info(f"Cached analysis saved for portfolio {portfolio.get('portfolio_id')}")
+        except Exception as e:
+            logger.error(f"Failed to cache analysis: {str(e)}")
+            # Continue anyway - caching is optional
 
         # Navigate to results page
         st.session_state.show_portfolio_results = True
@@ -4681,13 +4811,25 @@ def route_after_login():
         logger.info(f"Has portfolio: {has_portfolio}")
 
         if has_portfolio:
-            logger.info("Routing to portfolio landing page")
-            st.session_state.show_portfolio_landing = True
-            st.session_state.show_onboarding = False
-            st.session_state.show_portfolio_generation = False
-            st.session_state.show_main_app = False
-            logger.info(f"Set show_portfolio_landing={st.session_state.show_portfolio_landing}")
-            return
+            logger.info("User has saved portfolio - loading with analysis")
+            # Fetch the latest portfolio
+            user_email = st.session_state.get('user_email')
+            if user_email:
+                portfolio = api_client.get_latest_portfolio(user_email)
+                if portfolio:
+                    logger.info("Loading saved portfolio with AI analysis")
+                    # Hide all other views
+                    st.session_state.show_portfolio_landing = False
+                    st.session_state.show_onboarding = False
+                    st.session_state.show_portfolio_generation = False
+                    st.session_state.show_main_app = False
+                    # Load portfolio and run/load analysis
+                    load_and_refresh_portfolio(portfolio)
+                    return
+                else:
+                    logger.warning("Failed to fetch portfolio, falling through to next priority")
+            else:
+                logger.warning("No user email, can't fetch portfolio")
 
         # Priority 2: Check if needs onboarding
         logger.info("Checking Priority 2: Needs onboarding")
