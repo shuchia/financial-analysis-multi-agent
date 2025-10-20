@@ -3411,9 +3411,11 @@ def load_and_refresh_portfolio(portfolio):
             st.session_state.projection_data = cached_analysis.get('projection_data')
 
             # Set up structured portfolio
+            amounts = [w * investment_amount for w in weights]
             structured_portfolio = {
                 'tickers': tickers,
                 'weights': weights,
+                'amounts': amounts,
                 'categories': [a.get('category', 'Stock') for a in allocations],
                 'allocations': allocations
             }
@@ -3447,9 +3449,11 @@ def load_and_refresh_portfolio(portfolio):
         user_profile = portfolio.get('preferences', {})
 
         # Reconstruct structured portfolio
+        amounts = [w * investment_amount for w in weights]
         structured_portfolio = {
             'tickers': tickers,
             'weights': weights,
+            'amounts': amounts,
             'categories': [a.get('category', 'Stock') for a in allocations]
         }
 
