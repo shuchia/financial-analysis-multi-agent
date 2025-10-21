@@ -698,12 +698,22 @@ def get_investment_amount_options(age_range: str) -> list:
         ]
 
 
-def show_portfolio_generation_overlay():
-    """Display loading overlay while generating portfolio."""
-    st.markdown("""
+def show_portfolio_generation_overlay(title=None, subtitle=None):
+    """Display loading overlay while generating or analyzing portfolio.
+
+    Args:
+        title: Custom title text (default: "Crafting Your Portfolio")
+        subtitle: Custom subtitle text (default: creation message)
+    """
+    if title is None:
+        title = "Crafting Your Portfolio"
+    if subtitle is None:
+        subtitle = "Our AI is analyzing thousands of market scenarios to create your personalized investment strategy"
+
+    st.markdown(f"""
     <style>
         /* Full-screen overlay */
-        .loading-overlay {
+        .loading-overlay {{
             position: fixed;
             top: 0;
             left: 0;
@@ -715,10 +725,10 @@ def show_portfolio_generation_overlay():
             display: flex;
             align-items: center;
             justify-content: center;
-        }
+        }}
 
         /* Loading content container */
-        .loading-content {
+        .loading-content {{
             text-align: center;
             padding: 3rem;
             background: white;
@@ -726,10 +736,10 @@ def show_portfolio_generation_overlay():
             box-shadow: 0 20px 60px rgba(0,0,0,0.15);
             max-width: 500px;
             border: 2px solid #E1E8ED;
-        }
+        }}
 
         /* Animated spinner */
-        .spinner {
+        .spinner {{
             width: 80px;
             height: 80px;
             margin: 0 auto 2rem;
@@ -738,15 +748,15 @@ def show_portfolio_generation_overlay():
             border-right: 6px solid #1A759F;
             border-radius: 50%;
             animation: spin 1.5s linear infinite;
-        }
+        }}
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        @keyframes spin {{
+            0% {{ transform: rotate(0deg); }}
+            100% {{ transform: rotate(360deg); }}
+        }}
 
         /* Loading text */
-        .loading-title {
+        .loading-title {{
             font-size: 2rem;
             font-weight: 700;
             background: linear-gradient(135deg, #FF6B35 0%, #1A759F 100%);
@@ -754,55 +764,55 @@ def show_portfolio_generation_overlay():
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin-bottom: 1rem;
-        }
+        }}
 
-        .loading-subtitle {
+        .loading-subtitle {{
             font-size: 1.1rem;
             color: #7F8C8D;
             margin-bottom: 2rem;
-        }
+        }}
 
         /* Progress dots animation */
-        .progress-dots {
+        .progress-dots {{
             display: flex;
             justify-content: center;
             gap: 0.5rem;
             margin-top: 1.5rem;
-        }
+        }}
 
-        .progress-dot {
+        .progress-dot {{
             width: 12px;
             height: 12px;
             border-radius: 50%;
             background: linear-gradient(135deg, #FF6B35 0%, #1A759F 100%);
             animation: pulse 1.5s ease-in-out infinite;
-        }
+        }}
 
-        .progress-dot:nth-child(2) {
+        .progress-dot:nth-child(2) {{
             animation-delay: 0.3s;
-        }
+        }}
 
-        .progress-dot:nth-child(3) {
+        .progress-dot:nth-child(3) {{
             animation-delay: 0.6s;
-        }
+        }}
 
-        @keyframes pulse {
-            0%, 100% {
+        @keyframes pulse {{
+            0%, 100% {{
                 opacity: 0.3;
                 transform: scale(0.8);
-            }
-            50% {
+            }}
+            50% {{
                 opacity: 1;
                 transform: scale(1.2);
-            }
-        }
+            }}
+        }}
     </style>
 
     <div class="loading-overlay">
         <div class="loading-content">
             <div class="spinner"></div>
-            <div class="loading-title">Crafting Your Portfolio</div>
-            <div class="loading-subtitle">Our AI is analyzing thousands of market scenarios to create your personalized investment strategy</div>
+            <div class="loading-title">{title}</div>
+            <div class="loading-subtitle">{subtitle}</div>
             <div class="progress-dots">
                 <div class="progress-dot"></div>
                 <div class="progress-dot"></div>
@@ -3403,6 +3413,13 @@ def load_and_refresh_portfolio(portfolio):
     if last_analysis_date == today and cached_analysis:
         # Use cached analysis from today
         logger.info("Loading cached portfolio analysis from today")
+
+        # Show overlay modal for loading cached portfolio
+        show_portfolio_generation_overlay(
+            title="Loading Your Portfolio",
+            subtitle="Retrieving your saved portfolio and today's analysis"
+        )
+
         with st.spinner("🔄 Loading your saved portfolio..."):
             # Load cached data into session state
             st.session_state.portfolio_output = cached_analysis.get('portfolio_output', 'Portfolio loaded.')
@@ -3444,6 +3461,13 @@ def load_and_refresh_portfolio(portfolio):
 
     # If no cache or stale, regenerate analysis
     logger.info("Regenerating portfolio analysis (cache miss or stale)")
+
+    # Show overlay modal for loading saved portfolio
+    show_portfolio_generation_overlay(
+        title="Analyzing Your Portfolio",
+        subtitle="Our AI advisors are conducting a fresh analysis of your saved portfolio with current market data"
+    )
+
     with st.spinner("🔄 Analyzing your portfolio with AI advisors..."):
 
         user_profile = portfolio.get('preferences', {})
@@ -3454,7 +3478,8 @@ def load_and_refresh_portfolio(portfolio):
             'tickers': tickers,
             'weights': weights,
             'amounts': amounts,
-            'categories': [a.get('category', 'Stock') for a in allocations]
+            'categories': [a.get('category', 'Stock') for a in allocations],
+            'allocations': allocations  # Include allocations for insights rendering
         }
 
         st.session_state.structured_portfolio = structured_portfolio
