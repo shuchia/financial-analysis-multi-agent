@@ -202,8 +202,11 @@ def load_custom_css():
             font-size: 16px !important;
         }
 
-        /* Form Submit Buttons */
-        .stFormSubmitButton > button {
+        /* Form Submit Buttons - All Variations */
+        .stFormSubmitButton > button,
+        button[kind="formSubmit"],
+        button[data-testid="stFormSubmitButton"],
+        .stForm button[type="submit"] {
             background: linear-gradient(135deg, var(--primary-color), var(--accent-color)) !important;
             color: var(--text-white) !important;
             border: none !important;
@@ -214,9 +217,19 @@ def load_custom_css():
             transition: all 0.3s ease !important;
         }
 
-        .stFormSubmitButton > button:hover {
+        .stFormSubmitButton > button:hover,
+        button[kind="formSubmit"]:hover,
+        button[data-testid="stFormSubmitButton"]:hover {
             transform: translateY(-2px) !important;
             box-shadow: var(--shadow-hover) !important;
+        }
+
+        /* Override any red button styling */
+        button[kind="primary"],
+        button[data-testid="baseButton-primary"],
+        .stFormSubmitButton > button[kind="primary"] {
+            background: linear-gradient(135deg, #FF6B35, #1A759F) !important;
+            color: white !important;
         }
 
         /* Tab Styles - Larger Font */
@@ -658,15 +671,34 @@ def show_login_signup():
             transition: all 0.3s ease;
             border: none;
         }
-        
+
         .stButton > button[kind="primary"] {
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            color: white;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color)) !important;
+            color: white !important;
         }
-        
+
         .stButton > button[kind="primary"]:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+        }
+
+        /* Style form submit buttons */
+        .stFormSubmitButton > button,
+        button[kind="formSubmit"],
+        button[data-testid="stFormSubmitButton"] {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color)) !important;
+            color: white !important;
+            border-radius: 12px !important;
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 600 !important;
+            padding: 12px 24px !important;
+            transition: all 0.3s ease !important;
+            border: none !important;
+        }
+
+        .stFormSubmitButton > button:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3) !important;
         }
         
         /* Style form containers */
