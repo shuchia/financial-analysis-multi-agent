@@ -1569,12 +1569,12 @@ def show_portfolio_results():
     risk_score = risk_score_raw * 10  # Convert to 0-10 scale
 
     # Parse portfolio data first (needed for projections)
-    # BUT: If portfolio was optimized, use the optimized version from session state instead
-    if st.session_state.get('portfolio_was_optimized', False) and 'structured_portfolio' in st.session_state:
-        # Portfolio was optimized - use the optimized version from session state
+    # If structured_portfolio is in session state (from saved portfolio or optimization), use it
+    if 'structured_portfolio' in st.session_state:
+        # Use structured portfolio from session state (could be saved portfolio or optimized)
         structured_portfolio = st.session_state.structured_portfolio
-        portfolio_output = st.session_state.get('portfolio_output', "Optimized portfolio")
-        logger.info("Using optimized portfolio from session state")
+        portfolio_output = st.session_state.get('portfolio_output', "Portfolio loaded")
+        logger.info("Using portfolio from session state")
     elif hasattr(result, 'tasks_output') and result.tasks_output:
         # First time or not optimized - parse from original result
         portfolio_output = result.tasks_output[0].raw if result.tasks_output else "No portfolio data"
