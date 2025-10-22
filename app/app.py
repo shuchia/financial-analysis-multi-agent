@@ -94,16 +94,36 @@ st.set_page_config(
 
 def load_custom_css():
     """Load InvestForge theme CSS"""
-    # Load unified theme CSS
-    try:
-        with open("app/static/css/investforge-theme.css", "r") as f:
-            theme_css = f.read()
-        st.markdown(f"<style>{theme_css}</style>", unsafe_allow_html=True)
-    except FileNotFoundError:
-        # Load from CDN as fallback
+    import os
+
+    # Try multiple paths for CSS file
+    possible_paths = [
+        "app/static/css/investforge-theme.css",
+        "static/css/investforge-theme.css",
+        os.path.join(os.path.dirname(__file__), "static/css/investforge-theme.css")
+    ]
+
+    css_loaded = False
+    for css_path in possible_paths:
+        try:
+            with open(css_path, "r") as f:
+                theme_css = f.read()
+            st.markdown(f"<style>{theme_css}</style>", unsafe_allow_html=True)
+            css_loaded = True
+            logger.info(f"Loaded CSS from: {css_path}")
+            break
+        except FileNotFoundError:
+            continue
+
+    if not css_loaded:
+        # Inline fallback CSS
+        logger.warning("CSS file not found, using inline styles")
         st.markdown("""
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
         <style>
         :root {
             --primary-color: #FF6B35;
