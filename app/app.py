@@ -93,17 +93,18 @@ st.set_page_config(
 )
 
 def load_custom_css():
-    """Load custom CSS to match landing page styling"""
+    """Load InvestForge theme CSS"""
+    # Load unified theme CSS
     try:
-        with open("app/static/css/custom.css", "r") as f:
-            css = f.read()
-        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+        with open("app/static/css/investforge-theme.css", "r") as f:
+            theme_css = f.read()
+        st.markdown(f"<style>{theme_css}</style>", unsafe_allow_html=True)
     except FileNotFoundError:
-        # Fallback inline CSS with key branding elements
+        # Load from CDN as fallback
         st.markdown("""
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
         :root {
             --primary-color: #FF6B35;
             --secondary-color: #004E89;
@@ -115,24 +116,30 @@ def load_custom_css():
             --border-color: #E1E8ED;
             --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-        
+
         .stApp {
             font-family: var(--font-family) !important;
         }
-        
-        .gradient-text {
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 700;
-        }
-        
+
         .stButton > button[kind="primary"] {
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            color: white;
-            border: none;
-            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color)) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 12px 24px !important;
+            font-weight: 600 !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .stButton > button[kind="primary"]:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3) !important;
+        }
+
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-size: 24px;
+            vertical-align: middle;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -1898,9 +1905,9 @@ def show_portfolio_results():
     </style>
     """, unsafe_allow_html=True)
 
-    # Create 4 tabs
+    # Create 4 tabs with Material Icons
     tab_overview, tab_risk, tab_projections, tab_budget = st.tabs([
-        "📊 Overview",
+        "📊 Overview",  # Will be styled by CSS
         "⚠️ Risk Analysis",
         "📈 Projections",
         "💰 Budget Plan"
