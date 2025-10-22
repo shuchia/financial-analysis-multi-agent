@@ -3490,7 +3490,8 @@ def load_and_refresh_portfolio(portfolio):
         # STEP 1: Regenerate portfolio insights
         with st.spinner("🤖 Analyzing your portfolio with AI advisors..."):
             try:
-                from portfoliocrew import interpret_optimized_portfolio, parse_portfolio_output
+                from portfoliocrew import interpret_optimized_portfolio
+                from utils.portfolio_parser import parse_portfolio_output
 
                 # Convert weights to dict format
                 weights_dict = {ticker: weight for ticker, weight in zip(tickers, weights)}
