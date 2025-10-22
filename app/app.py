@@ -42,27 +42,27 @@ logger = logging.getLogger(__name__)
 
 class ErrorBoundary:
     """Context manager for handling errors gracefully"""
-    
+
     def __init__(self, fallback_message="An error occurred. Please try again."):
         self.fallback_message = fallback_message
         self.error_container = None
-    
+
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             logger.error(f"Error caught: {exc_type.__name__}: {exc_val}")
             logger.error(traceback.format_exc())
-            
+
             st.error(f"""
             ### ❌ {self.fallback_message}
-            
+
             **Error Details:** {exc_type.__name__}: {str(exc_val)}
-            
+
             If this issue persists, please contact support.
             """)
-            
+
             # Log to analytics
             if 'user_data' in st.session_state:
                 user_id = st.session_state.user_data.get('user_id')
@@ -72,9 +72,47 @@ class ErrorBoundary:
                         'error_message': str(exc_val),
                         'location': 'analysis_page'
                     })
-            
+
             return True  # Suppress the exception
         return False
+
+# =====================================
+# Material Icons Helper
+# =====================================
+
+def icon(name: str) -> str:
+    """Render Material Icon (Google Material Symbols Outlined)
+
+    Args:
+        name: Material icon name (e.g., 'assessment', 'trending_up', 'warning')
+
+    Returns:
+        HTML string with Material Icon span
+
+    Common mappings:
+        📊 → assessment, pie_chart
+        📈 → trending_up, show_chart
+        📉 → trending_down
+        ⚠️ → warning
+        💰 → payments, account_balance
+        💼 → work, business_center
+        🎯 → track_changes, flag
+        🔍 → search
+        📚 → menu_book, book
+        👁 → visibility
+        ⬆️ → upgrade, arrow_upward
+        ✅ → check_circle
+        ❌ → cancel, close
+        ⚙️ → settings
+        📋 → assignment, list_alt
+        🔄 → refresh, sync
+        💡 → lightbulb
+        🚀 → rocket_launch
+        🏆 → emoji_events
+        ⏳ → hourglass_empty
+        🌟 → star, grade
+    """
+    return f'<span class="material-symbols-outlined">{name}</span>'
 
 # =====================================
 # Configuration & Setup
@@ -1168,7 +1206,7 @@ def show_onboarding():
         # Single form with all questions
         with st.form("streamlined_onboarding"):
             # Question 1: Age + Timeline Combo
-            st.markdown("### 🎯 I'm investing for...")
+            st.markdown(f"### {icon('track_changes')} I'm investing for...", unsafe_allow_html=True)
 
             col1, col2 = st.columns(2)
             with col1:
@@ -1202,7 +1240,7 @@ def show_onboarding():
             st.markdown("---")
 
             # Question 2: Emergency Fund Status
-            st.markdown("### 💰 My emergency savings situation:")
+            st.markdown(f"### {icon('savings')} My emergency savings situation:", unsafe_allow_html=True)
             emergency_fund = st.radio(
                 "Current emergency fund status:",
                 [
@@ -1218,7 +1256,7 @@ def show_onboarding():
             st.markdown("---")
 
             # Question 3: Initial Investment Amount
-            st.markdown("### 💰 How much can you comfortably invest to start?")
+            st.markdown(f"### {icon('payments')} How much can you comfortably invest to start?", unsafe_allow_html=True)
 
             # Use fixed amount options to avoid form state issues
             # (Dynamic options based on age can cause selectbox value mismatches in Streamlit forms)
@@ -1481,7 +1519,7 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.markdown(f"### 🎯 Your Investment Profile: **{risk_profile['category']}**")
+        st.markdown(f"### {icon('track_changes')} Your Investment Profile: **{risk_profile['category']}**", unsafe_allow_html=True)
         st.markdown(f"*{risk_profile['description']}*")
         
         st.markdown("#### 📊 Recommended Asset Allocation")
@@ -1553,7 +1591,7 @@ def generate_portfolio_with_progress():
                 st.rerun()
 
         st.markdown("---")
-        st.markdown("### 💼 Your Personalized Portfolio")
+        st.markdown(f"### {icon('work')} Your Personalized Portfolio", unsafe_allow_html=True)
 
     # Initialize progress tracking
     progress_placeholder = st.empty()
@@ -1653,7 +1691,7 @@ def generate_portfolio_with_progress():
     except Exception as e:
         status_placeholder.error(f"❌ Error generating portfolio: {str(e)}")
         st.error("Failed to generate portfolio. Please try again.")
-        if st.button("🔄 Retry", type="primary"):
+        if st.button(f"{icon('refresh')} Retry", type="primary", unsafe_allow_html=True):
             st.session_state.show_portfolio_generation = False
             st.rerun()
 
@@ -1823,7 +1861,7 @@ def show_portfolio_results():
     """Display the generated portfolio results with progressive enhancements."""
     if 'portfolio_result' not in st.session_state:
         st.error("No portfolio results found. Please generate a portfolio first.")
-        if st.button("🔄 Generate Portfolio", type="primary"):
+        if st.button(f"{icon('refresh')} Generate Portfolio", type="primary", unsafe_allow_html=True):
             st.session_state.show_portfolio_results = False
             st.session_state.show_portfolio_generation = True
             st.rerun()
@@ -1871,7 +1909,7 @@ def show_portfolio_results():
     else:
         logger.error(f"Unable to parse portfolio - result structure: {result}")
         st.error("Unable to parse portfolio results.")
-        if st.button("🔄 Try Again", type="primary"):
+        if st.button(f"{icon('refresh')} Try Again", type="primary", unsafe_allow_html=True):
             st.session_state.show_portfolio_results = False
             st.session_state.show_portfolio_generation = True
             st.rerun()
@@ -1888,7 +1926,7 @@ def show_portfolio_results():
         - Network or API issues
         """)
         st.info("💡 Please try generating the portfolio again or contact support if the issue persists.")
-        if st.button("🔄 Try Again", type="primary"):
+        if st.button(f"{icon('refresh')} Try Again", type="primary", unsafe_allow_html=True):
             st.session_state.show_portfolio_results = False
             st.session_state.show_portfolio_generation = True
             # Clear the problematic result
@@ -2187,10 +2225,10 @@ def show_portfolio_results():
 
     # Create 4 tabs with Material Icons
     tab_overview, tab_risk, tab_projections, tab_budget = st.tabs([
-        "📊 Overview",  # Will be styled by CSS
-        "⚠️ Risk Analysis",
-        "📈 Projections",
-        "💰 Budget Plan"
+        f"{icon('assessment')} Overview",
+        f"{icon('warning')} Risk Analysis",
+        f"{icon('trending_up')} Projections",
+        f"{icon('payments')} Budget Plan"
     ])
 
     # ============================================
@@ -2204,9 +2242,9 @@ def show_portfolio_results():
 
         # Conditional header based on whether portfolio was optimized
         if st.session_state.get('portfolio_was_optimized', False):
-            st.markdown("### 📊 Optimized Portfolio Allocation")
+            st.markdown(f"### {icon('assessment')} Optimized Portfolio Allocation", unsafe_allow_html=True)
         else:
-            st.markdown("### 📊 Suggested Portfolio Allocation")
+            st.markdown(f"### {icon('pie_chart')} Suggested Portfolio Allocation", unsafe_allow_html=True)
 
         # Display allocation table with enhanced design
         if structured_portfolio['tickers']:
@@ -2353,7 +2391,7 @@ def show_portfolio_results():
             with col2:
                 # Hide optimize button if portfolio was already optimized
                 if not st.session_state.get('portfolio_was_optimized', False):
-                    if st.button("🎯 Smart Optimize", type="primary", use_container_width=True,
+                    if st.button(f"{icon('track_changes')} Smart Optimize", type="primary", use_container_width=True, unsafe_allow_html=True,
                                 help="Uses quantitative models to improve your returns"):
                         # Trigger optimization
                         with st.spinner("🔄 Optimizing portfolio allocation..."):
@@ -2539,7 +2577,7 @@ def show_portfolio_results():
                         # Confirmation buttons
                         col1, col2 = st.columns([1, 1])
                         with col1:
-                            if st.button("✅ Confirm & Apply", type="primary", use_container_width=True):
+                            if st.button(f"{icon('check_circle')} Confirm & Apply", type="primary", use_container_width=True, unsafe_allow_html=True):
                                 apply_optimized_portfolio()
                                 st.rerun()
                         with col2:
@@ -2754,7 +2792,7 @@ def show_portfolio_results():
                                 st.code(traceback.format_exc())
 
                     # Show the apply button
-                    if st.button("✅ Apply Optimized Allocation", type="primary"):
+                    if st.button(f"{icon('check_circle')} Apply Optimized Allocation", type="primary", unsafe_allow_html=True):
                         confirm_apply_optimization()
 
                 # SECTION C: AI Narrative (Expandable)
@@ -2888,7 +2926,7 @@ def show_portfolio_results():
 
             with col1:
                 # Asset Allocation - Show each holding with reasoning
-                st.markdown('<div class="insight-category"><div class="insight-category-title">🎯 Asset Allocation</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="insight-category"><div class="insight-category-title">{icon("track_changes")} Asset Allocation</div>', unsafe_allow_html=True)
 
                 # Use structured portfolio data (already parsed correctly)
                 for alloc in structured_portfolio.get('allocations', []):
@@ -2905,7 +2943,7 @@ def show_portfolio_results():
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Performance Outlook - Show expected return and KPIs
-                st.markdown('<div class="insight-category"><div class="insight-category-title">📊 Performance Outlook</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="insight-category"><div class="insight-category-title">{icon("assessment")} Performance Outlook</div>', unsafe_allow_html=True)
 
                 if expected_return_range:
                     st.markdown(f'<div class="insight-item">Expected annual return: {expected_return_range}</div>', unsafe_allow_html=True)
@@ -2928,7 +2966,7 @@ def show_portfolio_results():
 
             with col2:
                 # Risk Management - Show portfolio-specific risks
-                st.markdown('<div class="insight-category"><div class="insight-category-title">⚠️ Risk Management</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="insight-category"><div class="insight-category-title">{icon("warning")} Risk Management</div>', unsafe_allow_html=True)
 
                 if risk_items:
                     for risk in risk_items[:5]:  # Show up to 5 risks
@@ -2942,7 +2980,7 @@ def show_portfolio_results():
                 st.markdown('</div>', unsafe_allow_html=True)
 
                 # Cost Efficiency - Show specific expense ratios and fee insights
-                st.markdown('<div class="insight-category"><div class="insight-category-title">💰 Cost Efficiency</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="insight-category"><div class="insight-category-title">{icon("payments")} Cost Efficiency</div>', unsafe_allow_html=True)
 
                 if cost_items:
                     for cost_item in cost_items[:4]:  # Show up to 4 cost items
@@ -3149,7 +3187,7 @@ def show_portfolio_results():
     # TAB 3: PROJECTIONS
     # ============================================
     with tab_projections:
-        st.markdown("### 📈 Performance Projections")
+        st.markdown(f"### {icon('trending_up')} Performance Projections", unsafe_allow_html=True)
 
         # Display performance chart if we have projection data
         if projection_data:
@@ -3163,24 +3201,27 @@ def show_portfolio_results():
                 summary = projection_data['summary']
 
                 with col1:
+                    st.markdown(f"{icon('trending_down')} **Conservative Scenario**", unsafe_allow_html=True)
                     st.metric(
-                        "📊 Conservative Scenario",
+                        "",
                         summary.get('conservative_final_value', 'N/A'),
                         summary.get('conservative_total_return', 'N/A'),
                         help="If market underperforms"
                     )
 
                 with col2:
+                    st.markdown(f"{icon('show_chart')} **Expected Scenario**", unsafe_allow_html=True)
                     st.metric(
-                        "📊 Expected Scenario",
+                        "",
                         summary.get('expected_final_value', 'N/A'),
                         summary.get('expected_total_return', 'N/A'),
                         help="Most likely outcome"
                     )
 
                 with col3:
+                    st.markdown(f"{icon('trending_up')} **Optimistic Scenario**", unsafe_allow_html=True)
                     st.metric(
-                        "📊 Optimistic Scenario",
+                        "",
                         summary.get('optimistic_final_value', 'N/A'),
                         summary.get('optimistic_total_return', 'N/A'),
                         help="If market outperforms"
@@ -3226,7 +3267,7 @@ def show_portfolio_results():
     # TAB 4: BUDGET PLAN
     # ============================================
     with tab_budget:
-        st.markdown("### 💰 Budget Plan & Next Steps")
+        st.markdown(f"### {icon('payments')} Budget Plan & Next Steps", unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
 
@@ -3524,7 +3565,7 @@ def show_portfolio_results():
                         else:
                             st.warning(f"📉 **{rec['ticker']}**: Decrease by {abs(rec['percentage_change']):.1f}% (${rec['dollar_amount']:,.2f})")
                 
-                    if st.button("✅ Apply Optimized Allocation", type="primary"):
+                    if st.button(f"{icon('check_circle')} Apply Optimized Allocation", type="primary", unsafe_allow_html=True):
                         st.info("🚧 Feature coming soon: Apply optimization and rebalance portfolio")
 
     # ============================================
@@ -3654,7 +3695,7 @@ def show_portfolio_landing():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("🔍 View Full Analysis", type="primary", use_container_width=True):
+        if st.button(f"{icon('search')} View Full Analysis", type="primary", use_container_width=True, unsafe_allow_html=True):
             # Will be implemented in Phase 4
             load_and_refresh_portfolio(portfolio)
 
@@ -4314,7 +4355,7 @@ def show_action_plan_step():
     # Save preferences
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🚀 Complete Setup & Start Analysis", type="primary", use_container_width=True):
+        if st.button(f"{icon('rocket_launch')} Complete Setup & Start Analysis", type="primary", use_container_width=True, unsafe_allow_html=True):
             # Save all onboarding data as user preferences
             save_enhanced_user_preferences(st.session_state.onboarding_data)
             st.session_state.onboarding_complete = True
@@ -4890,7 +4931,7 @@ def show_beginner_analysis_interface():
             del st.session_state.suggested_ticker
     
     with col2:
-        analyze_button = st.button("🔍 Analyze", type="primary", use_container_width=True)
+        analyze_button = st.button(f"{icon('search')} Analyze", type="primary", use_container_width=True, unsafe_allow_html=True)
     
     # Educational tips for beginners
     with st.expander("🎓 New to stock analysis? Click here for tips!", expanded=False):
@@ -4936,7 +4977,7 @@ def show_standard_analysis_interface():
         ).upper()
     
     with col2:
-        analyze_button = st.button("🔍 Analyze", type="primary", use_container_width=True)
+        analyze_button = st.button(f"{icon('search')} Analyze", type="primary", use_container_width=True, unsafe_allow_html=True)
     
     # Run analysis
     if analyze_button and ticker:
@@ -5562,13 +5603,18 @@ def display_analysis_results(ticker: str, tutorial_mode: bool = False):
     # Create tabs for results with tutorial enhancements
     if tutorial_mode:
         tab1, tab2, tab3, tab4 = st.tabs([
-            "📊 Overview (Start Here!)", 
-            "📈 Technical Analysis", 
-            "💰 Company Finances", 
-            "🤖 AI Insights"
+            f"{icon('assessment')} Overview (Start Here!)",
+            f"{icon('show_chart')} Technical Analysis",
+            f"{icon('account_balance')} Company Finances",
+            f"{icon('psychology')} AI Insights"
         ])
     else:
-        tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "📈 Technical", "💰 Fundamental", "🤖 AI Insights"])
+        tab1, tab2, tab3, tab4 = st.tabs([
+            f"{icon('assessment')} Overview",
+            f"{icon('show_chart')} Technical",
+            f"{icon('account_balance')} Fundamental",
+            f"{icon('psychology')} AI Insights"
+        ])
     
     data = result_data['data']
     
@@ -5714,7 +5760,7 @@ def display_technical_tab(ticker: str, data: Dict[str, Any]):
 def display_fundamental_tab(ticker: str, data: Dict[str, Any]):
     """Display fundamental analysis results."""
     
-    st.markdown("### 💰 Company Finances")
+    st.markdown(f"### {icon('account_balance')} Company Finances", unsafe_allow_html=True)
     
     # Check if we have real crew analysis data first
     if 'analysis' in data and data['analysis']:
@@ -5861,7 +5907,7 @@ def display_ai_insights(ticker: str):
 
 def display_tutorial_overview_tab(ticker: str, data: Dict[str, Any]):
     """Display overview with educational explanations for beginners using actual analysis data."""
-    st.markdown("### 📊 Company Overview - What This Tells You")
+    st.markdown(f"### {icon('business')} Company Overview - What This Tells You", unsafe_allow_html=True)
     
     # Educational introduction
     st.info("🎓 **Learning Goal**: Understand the basics of what makes a company valuable and how to read key metrics.")
@@ -5949,7 +5995,7 @@ def display_tutorial_overview_tab(ticker: str, data: Dict[str, Any]):
 
 def display_tutorial_technical_tab(ticker: str, data: Dict[str, Any]):
     """Display technical analysis with educational explanations using actual analysis data."""
-    st.markdown("### 📈 Technical Analysis - Reading Price Charts")
+    st.markdown(f"### {icon('show_chart')} Technical Analysis - Reading Price Charts", unsafe_allow_html=True)
     
     st.info("🎓 **Learning Goal**: Understand how to read stock charts and identify trends.")
     
