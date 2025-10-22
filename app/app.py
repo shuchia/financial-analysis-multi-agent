@@ -116,7 +116,7 @@ def load_custom_css():
             continue
 
     if not css_loaded:
-        # Inline fallback CSS
+        # Inline fallback CSS - Full InvestForge Theme
         logger.warning("CSS file not found, using inline styles")
         st.markdown("""
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
@@ -125,41 +125,177 @@ def load_custom_css():
 
         st.markdown("""
         <style>
+        /* InvestForge Theme - CSS Variables */
         :root {
             --primary-color: #FF6B35;
+            --primary-hover: #FF8255;
             --secondary-color: #004E89;
             --accent-color: #1A759F;
+            --success-color: #00BA6D;
+            --warning-color: #F5B800;
+            --danger-color: #E74C3C;
             --text-primary: #2C3E50;
             --text-secondary: #7F8C8D;
+            --text-white: #FFFFFF;
             --bg-primary: #FFFFFF;
             --bg-secondary: #F8F9FA;
             --border-color: #E1E8ED;
+            --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.08);
+            --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.12);
+            --shadow-hover: 0 8px 25px rgba(255, 107, 53, 0.3);
+            --border-radius: 8px;
             --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
+        /* Global Font */
         .stApp {
             font-family: var(--font-family) !important;
         }
 
-        .stButton > button[kind="primary"] {
+        /* Primary Buttons */
+        .stButton > button[kind="primary"],
+        .stButton > button[data-testid="baseButton-primary"] {
             background: linear-gradient(135deg, var(--primary-color), var(--accent-color)) !important;
-            color: white !important;
+            color: var(--text-white) !important;
             border: none !important;
-            border-radius: 8px !important;
+            border-radius: var(--border-radius) !important;
             padding: 12px 24px !important;
             font-weight: 600 !important;
+            font-size: 16px !important;
+            transition: all 0.3s ease !important;
+            box-shadow: var(--shadow-light) !important;
+        }
+
+        .stButton > button[kind="primary"]:hover,
+        .stButton > button[data-testid="baseButton-primary"]:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: var(--shadow-hover) !important;
+        }
+
+        /* Secondary Buttons */
+        .stButton > button[kind="secondary"],
+        .stButton > button[data-testid="baseButton-secondary"] {
+            background: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+            border: 2px solid var(--border-color) !important;
+            border-radius: var(--border-radius) !important;
+            padding: 12px 24px !important;
+            font-weight: 600 !important;
+            font-size: 16px !important;
             transition: all 0.3s ease !important;
         }
 
-        .stButton > button[kind="primary"]:hover {
+        .stButton > button[kind="secondary"]:hover,
+        .stButton > button[data-testid="baseButton-secondary"]:hover {
+            background: var(--bg-primary) !important;
+            border-color: var(--primary-color) !important;
             transform: translateY(-2px) !important;
-            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3) !important;
         }
 
+        /* All Buttons General */
+        .stButton > button {
+            border-radius: var(--border-radius) !important;
+            font-family: var(--font-family) !important;
+            font-weight: 600 !important;
+            padding: 12px 24px !important;
+            transition: all 0.3s ease !important;
+            font-size: 16px !important;
+        }
+
+        /* Form Submit Buttons */
+        .stFormSubmitButton > button {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color)) !important;
+            color: var(--text-white) !important;
+            border: none !important;
+            border-radius: var(--border-radius) !important;
+            padding: 12px 24px !important;
+            font-weight: 600 !important;
+            font-size: 16px !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .stFormSubmitButton > button:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: var(--shadow-hover) !important;
+        }
+
+        /* Tab Styles - Larger Font */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 16px;
+            background: transparent;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            font-family: var(--font-family) !important;
+            font-size: 18px !important;
+            font-weight: 600 !important;
+            color: var(--text-secondary) !important;
+            padding: 16px 24px !important;
+            border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+            transition: all 0.15s ease !important;
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .stTabs [data-baseweb="tab"]:hover {
+            color: var(--primary-color) !important;
+            background: rgba(255, 107, 53, 0.05) !important;
+        }
+
+        .stTabs [aria-selected="true"] {
+            color: var(--primary-color) !important;
+            background: rgba(255, 107, 53, 0.1) !important;
+            font-weight: 700 !important;
+        }
+
+        .stTabs [data-baseweb="tab-highlight"] {
+            background: var(--primary-color) !important;
+            height: 3px !important;
+        }
+
+        /* Input Fields */
+        .stTextInput > div > div > input,
+        .stTextArea > div > div > textarea {
+            border: 2px solid var(--border-color) !important;
+            border-radius: var(--border-radius) !important;
+            padding: 14px 16px !important;
+            font-family: var(--font-family) !important;
+            font-size: 16px !important;
+            transition: all 0.3s ease !important;
+            background: var(--bg-primary) !important;
+        }
+
+        .stTextInput > div > div > input:focus,
+        .stTextArea > div > div > textarea:focus {
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1) !important;
+            outline: none !important;
+        }
+
+        /* Material Icons */
         .material-symbols-outlined {
             font-family: 'Material Symbols Outlined';
+            font-weight: 400;
             font-size: 24px;
+            display: inline-block;
             vertical-align: middle;
+            line-height: 1;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .stTabs [data-baseweb="tab"] {
+                font-size: 16px !important;
+                padding: 12px 16px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stTabs [data-baseweb="tab"] {
+                font-size: 14px !important;
+                padding: 10px 12px !important;
+            }
         }
         </style>
         """, unsafe_allow_html=True)
