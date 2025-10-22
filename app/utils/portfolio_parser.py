@@ -42,8 +42,9 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
         # Common patterns for parsing - enhanced to capture category
         # Pattern 1: "TICKER - XX% ($X,XXX) - Category/Sector - reasoning"
         # or "TICKER (Category) - XX% ($X,XXX) - reasoning"
-        # Updated to capture multi-line reasoning - stops at double newline or next ticker
-        pattern1 = r'([A-Z]{2,5})(?:\s*\(([^)]+)\))?\s*[-:]\s*(\d+(?:\.\d+)?)\s*%\s*\(\$?([\d,]+(?:\.\d+)?)\)\s*(?:[-:]\s*([^-\n]+?))?\s*(?:[-:]\s*(.+?))?(?=\n\n|\n[A-Z]{2,5}\s*[-:(]|##|\Z)'
+        # Updated to capture multi-line reasoning - improved to capture full sentences
+        # More specific lookahead: only stop at actual new allocation line (ticker with % and $) or section headers
+        pattern1 = r'([A-Z]{2,5})(?:\s*\(([^)]+)\))?\s*[-:]\s*(\d+(?:\.\d+)?)\s*%\s*\(\$?([\d,]+(?:\.\d+)?)\)\s*(?:[-:]\s*([^-\n]+?))?\s*(?:[-:]\s*(.+?))?(?=\n+[A-Z]{2,5}(?:\s*\([^)]+\))?\s*[-:]\s*\d+(?:\.\d+)?%|##|\Z)'
         
         # Pattern 2: "TICKER: XX% allocation ($X,XXX) - Category"
         pattern2 = r'([A-Z]{2,5}):\s*(\d+(?:\.\d+)?)\s*%.*?\(\$?([\d,]+(?:\.\d+)?)\)(?:\s*[-:]\s*([^-\n]+))?'

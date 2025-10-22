@@ -6,6 +6,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import re
+import os
 from datetime import datetime, timedelta
 import yfinance as yf
 from urllib.parse import parse_qs, urlparse
@@ -3451,7 +3452,8 @@ def load_and_refresh_portfolio(portfolio):
                 'investment_amount': investment_amount,
                 'user_profile': user_profile
             }
-            st.session_state.portfolio_was_optimized = True
+            # Allow optimization once per session for saved portfolios
+            st.session_state.portfolio_was_optimized = False
 
             # Navigate to results
             st.session_state.show_portfolio_results = True
@@ -3627,8 +3629,8 @@ def load_and_refresh_portfolio(portfolio):
             'user_profile': user_profile
         }
 
-        # Mark that portfolio was "optimized" (loaded from saved)
-        st.session_state.portfolio_was_optimized = True
+        # Allow optimization once per session for saved portfolios
+        st.session_state.portfolio_was_optimized = False
 
         # Save cached analysis to DynamoDB for faster future loads
         try:
