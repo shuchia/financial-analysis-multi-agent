@@ -432,11 +432,18 @@ def render_investforge_header(title="InvestForge", subtitle="Forge Your Financia
 
 
 def render_horizontal_nav():
-    """Render horizontal navigation bar at the top"""
+    """Render horizontal navigation bar at the top - Link Style with Material Icons"""
     # Get logo
     logo_b64 = get_logo_base64()
 
-    # Navbar styling with fixed widths to prevent wrapping
+    # Determine active page
+    current_page = 'portfolio'  # Default
+    if st.session_state.get('show_main_app'):
+        current_page = 'analyze'
+    elif st.session_state.get('show_portfolio_results') or st.session_state.get('show_portfolio_landing'):
+        current_page = 'portfolio'
+
+    # Navbar styling - Link style navigation
     st.markdown("""
     <style>
     /* Hide default Streamlit header */
@@ -444,78 +451,167 @@ def render_horizontal_nav():
         display: none;
     }
 
-    /* Streamlit button styling for navbar */
-    .stButton button {
-        white-space: nowrap !important;
-        padding: 0.375rem 0.75rem !important;
-        font-size: 0.875rem !important;
-        font-weight: 500 !important;
-        min-width: fit-content !important;
+    /* Navigation Bar Container */
+    .investforge-topnav {
+        background: #FFFFFF;
+        padding: 12px 24px;
+        border-bottom: 1px solid #E1E8ED;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        gap: 40px;
+        margin-bottom: 24px;
     }
 
-    /* Fix column gaps */
-    [data-testid="column"] {
-        padding: 0 0.25rem !important;
+    /* Logo Section */
+    .investforge-topnav-logo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 18px;
+        color: #2C3E50;
+    }
+
+    /* Navigation Links Container */
+    .investforge-topnav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        flex: 1;
+    }
+
+    /* Individual Nav Links */
+    .investforge-topnav-link {
+        text-decoration: none;
+        color: #7F8C8D;
+        font-weight: 500;
+        font-size: 15px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        background: transparent;
+        border: none;
+    }
+
+    .investforge-topnav-link:hover {
+        color: #FF6B35;
+        background: rgba(255, 107, 53, 0.08);
+    }
+
+    .investforge-topnav-link.active {
+        color: #FF6B35;
+        font-weight: 600;
+        background: rgba(255, 107, 53, 0.12);
+    }
+
+    /* Material Icons in Nav */
+    .investforge-topnav-link .material-symbols-outlined {
+        font-size: 20px;
+    }
+
+    /* Search Bar */
+    .investforge-topnav-search {
+        flex: 1;
+        max-width: 300px;
+    }
+
+    /* Upgrade Button */
+    .investforge-topnav-upgrade {
+        background: linear-gradient(135deg, #FF6B35, #1A759F);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .investforge-topnav-upgrade:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    }
+
+    /* Hide default Streamlit buttons in nav */
+    [data-testid="column"] .stButton {
+        display: none;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .investforge-topnav-links {
+            display: none;
+        }
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # Create navbar with better column proportions
-    cols = st.columns([1.2, 0.7, 0.7, 0.7, 0.7, 0.7, 2, 0.8, 0.4])
+    # Render navigation HTML
+    nav_html = f"""
+    <div class="investforge-topnav">
+        <div class="investforge-topnav-logo">
+            {'<img src="data:image/png;base64,' + logo_b64 + '" style="height: 28px;" alt="InvestForge">' if logo_b64 else '<span class="material-symbols-outlined">trending_up</span>'}
+            <span>InvestForge</span>
+        </div>
 
-    with cols[0]:
-        if logo_b64:
-            st.markdown(f"""
-            <div style='display: flex; align-items: center; gap: 0.5rem; color: #2C3E50; font-weight: 600; padding-top: 0.25rem;'>
-                <img src='data:image/png;base64,{logo_b64}' style='height: 28px;' alt='InvestForge'>
-                <span>InvestForge</span>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <div style='color: #2C3E50; font-weight: 600; padding-top: 0.25rem;'>⚒️ InvestForge</div>
-            """, unsafe_allow_html=True)
+        <div class="investforge-topnav-links">
+            <a class="investforge-topnav-link {'active' if current_page == 'portfolio' else ''}" id="nav-portfolio">
+                <span class="material-symbols-outlined">pie_chart</span>
+                Portfolio
+            </a>
+            <a class="investforge-topnav-link" id="nav-watchlist">
+                <span class="material-symbols-outlined">visibility</span>
+                Watchlist
+            </a>
+            <a class="investforge-topnav-link {'active' if current_page == 'analyze' else ''}" id="nav-analyze">
+                <span class="material-symbols-outlined">search</span>
+                Analyze Stocks
+            </a>
+            <a class="investforge-topnav-link" id="nav-learn">
+                <span class="material-symbols-outlined">school</span>
+                Learn
+            </a>
+            <a class="investforge-topnav-link" id="nav-budget">
+                <span class="material-symbols-outlined">payments</span>
+                Budget
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Navigation click handlers
+        document.getElementById('nav-portfolio')?.addEventListener('click', () => {{
+            window.location.href = '?nav=portfolio';
+        }});
+        document.getElementById('nav-analyze')?.addEventListener('click', () => {{
+            window.location.href = '?nav=analyze';
+        }});
+        document.getElementById('nav-watchlist')?.addEventListener('click', () => {{
+            alert('Watchlist feature coming soon!');
+        }});
+        document.getElementById('nav-learn')?.addEventListener('click', () => {{
+            alert('Educational resources coming soon!');
+        }});
+        document.getElementById('nav-budget')?.addEventListener('click', () => {{
+            alert('Budget planning feature coming soon!');
+        }});
+    </script>
+    """
+
+    st.markdown(nav_html, unsafe_allow_html=True)
+
+    # Add search and user controls below navigation
+    cols = st.columns([8, 2, 1])
 
     with cols[1]:
-        if st.button("🏠 Portfolio", key="nav_portfolio", use_container_width=True):
-            # Reset all nav flags and route to portfolio dashboard
-            st.session_state.show_main_app = False
-            st.session_state.show_portfolio_generation = False
-            st.session_state.show_portfolio_results = False
-            st.session_state.show_portfolio_landing = False
-            # Route based on user's portfolio status
-            route_after_login()
-            st.rerun()
+        search_query = st.text_input("🔍", placeholder="Search companies...", label_visibility="collapsed", key="nav_search")
 
     with cols[2]:
-        if st.button("👁 Watchlist", key="nav_watchlist", use_container_width=True):
-            st.info("Watchlist feature coming soon!")
-
-    with cols[3]:
-        if st.button("🔍 Analyze Stocks", key="nav_discover", use_container_width=True):
-            # Goes to stock analysis (old main app)
-            st.session_state.show_main_app = True
-            st.session_state.show_portfolio_generation = False
-            st.session_state.show_portfolio_results = False
-            st.session_state.show_portfolio_landing = False
-            st.rerun()
-
-    with cols[4]:
-        if st.button("📚 Learn", key="nav_learn", use_container_width=True):
-            st.info("Educational resources coming soon!")
-
-    with cols[5]:
-        if st.button("💰 Budget", key="nav_budget", use_container_width=True):
-            st.info("Budget planning feature coming soon!")
-
-    with cols[6]:
-        search_query = st.text_input("🔍 Search", placeholder="Search companies...", label_visibility="collapsed", key="nav_search")
-
-    with cols[7]:
-        if st.button("⬆️ Upgrade", key="nav_upgrade", type="primary", use_container_width=True):
-            st.info("Upgrade feature coming soon!")
-
-    with cols[8]:
         # User dropdown
         if st.session_state.get('authenticated'):
             user_menu = st.selectbox(
@@ -531,10 +627,6 @@ def render_horizontal_nav():
                 st.session_state.authenticated = False
                 st.session_state.user_email = None
                 st.rerun()
-        else:
-            st.markdown("<div style='text-align: center; padding-top: 0.25rem;'>👤</div>", unsafe_allow_html=True)
-
-    st.markdown("<hr style='margin: 0; border: none; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
 
 
 # =====================================
