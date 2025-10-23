@@ -589,57 +589,56 @@ def render_horizontal_nav():
     </style>
     """, unsafe_allow_html=True)
 
-    # Render navigation HTML
+    # Render navigation HTML using components.html for better rendering
+    logo_img = f'<img src="data:image/png;base64,{logo_b64}" style="height: 28px;" alt="InvestForge">' if logo_b64 else '<span class="material-symbols-outlined">trending_up</span>'
+
     nav_html = f"""
-    <div class="investforge-topnav">
-        <div class="investforge-topnav-logo">
-            {'<img src="data:image/png;base64,' + logo_b64 + '" style="height: 28px;" alt="InvestForge">' if logo_b64 else '<span class="material-symbols-outlined">trending_up</span>'}
-            <span>InvestForge</span>
-        </div>
-
-        <div class="investforge-topnav-links">
-            <a class="investforge-topnav-link {'active' if current_page == 'portfolio' else ''}" id="nav-portfolio">
-                <span class="material-symbols-outlined">pie_chart</span>
-                Portfolio
-            </a>
-            <a class="investforge-topnav-link" id="nav-watchlist">
-                <span class="material-symbols-outlined">visibility</span>
-                Watchlist
-            </a>
-            <a class="investforge-topnav-link {'active' if current_page == 'analyze' else ''}" id="nav-analyze">
-                <span class="material-symbols-outlined">search</span>
-                Analyze Stocks
-            </a>
-            <a class="investforge-topnav-link" id="nav-learn">
-                <span class="material-symbols-outlined">school</span>
-                Learn
-            </a>
-            <a class="investforge-topnav-link" id="nav-budget">
-                <span class="material-symbols-outlined">payments</span>
-                Budget
-            </a>
-        </div>
+<div class="investforge-topnav">
+    <div class="investforge-topnav-logo">
+        {logo_img}
+        <span>InvestForge</span>
     </div>
-
-    <script>
-        // Navigation click handlers
-        document.getElementById('nav-portfolio')?.addEventListener('click', () => {{
-            window.location.href = '?nav=portfolio';
-        }});
-        document.getElementById('nav-analyze')?.addEventListener('click', () => {{
-            window.location.href = '?nav=analyze';
-        }});
-        document.getElementById('nav-watchlist')?.addEventListener('click', () => {{
-            alert('Watchlist feature coming soon!');
-        }});
-        document.getElementById('nav-learn')?.addEventListener('click', () => {{
-            alert('Educational resources coming soon!');
-        }});
-        document.getElementById('nav-budget')?.addEventListener('click', () => {{
-            alert('Budget planning feature coming soon!');
-        }});
-    </script>
-    """
+    <div class="investforge-topnav-links">
+        <a class="investforge-topnav-link {'active' if current_page == 'portfolio' else ''}" id="nav-portfolio">
+            <span class="material-symbols-outlined">pie_chart</span>
+            Portfolio
+        </a>
+        <a class="investforge-topnav-link" id="nav-watchlist">
+            <span class="material-symbols-outlined">visibility</span>
+            Watchlist
+        </a>
+        <a class="investforge-topnav-link {'active' if current_page == 'analyze' else ''}" id="nav-analyze">
+            <span class="material-symbols-outlined">search</span>
+            Analyze Stocks
+        </a>
+        <a class="investforge-topnav-link" id="nav-learn">
+            <span class="material-symbols-outlined">school</span>
+            Learn
+        </a>
+        <a class="investforge-topnav-link" id="nav-budget">
+            <span class="material-symbols-outlined">payments</span>
+            Budget
+        </a>
+    </div>
+</div>
+<script>
+    document.getElementById('nav-portfolio')?.addEventListener('click', () => {{
+        window.location.href = '?nav=portfolio';
+    }});
+    document.getElementById('nav-analyze')?.addEventListener('click', () => {{
+        window.location.href = '?nav=analyze';
+    }});
+    document.getElementById('nav-watchlist')?.addEventListener('click', () => {{
+        alert('Watchlist feature coming soon!');
+    }});
+    document.getElementById('nav-learn')?.addEventListener('click', () => {{
+        alert('Educational resources coming soon!');
+    }});
+    document.getElementById('nav-budget')?.addEventListener('click', () => {{
+        alert('Budget planning feature coming soon!');
+    }});
+</script>
+"""
 
     st.markdown(nav_html, unsafe_allow_html=True)
 
@@ -1556,7 +1555,7 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
     # Center the button
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("💼 Generate My Portfolio", type="primary", use_container_width=True, key="generate_portfolio_btn"):
+        if st.button(":material/work: Generate My Portfolio", type="primary", use_container_width=True, key="generate_portfolio_btn"):
             st.session_state.show_portfolio_generation = True
             st.session_state.show_onboarding = False
             st.rerun()
@@ -1691,7 +1690,7 @@ def generate_portfolio_with_progress():
     except Exception as e:
         status_placeholder.error(f"❌ Error generating portfolio: {str(e)}")
         st.error("Failed to generate portfolio. Please try again.")
-        if st.button(f"{icon('refresh')} Retry", type="primary", unsafe_allow_html=True):
+        if st.button(":material/refresh: Retry", type="primary"):
             st.session_state.show_portfolio_generation = False
             st.rerun()
 
@@ -1861,7 +1860,7 @@ def show_portfolio_results():
     """Display the generated portfolio results with progressive enhancements."""
     if 'portfolio_result' not in st.session_state:
         st.error("No portfolio results found. Please generate a portfolio first.")
-        if st.button(f"{icon('refresh')} Generate Portfolio", type="primary", unsafe_allow_html=True):
+        if st.button(":material/refresh: Generate Portfolio", type="primary"):
             st.session_state.show_portfolio_results = False
             st.session_state.show_portfolio_generation = True
             st.rerun()
@@ -1909,7 +1908,7 @@ def show_portfolio_results():
     else:
         logger.error(f"Unable to parse portfolio - result structure: {result}")
         st.error("Unable to parse portfolio results.")
-        if st.button(f"{icon('refresh')} Try Again", type="primary", unsafe_allow_html=True):
+        if st.button(":material/refresh: Try Again", type="primary"):
             st.session_state.show_portfolio_results = False
             st.session_state.show_portfolio_generation = True
             st.rerun()
@@ -1926,7 +1925,7 @@ def show_portfolio_results():
         - Network or API issues
         """)
         st.info("💡 Please try generating the portfolio again or contact support if the issue persists.")
-        if st.button(f"{icon('refresh')} Try Again", type="primary", unsafe_allow_html=True):
+        if st.button(":material/refresh: Try Again", type="primary"):
             st.session_state.show_portfolio_results = False
             st.session_state.show_portfolio_generation = True
             # Clear the problematic result
@@ -2223,12 +2222,12 @@ def show_portfolio_results():
     </style>
     """, unsafe_allow_html=True)
 
-    # Create 4 tabs with Material Icons
+    # Create 4 tabs with Material Icons using Streamlit's native syntax
     tab_overview, tab_risk, tab_projections, tab_budget = st.tabs([
-        f"{icon('assessment')} Overview",
-        f"{icon('warning')} Risk Analysis",
-        f"{icon('trending_up')} Projections",
-        f"{icon('payments')} Budget Plan"
+        ":material/assessment: Overview",
+        ":material/warning: Risk Analysis",
+        ":material/trending_up: Projections",
+        ":material/payments: Budget Plan"
     ])
 
     # ============================================
@@ -2391,7 +2390,7 @@ def show_portfolio_results():
             with col2:
                 # Hide optimize button if portfolio was already optimized
                 if not st.session_state.get('portfolio_was_optimized', False):
-                    if st.button(f"{icon('track_changes')} Smart Optimize", type="primary", use_container_width=True, unsafe_allow_html=True,
+                    if st.button(":material/track_changes: Smart Optimize", type="primary", use_container_width=True,
                                 help="Uses quantitative models to improve your returns"):
                         # Trigger optimization
                         with st.spinner("🔄 Optimizing portfolio allocation..."):
@@ -2577,7 +2576,7 @@ def show_portfolio_results():
                         # Confirmation buttons
                         col1, col2 = st.columns([1, 1])
                         with col1:
-                            if st.button(f"{icon('check_circle')} Confirm & Apply", type="primary", use_container_width=True, unsafe_allow_html=True):
+                            if st.button(":material/check_circle: Confirm & Apply", type="primary", use_container_width=True):
                                 apply_optimized_portfolio()
                                 st.rerun()
                         with col2:
@@ -2792,7 +2791,7 @@ def show_portfolio_results():
                                 st.code(traceback.format_exc())
 
                     # Show the apply button
-                    if st.button(f"{icon('check_circle')} Apply Optimized Allocation", type="primary", unsafe_allow_html=True):
+                    if st.button(":material/check_circle: Apply Optimized Allocation", type="primary"):
                         confirm_apply_optimization()
 
                 # SECTION C: AI Narrative (Expandable)
@@ -3565,7 +3564,7 @@ def show_portfolio_results():
                         else:
                             st.warning(f"📉 **{rec['ticker']}**: Decrease by {abs(rec['percentage_change']):.1f}% (${rec['dollar_amount']:,.2f})")
                 
-                    if st.button(f"{icon('check_circle')} Apply Optimized Allocation", type="primary", unsafe_allow_html=True):
+                    if st.button(":material/check_circle: Apply Optimized Allocation", type="primary"):
                         st.info("🚧 Feature coming soon: Apply optimization and rebalance portfolio")
 
     # ============================================
@@ -3695,7 +3694,7 @@ def show_portfolio_landing():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button(f"{icon('search')} View Full Analysis", type="primary", use_container_width=True, unsafe_allow_html=True):
+        if st.button(":material/search: View Full Analysis", type="primary", use_container_width=True):
             # Will be implemented in Phase 4
             load_and_refresh_portfolio(portfolio)
 
@@ -4355,7 +4354,7 @@ def show_action_plan_step():
     # Save preferences
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button(f"{icon('rocket_launch')} Complete Setup & Start Analysis", type="primary", use_container_width=True, unsafe_allow_html=True):
+        if st.button(":material/rocket_launch: Complete Setup & Start Analysis", type="primary", use_container_width=True):
             # Save all onboarding data as user preferences
             save_enhanced_user_preferences(st.session_state.onboarding_data)
             st.session_state.onboarding_complete = True
@@ -4776,7 +4775,7 @@ def show_analysis_page():
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🚀 Upgrade to Growth - $4.99/mo", type="primary", use_container_width=True):
+            if st.button(":material/rocket_launch: Upgrade to Growth - $4.99/mo", type="primary", use_container_width=True):
                 initiate_payment('growth')
         return
     
@@ -4911,7 +4910,7 @@ def show_beginner_analysis_interface():
             suggestion_cols = st.columns(len(suggestions))
             for i, (symbol, reason) in enumerate(suggestions.items()):
                 with suggestion_cols[i]:
-                    if st.button(f"🎯 {symbol}", help=reason, use_container_width=True):
+                    if st.button(f":material/flag: {symbol}", help=reason, use_container_width=True):
                         st.session_state.suggested_ticker = symbol
     
     # Stock input with enhanced help
@@ -4931,7 +4930,7 @@ def show_beginner_analysis_interface():
             del st.session_state.suggested_ticker
     
     with col2:
-        analyze_button = st.button(f"{icon('search')} Analyze", type="primary", use_container_width=True, unsafe_allow_html=True)
+        analyze_button = st.button(":material/search: Analyze", type="primary", use_container_width=True)
     
     # Educational tips for beginners
     with st.expander("🎓 New to stock analysis? Click here for tips!", expanded=False):
@@ -4977,7 +4976,7 @@ def show_standard_analysis_interface():
         ).upper()
     
     with col2:
-        analyze_button = st.button(f"{icon('search')} Analyze", type="primary", use_container_width=True, unsafe_allow_html=True)
+        analyze_button = st.button(":material/search: Analyze", type="primary", use_container_width=True)
     
     # Run analysis
     if analyze_button and ticker:
@@ -5601,19 +5600,20 @@ def display_analysis_results(ticker: str, tutorial_mode: bool = False):
         st.info("💡 **Tutorial Mode**: Each section below teaches you something important about investing. Take your time to read through each tab!")
     
     # Create tabs for results with tutorial enhancements
+    # Using Streamlit's native Material Icons syntax :material/icon_name:
     if tutorial_mode:
         tab1, tab2, tab3, tab4 = st.tabs([
-            f"{icon('assessment')} Overview (Start Here!)",
-            f"{icon('show_chart')} Technical Analysis",
-            f"{icon('account_balance')} Company Finances",
-            f"{icon('psychology')} AI Insights"
+            ":material/assessment: Overview (Start Here!)",
+            ":material/show_chart: Technical Analysis",
+            ":material/account_balance: Company Finances",
+            ":material/psychology: AI Insights"
         ])
     else:
         tab1, tab2, tab3, tab4 = st.tabs([
-            f"{icon('assessment')} Overview",
-            f"{icon('show_chart')} Technical",
-            f"{icon('account_balance')} Fundamental",
-            f"{icon('psychology')} AI Insights"
+            ":material/assessment: Overview",
+            ":material/show_chart: Technical",
+            ":material/account_balance: Fundamental",
+            ":material/psychology: AI Insights"
         ])
     
     data = result_data['data']
