@@ -589,7 +589,7 @@ def render_horizontal_nav():
     </style>
     """, unsafe_allow_html=True)
 
-    # Render navigation HTML using components.html for better rendering
+    # Render navigation HTML with search and user controls in same row
     logo_img = f'<img src="data:image/png;base64,{logo_b64}" style="height: 28px;" alt="InvestForge">' if logo_b64 else '<span class="material-symbols-outlined">trending_up</span>'
 
     nav_html = f"""
@@ -642,18 +642,22 @@ def render_horizontal_nav():
 
     st.markdown(nav_html, unsafe_allow_html=True)
 
-    # Add search and user controls below navigation
-    cols = st.columns([8, 2, 1])
+    # Add search and user controls in same row as navigation
+    cols = st.columns([6, 2, 2, 1])
 
     with cols[1]:
-        search_query = st.text_input("🔍", placeholder="Search companies...", label_visibility="collapsed", key="nav_search")
+        search_query = st.text_input(":material/search:", placeholder="Search companies...", label_visibility="collapsed", key="nav_search")
 
     with cols[2]:
-        # User dropdown
+        # Spacer
+        st.write("")
+
+    with cols[3]:
+        # User dropdown with Material icon
         if st.session_state.get('authenticated'):
             user_menu = st.selectbox(
                 "user",
-                ["👤", "Account", "Settings", "Logout"],
+                [":material/account_circle:", "Account", "Settings", "Logout"],
                 label_visibility="collapsed",
                 key="nav_user_dropdown"
             )
@@ -2075,7 +2079,7 @@ def show_portfolio_results():
 
     # Determine header text based on whether this is a saved portfolio or new portfolio
     is_saved_portfolio = st.session_state.get('current_portfolio_id') is not None
-    header_title = "💼 Your Saved Portfolio" if is_saved_portfolio else "🧠 AI Portfolio Created Successfully!"
+    header_title = f"{icon('work')} Your Saved Portfolio" if is_saved_portfolio else f"{icon('psychology')} AI Portfolio Created Successfully!"
     header_subtitle = "AI analysis updated with current market data and risk assessment" if is_saved_portfolio else "Powered by specialized AI agents analyzing market data, risk factors, and your personal goals"
 
     st.markdown(f"""
@@ -2087,9 +2091,9 @@ def show_portfolio_results():
             {header_subtitle}
         </div>
         <div class="badge-row">
-            <div class="badge">📊 Risk Profile: {risk_profile}</div>
-            <div class="badge">⏰ Timeline: {timeline}</div>
-            <div class="badge">🎯 Diversification: {diversification_score}%</div>
+            <div class="badge">{icon('assessment')} Risk Profile: {risk_profile}</div>
+            <div class="badge">{icon('schedule')} Timeline: {timeline}</div>
+            <div class="badge">{icon('pie_chart')} Diversification: {diversification_score}%</div>
         </div>
         <div class="metrics-grid">
             <div class="metric-card">
@@ -2360,7 +2364,7 @@ def show_portfolio_results():
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                if st.button("💾 Save Portfolio", type="secondary", use_container_width=True):
+                if st.button(":material/save: Save Portfolio", type="secondary", use_container_width=True):
                     # Prepare portfolio data for save dialog
                     try:
                         portfolio_data_to_save = {
@@ -3099,7 +3103,7 @@ def show_portfolio_results():
 
             # Display Risk Metrics Dashboard FIRST
             if risk_results:
-                st.markdown("#### 📊 Risk Metrics Dashboard")
+                st.markdown(f"#### {icon('dashboard')} Risk Metrics Dashboard", unsafe_allow_html=True)
                 # Display risk metrics
                 col1, col2, col3, col4 = st.columns(4)
                 
@@ -3142,12 +3146,12 @@ def show_portfolio_results():
                         st.info(f"💡 {alignment['adjustment_recommendation']}")
                 
                 # Value at Risk
-                with st.expander("💰 Value at Risk (VaR)"):
+                with st.expander(":material/account_balance_wallet: Value at Risk (VaR)", expanded=False):
                     st.markdown(f"**95% VaR**: {risk_results['value_at_risk_interpretation']['95%']}")
                     st.markdown(f"**99% VaR**: {risk_results['value_at_risk_interpretation']['99%']}")
                 
                 # Risk contributions
-                with st.expander("📊 Individual Stock Risk Contributions"):
+                with st.expander(":material/bar_chart: Individual Stock Risk Contributions", expanded=False):
                     risk_df = pd.DataFrame([
                         {
                             'Ticker': ticker,
@@ -3162,7 +3166,7 @@ def show_portfolio_results():
                 # Display AI Risk Summary & Recommendations (non-duplicate content only)
                 if 'portfolio_risk_crew_result' in st.session_state:
                     st.markdown("---")
-                    with st.expander("💡 Risk Summary & Recommendations", expanded=False):
+                    with st.expander(":material/lightbulb: Risk Summary & Recommendations", expanded=False):
                         crew_risk_result = st.session_state.portfolio_risk_crew_result
 
                         # NEW: Handle the new structure with tool_output and narrative
@@ -3593,8 +3597,8 @@ def show_portfolio_results():
     # ============================================
     st.markdown("---")
 
-    with st.expander("📚 Investment Education & Learning Resources", expanded=False):
-        st.markdown("### 📚 Investment Education")
+    with st.expander(":material/school: Investment Education & Learning Resources", expanded=False):
+        st.markdown(f"### {icon('menu_book')} Investment Education", unsafe_allow_html=True)
 
         # Check if education content already exists in session state
         if 'education_content' in st.session_state:
@@ -5956,27 +5960,27 @@ def display_tutorial_overview_tab(ticker: str, data: Dict[str, Any]):
             value=f"${current_price:.2f}",
             delta=f"{price_change:.1f}%"
         )
-        st.caption("💡 **What this means**: The current price investors are willing to pay for one share of the company.")
+        st.caption(":material/lightbulb: **What this means**: The current price investors are willing to pay for one share of the company.")
         
         if market_cap:
             market_cap_formatted = f"${market_cap/1e9:.1f}B" if market_cap > 1e9 else f"${market_cap/1e6:.0f}M"
             st.metric("🏢 Market Cap", market_cap_formatted)
-            st.caption("💡 **What this means**: Total value of all company shares. Bigger usually means more stable.")
+            st.caption(":material/lightbulb: **What this means**: Total value of all company shares. Bigger usually means more stable.")
     
     with col2:
         if pe_ratio and pe_ratio > 0:
             st.metric("📊 P/E Ratio", f"{pe_ratio:.1f}")
             if pe_ratio < 15:
-                st.caption("💡 **What this means**: Low P/E might mean the stock is undervalued or the company has issues.")
+                st.caption(":material/lightbulb: **What this means**: Low P/E might mean the stock is undervalued or the company has issues.")
             elif pe_ratio > 30:
-                st.caption("💡 **What this means**: High P/E might mean investors expect high growth or the stock is expensive.")
+                st.caption(":material/lightbulb: **What this means**: High P/E might mean investors expect high growth or the stock is expensive.")
             else:
-                st.caption("💡 **What this means**: Moderate P/E suggests reasonable valuation for current earnings.")
+                st.caption(":material/lightbulb: **What this means**: Moderate P/E suggests reasonable valuation for current earnings.")
         
         # Add sector info if available
         sector = info.get('sector', 'Technology') if 'info' in locals() else 'Technology'
         st.metric("🏭 Industry", sector)
-        st.caption("💡 **What this means**: The business sector helps you understand what the company does.")
+        st.caption(":material/lightbulb: **What this means**: The business sector helps you understand what the company does.")
     
     # Educational summary
     st.markdown("### 🧠 What You've Learned")
