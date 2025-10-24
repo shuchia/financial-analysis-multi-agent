@@ -783,6 +783,34 @@ def process_url_params():
         st.session_state.referral_source = query_params['ref'][0]
         track_referral(query_params['ref'][0])
 
+    # Check for navigation - only process once per navigation event
+    # This prevents breaking existing flows like portfolio generation
+    if 'nav' in query_params:
+        nav_target = query_params['nav']
+        # Create a unique key for this navigation event
+        nav_key = f"nav_processed_{nav_target}_{query_params.get('ticker', '')}"
+
+        # Only process if we haven't already handled this exact navigation
+        if not st.session_state.get(nav_key, False):
+            if nav_target == 'analyze':
+                st.session_state.show_main_app = True
+                st.session_state.show_portfolio_landing = False
+                st.session_state.show_portfolio_results = False
+                # Check for ticker parameter
+                if 'ticker' in query_params:
+                    st.session_state.suggested_ticker = query_params['ticker']
+            elif nav_target == 'portfolio':
+                st.session_state.show_main_app = False
+                st.session_state.show_portfolio_landing = True
+                st.session_state.show_portfolio_results = False
+
+            # Mark this navigation as processed
+            st.session_state[nav_key] = True
+
+            # Clear query params to prevent re-processing on subsequent interactions
+            st.query_params.clear()
+            st.rerun()
+
 
 # =====================================
 # Authentication System
@@ -3091,6 +3119,18 @@ def show_portfolio_results():
                 font-size: 1.05rem;
                 margin-bottom: 0.5rem;
             }
+            .holding-ticker-link {
+                color: #FF6B35;
+                text-decoration: none;
+                font-weight: 700;
+                transition: all 0.2s ease;
+                cursor: pointer;
+                border-bottom: 2px solid transparent;
+            }
+            .holding-ticker-link:hover {
+                color: #1A759F;
+                border-bottom-color: #1A759F;
+            }
             .holding-reasoning {
                 color: #555;
                 font-size: 0.95rem;
@@ -3170,7 +3210,8 @@ def show_portfolio_results():
                 percentage = alloc.get('percentage', 0)
                 reasoning = alloc.get('reasoning', 'Diversification component')
                 logger.info(f"DEBUG Allocation {i}: ticker={ticker}, percentage={percentage}, reasoning='{reasoning}', reasoning_length={len(reasoning)}")
-                asset_allocation_content += f'<div class="holding-row"><div class="holding-ticker">{ticker} - {percentage:.1f}%</div><div class="holding-reasoning">{reasoning}</div></div>'
+                # Make ticker clickable to navigate to analysis page
+                asset_allocation_content += f'<div class="holding-row"><div class="holding-ticker"><a href="?nav=analyze&ticker={ticker}" class="holding-ticker-link">{ticker}</a> - {percentage:.1f}%</div><div class="holding-reasoning">{reasoning}</div></div>'
 
             # Determine if content needs "Show More" (>240px ~ 4-5 holdings)
             asset_needs_expand = len(structured_portfolio.get('allocations', [])) > 4
