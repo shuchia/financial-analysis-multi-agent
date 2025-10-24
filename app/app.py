@@ -2303,7 +2303,7 @@ def show_portfolio_results():
             else:
                 st.markdown(f"### {icon('pie_chart')} Suggested Portfolio Allocation", unsafe_allow_html=True)
         with col_edu_icon:
-            if st.button("🎓", key="education_icon_btn", help="Investment Education & Learning Resources"):
+            if st.button(":material/school:", key="education_icon_btn", help="Investment Education & Learning Resources"):
                 st.session_state.show_education_overlay = True
 
         # Display allocation table with enhanced design
@@ -2480,7 +2480,7 @@ def show_portfolio_results():
 
         # Education Dialog - triggered by icon button
         if st.session_state.get('show_education_overlay', False):
-            @st.dialog(f"{icon('school')} Investment Education & Learning Resources", width="large")
+            @st.dialog(":material/school: Investment Education & Learning Resources", width="large")
             def show_education_dialog():
                 # Check if education content already exists in session state
                 if 'education_content' not in st.session_state:
@@ -2914,12 +2914,12 @@ def show_portfolio_results():
             with col_header:
                 st.markdown(f"## {icon('lightbulb')} Portfolio Insights", unsafe_allow_html=True)
             with col_icon:
-                if st.button("ℹ️", key="portfolio_info_btn", help="Understanding Your Portfolio"):
+                if st.button(":material/info:", key="portfolio_info_btn", help="Understanding Your Portfolio"):
                     st.session_state.show_portfolio_info = True
 
             # Show portfolio info dialog
             if st.session_state.get('show_portfolio_info', False):
-                @st.dialog(f"{icon('info')} Understanding Your Portfolio", width="large")
+                @st.dialog(":material/info: Understanding Your Portfolio", width="large")
                 def show_portfolio_info_dialog():
                     st.markdown("""
                     #### Why this portfolio?
