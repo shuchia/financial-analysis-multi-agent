@@ -2859,12 +2859,39 @@ def show_portfolio_results():
             # Add enhanced card-based styling for Portfolio Insights with Show More functionality
             st.markdown("""
             <style>
-            /* 2x2 Grid Layout - Equal Heights Per Row */
+            /* 2x2 Grid Layout - Responsive Equal Heights Per Row */
             .insights-grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 1.5rem;
                 grid-auto-rows: auto;
+            }
+
+            /* Responsive Breakpoints */
+            @media (max-width: 768px) {
+                .insights-grid {
+                    grid-template-columns: 1fr;
+                    gap: 1rem;
+                }
+
+                .insight-category {
+                    padding: 1.25rem;
+                }
+
+                .insight-category-title {
+                    font-size: 1.1rem;
+                }
+
+                .show-more-btn {
+                    width: 100%;
+                    justify-content: center;
+                }
+            }
+
+            @media (min-width: 769px) and (max-width: 1024px) {
+                .insights-grid {
+                    gap: 1.25rem;
+                }
             }
 
             /* Modern Card Layout for Portfolio Insights */
