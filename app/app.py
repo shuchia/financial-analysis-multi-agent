@@ -2305,6 +2305,7 @@ def show_portfolio_results():
         with col_edu_icon:
             if st.button(":material/school:", key="education_icon_btn", help="Investment Education & Learning Resources"):
                 st.session_state.show_education_overlay = True
+                st.session_state.show_portfolio_info = False  # Close other dialog
 
         # Display allocation table with enhanced design
         if structured_portfolio['tickers']:
@@ -2916,6 +2917,7 @@ def show_portfolio_results():
             with col_icon:
                 if st.button(":material/info:", key="portfolio_info_btn", help="Understanding Your Portfolio"):
                     st.session_state.show_portfolio_info = True
+                    st.session_state.show_education_overlay = False  # Close other dialog
 
             # Show portfolio info dialog
             if st.session_state.get('show_portfolio_info', False):
