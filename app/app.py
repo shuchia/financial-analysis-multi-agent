@@ -3009,14 +3009,25 @@ def show_portfolio_results():
             .insight-content {
                 flex: 1;
                 position: relative;
-                transition: max-height 0.3s ease;
+                transition: all 0.3s ease;
             }
             .insight-content.collapsed {
-                max-height: 240px;
+                height: 240px;
                 overflow: hidden;
+                position: relative;
+            }
+            .insight-content.collapsed::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 60px;
+                background: linear-gradient(to bottom, transparent, white);
+                pointer-events: none;
             }
             .insight-content.expanded {
-                max-height: 2000px;
+                height: auto;
                 overflow: visible;
             }
 
