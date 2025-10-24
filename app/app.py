@@ -2297,9 +2297,23 @@ def show_portfolio_results():
 
         # Conditional header based on whether portfolio was optimized
         if st.session_state.get('portfolio_was_optimized', False):
-            st.markdown(f"### {icon('assessment')} Optimized Portfolio Allocation", unsafe_allow_html=True)
+            st.markdown(f'''
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                <h3 style="margin: 0;">{icon('assessment')} Optimized Portfolio Allocation</h3>
+                <button onclick="showEducationOverlay()" style="background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center;" title="Investment Education & Learning Resources">
+                    <span class="material-symbols-outlined" style="color: #1A759F; font-size: 24px;">school</span>
+                </button>
+            </div>
+            ''', unsafe_allow_html=True)
         else:
-            st.markdown(f"### {icon('pie_chart')} Suggested Portfolio Allocation", unsafe_allow_html=True)
+            st.markdown(f'''
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                <h3 style="margin: 0;">{icon('pie_chart')} Suggested Portfolio Allocation</h3>
+                <button onclick="showEducationOverlay()" style="background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center;" title="Investment Education & Learning Resources">
+                    <span class="material-symbols-outlined" style="color: #1A759F; font-size: 24px;">school</span>
+                </button>
+            </div>
+            ''', unsafe_allow_html=True)
 
         # Display allocation table with enhanced design
         if structured_portfolio['tickers']:
@@ -2472,6 +2486,100 @@ def show_portfolio_results():
 
         else:
             st.warning("No portfolio allocation data available.")
+
+        # Add Education Overlay HTML (initially hidden, populated when icon is clicked)
+        # Create a unique key for the education trigger
+        if 'show_education_overlay' not in st.session_state:
+            st.session_state.show_education_overlay = False
+
+        # Hidden button that JavaScript will trigger (styled to be invisible)
+        st.markdown('<style>#education_trigger { display: none !important; }</style>', unsafe_allow_html=True)
+        education_trigger = st.button("Trigger Education", key="education_trigger", type="primary")
+
+        if education_trigger or st.session_state.show_education_overlay:
+            st.session_state.show_education_overlay = True
+
+            # Check if education content already exists in session state
+            if 'education_content' not in st.session_state:
+                # Generate education content
+                with st.spinner("🎓 Creating personalized education content..."):
+                    try:
+                        # Get the portfolio output for education
+                        portfolio_text = portfolio_output if portfolio_output else "Portfolio data"
+
+                        education_result = portfoliocrew.create_education(
+                            amount=investment_amount,
+                            portfolio=portfolio_text,
+                            user_profile=user_profile
+                        )
+                        if education_result:
+                            st.session_state.education_content = education_result
+                    except Exception as e:
+                        st.error(f"Failed to generate education content: {str(e)}")
+                        st.session_state.education_content = {"content": "Education content generation failed."}
+
+            # Extract and format education content
+            education_html_content = ""
+            if 'education_content' in st.session_state:
+                education_result = st.session_state.education_content
+                if isinstance(education_result, dict) and 'content' in education_result:
+                    education_content = education_result['content']
+                    if hasattr(education_content, 'tasks_output') and education_content.tasks_output:
+                        education_html_content = escape_markdown_latex(education_content.tasks_output[0].raw)
+                    else:
+                        education_html_content = escape_markdown_latex(str(education_content))
+                else:
+                    education_html_content = escape_markdown_latex(str(education_result))
+
+            # Display education overlay
+            education_overlay = f'''
+            <div class="overlay-backdrop active" id="educationBackdrop" onclick="closeEducationOverlay()"></div>
+            <div class="overlay-modal active" id="educationModal">
+                <div class="overlay-header">
+                    <h3>{icon('school')} Investment Education & Learning Resources</h3>
+                    <button class="overlay-close" onclick="closeEducationOverlay()">×</button>
+                </div>
+                <div class="overlay-content">
+                    {education_html_content}
+                </div>
+            </div>
+
+            <script>
+            function closeEducationOverlay() {{
+                // Hide overlay visually
+                document.getElementById('educationBackdrop').classList.remove('active');
+                document.getElementById('educationModal').classList.remove('active');
+                // Clear session state flag (requires Streamlit rerun)
+                window.parent.postMessage({{
+                    type: 'streamlit:setComponentValue',
+                    key: 'close_education',
+                    value: true
+                }}, '*');
+            }}
+            </script>
+            '''
+            st.markdown(education_overlay, unsafe_allow_html=True)
+
+        # JavaScript to show education overlay (triggered by icon click)
+        st.markdown('''
+        <script>
+        function showEducationOverlay() {
+            // Find and click the hidden trigger button
+            const buttons = window.parent.document.querySelectorAll('button');
+            for (let btn of buttons) {
+                if (btn.innerText && btn.innerText.includes('Trigger Education')) {
+                    btn.click();
+                    break;
+                }
+            }
+        }
+        </script>
+        ''', unsafe_allow_html=True)
+
+        # Handle close education overlay
+        if st.session_state.get('close_education', False):
+            st.session_state.show_education_overlay = False
+            st.session_state.close_education = False
 
         # ============================================
         # OPTIMIZATION METRICS OR PORTFOLIO INSIGHTS
@@ -2862,7 +2970,16 @@ def show_portfolio_results():
         # Show Portfolio Insights if no optimization is active
         elif portfolio_output:
             st.markdown("---")
-            st.markdown(f"## {icon('lightbulb')} Portfolio Insights", unsafe_allow_html=True)
+
+            # Portfolio Insights Header with Info Icon
+            st.markdown(f'''
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                <h2 style="margin: 0;">{icon('lightbulb')} Portfolio Insights</h2>
+                <button onclick="showPortfolioInfoOverlay()" style="background: transparent; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center;">
+                    <span class="material-symbols-outlined" style="color: #1A759F; font-size: 28px;">info</span>
+                </button>
+            </div>
+            ''', unsafe_allow_html=True)
 
             # Add enhanced card-based styling for Portfolio Insights with Show More functionality
             st.markdown("""
@@ -3016,6 +3133,139 @@ def show_portfolio_results():
                 max-width: 100% !important;
                 text-overflow: clip !important;
                 hyphens: auto;
+            }
+
+            /* Overlay/Modal Styles - Responsive */
+            .overlay-backdrop {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100vh;
+                background: rgba(0, 0, 0, 0.6);
+                z-index: 9998;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            .overlay-backdrop.active {
+                display: block;
+                opacity: 1;
+            }
+
+            .overlay-modal {
+                display: none;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) scale(0.9);
+                max-width: 600px;
+                width: 90%;
+                max-height: 80vh;
+                background: #FFFFFF;
+                border-radius: 16px;
+                box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+                z-index: 9999;
+                overflow: hidden;
+                transition: all 0.3s ease;
+            }
+            .overlay-modal.active {
+                display: block;
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            .overlay-header {
+                background: linear-gradient(135deg, #FF6B35, #1A759F);
+                color: white;
+                padding: 20px 24px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .overlay-header h3 {
+                margin: 0;
+                font-size: 1.4rem;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .overlay-close {
+                background: transparent;
+                border: none;
+                color: white;
+                font-size: 32px;
+                cursor: pointer;
+                padding: 0;
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                transition: background 0.2s ease;
+            }
+            .overlay-close:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+            .overlay-content {
+                padding: 24px;
+                overflow-y: auto;
+                max-height: calc(80vh - 80px);
+            }
+            .overlay-content h4 {
+                color: #2C3E50;
+                margin-top: 0;
+            }
+            .overlay-content ul {
+                padding-left: 20px;
+            }
+            .overlay-content li {
+                margin-bottom: 8px;
+                line-height: 1.6;
+                color: #555;
+            }
+
+            /* Loading Spinner */
+            .overlay-loading {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 40px;
+                min-height: 200px;
+            }
+            .spinner {
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #FF6B35;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            .loading-text {
+                margin-top: 16px;
+                color: #555;
+                font-size: 1rem;
+            }
+
+            /* Mobile Responsive */
+            @media (max-width: 768px) {
+                .overlay-modal {
+                    width: 95%;
+                    max-height: 90vh;
+                }
+                .overlay-header h3 {
+                    font-size: 1.2rem;
+                }
+                .overlay-content {
+                    padding: 20px;
+                    max-height: calc(90vh - 80px);
+                }
             }
             </style>
             """, unsafe_allow_html=True)
@@ -3197,6 +3447,45 @@ toggleCard(contentId, this);
 </script>'''
 
             st.markdown(insights_html, unsafe_allow_html=True)
+
+            # Add overlay HTML for Portfolio Info
+            portfolio_info_overlay = f'''
+            <div class="overlay-backdrop" id="portfolioInfoBackdrop" onclick="closePortfolioInfoOverlay()"></div>
+            <div class="overlay-modal" id="portfolioInfoModal">
+                <div class="overlay-header">
+                    <h3>{icon('info')} Understanding Your Portfolio</h3>
+                    <button class="overlay-close" onclick="closePortfolioInfoOverlay()">×</button>
+                </div>
+                <div class="overlay-content">
+                    <h4>Why this portfolio?</h4>
+                    <ul>
+                        <li>Matched to your risk tolerance and timeline</li>
+                        <li>Diversified across asset classes</li>
+                        <li>Optimized for your investment amount</li>
+                        <li>Suitable for your experience level</li>
+                    </ul>
+                    <h4>Next Steps:</h4>
+                    <ol>
+                        <li>Open a brokerage account if you haven't already</li>
+                        <li>Start with the recommended allocation</li>
+                        <li>Review and rebalance quarterly</li>
+                        <li>Continue learning about each investment</li>
+                    </ol>
+                </div>
+            </div>
+
+            <script>
+            function showPortfolioInfoOverlay() {{
+                document.getElementById('portfolioInfoBackdrop').classList.add('active');
+                document.getElementById('portfolioInfoModal').classList.add('active');
+            }}
+            function closePortfolioInfoOverlay() {{
+                document.getElementById('portfolioInfoBackdrop').classList.remove('active');
+                document.getElementById('portfolioInfoModal').classList.remove('active');
+            }}
+            </script>
+            '''
+            st.markdown(portfolio_info_overlay, unsafe_allow_html=True)
 
     # ============================================
     # TAB 2: RISK ANALYSIS
@@ -3795,68 +4084,9 @@ toggleCard(contentId, this);
     #         st.info("Scroll down to see educational content")
 
     # ============================================
-    # SECTION 3: Education Content (Bottom, Collapsible)
+    # SECTION 3: Education Content - REMOVED
+    # Content moved to overlay modals triggered by icons in headers
     # ============================================
-    st.markdown("---")
-
-    with st.expander(":material/school: Investment Education & Learning Resources", expanded=False):
-        st.markdown(f"### {icon('menu_book')} Investment Education", unsafe_allow_html=True)
-
-        # Check if education content already exists in session state
-        if 'education_content' in st.session_state:
-            education_result = st.session_state.education_content
-            if isinstance(education_result, dict) and 'content' in education_result:
-                education_content = education_result['content']
-                if hasattr(education_content, 'tasks_output') and education_content.tasks_output:
-                    st.markdown(escape_markdown_latex(education_content.tasks_output[0].raw))
-                else:
-                    st.markdown(escape_markdown_latex(str(education_content)))
-            else:
-                st.markdown(escape_markdown_latex(str(education_result)))
-        else:
-            # Trigger education generation if not available
-            if st.button("📖 Generate Educational Content", type="primary"):
-                with st.spinner("🎓 Creating personalized education content..."):
-                    try:
-                        # Get the portfolio output for education
-                        portfolio_text = portfolio_output if portfolio_output else "Portfolio data"
-
-                        education_result = portfoliocrew.create_education(
-                            amount=investment_amount,  # Pass as number
-                            portfolio=portfolio_text,
-                            user_profile=user_profile
-                        )
-                        if education_result:
-                            # Store and display
-                            st.session_state.education_content = education_result
-
-                            # Extract content from the education result
-                            if isinstance(education_result, dict) and 'content' in education_result:
-                                education_content = education_result['content']
-                                if hasattr(education_content, 'tasks_output') and education_content.tasks_output:
-                                    st.markdown(escape_markdown_latex(education_content.tasks_output[0].raw))
-                                else:
-                                    st.markdown(escape_markdown_latex(str(education_content)))
-                            else:
-                                st.markdown(escape_markdown_latex(str(education_result)))
-                    except Exception as e:
-                        st.error(f"Failed to generate education content: {str(e)}")
-        
-        # Generic education content
-        with st.expander("ℹ️ Understanding Your Portfolio"):
-            st.markdown("""
-            **Why this portfolio?**
-            - Matched to your risk tolerance and timeline
-            - Diversified across asset classes
-            - Optimized for your investment amount
-            - Suitable for your experience level
-            
-            **Next Steps:**
-            1. Open a brokerage account if you haven't already
-            2. Start with the recommended allocation
-            3. Review and rebalance quarterly
-            4. Continue learning about each investment
-            """)
 
 
 def show_portfolio_landing():
