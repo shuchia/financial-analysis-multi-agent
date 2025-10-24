@@ -3062,6 +3062,7 @@ def show_portfolio_results():
             formatted_output = escape_markdown_latex(portfolio_output)
 
             # Build complete HTML for all 4 cards as single string to ensure proper nesting
+            import html as html_module
 
             # Card 1: Asset Allocation
             asset_allocation_content = ""
@@ -3069,10 +3070,13 @@ def show_portfolio_results():
                 ticker = alloc.get('ticker', 'N/A')
                 percentage = alloc.get('percentage', 0)
                 reasoning = alloc.get('reasoning', 'Diversification component')
+                # HTML escape dynamic content to prevent rendering issues
+                ticker_safe = html_module.escape(str(ticker))
+                reasoning_safe = html_module.escape(str(reasoning))
                 asset_allocation_content += f'''
                 <div class="holding-row">
-                    <div class="holding-ticker">{ticker} - {percentage:.1f}%</div>
-                    <div class="holding-reasoning">{reasoning}</div>
+                    <div class="holding-ticker">{ticker_safe} - {percentage:.1f}%</div>
+                    <div class="holding-reasoning">{reasoning_safe}</div>
                 </div>
                 '''
 
@@ -3087,7 +3091,8 @@ def show_portfolio_results():
                 "Review portfolio allocation quarterly"
             ]
             for risk in risk_list:
-                risk_content += f'<div class="insight-item">{risk}</div>'
+                risk_safe = html_module.escape(str(risk))
+                risk_content += f'<div class="insight-item">{risk_safe}</div>'
 
             risk_needs_expand = len(risk_list) > 4
 
@@ -3095,13 +3100,13 @@ def show_portfolio_results():
             perf_content = ""
             perf_items = []
             if expected_return_range:
-                perf_items.append(f'Expected annual return: {expected_return_range}')
+                perf_items.append(f'Expected annual return: {html_module.escape(str(expected_return_range))}')
             if rebalancing_trigger:
-                perf_items.append(f'<strong>Rebalancing:</strong> {rebalancing_trigger}')
+                perf_items.append(f'<strong>Rebalancing:</strong> {html_module.escape(str(rebalancing_trigger))}')
             if monitoring_frequency:
-                perf_items.append(f'<strong>Monitoring:</strong> {monitoring_frequency}')
+                perf_items.append(f'<strong>Monitoring:</strong> {html_module.escape(str(monitoring_frequency))}')
             if volatility_expectations:
-                perf_items.append(f'<strong>Volatility:</strong> {volatility_expectations}')
+                perf_items.append(f'<strong>Volatility:</strong> {html_module.escape(str(volatility_expectations))}')
 
             if not perf_items:
                 perf_items = [
@@ -3122,7 +3127,8 @@ def show_portfolio_results():
                 "Minimal management fees"
             ]
             for cost in cost_list:
-                cost_content += f'<div class="insight-item">{cost}</div>'
+                cost_safe = html_module.escape(str(cost))
+                cost_content += f'<div class="insight-item">{cost_safe}</div>'
 
             cost_needs_expand = len(cost_list) > 4
 
