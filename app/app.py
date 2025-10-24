@@ -709,6 +709,8 @@ def render_horizontal_nav():
             elif user_menu == "Logout":
                 st.session_state.authenticated = False
                 st.session_state.user_email = None
+                # Clear localStorage
+                clear_auth_from_storage()
                 st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
@@ -717,6 +719,56 @@ def render_horizontal_nav():
 # =====================================
 # Session State Management
 # =====================================
+
+def save_auth_to_storage(email: str, plan: str = 'free', demo: bool = False):
+    """Save authentication to localStorage."""
+    save_script = f"""
+    <script>
+        const authData = {{
+            email: '{email}',
+            plan: '{plan}',
+            demo: {str(demo).lower()},
+            timestamp: new Date().toISOString()
+        }};
+        localStorage.setItem('investforge_auth', JSON.stringify(authData));
+    </script>
+    """
+    st.markdown(save_script, unsafe_allow_html=True)
+
+def clear_auth_from_storage():
+    """Clear authentication from localStorage."""
+    clear_script = """
+    <script>
+        localStorage.removeItem('investforge_auth');
+    </script>
+    """
+    st.markdown(clear_script, unsafe_allow_html=True)
+
+def restore_session_from_storage():
+    """Restore session state from localStorage if available."""
+    restore_script = """
+    <script>
+        // Restore authentication from localStorage
+        const authData = localStorage.getItem('investforge_auth');
+        if (authData) {
+            try {
+                const data = JSON.parse(authData);
+                // Send to Streamlit via query params on first load only
+                if (!window.location.search.includes('restored=1')) {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('email', data.email);
+                    params.set('plan', data.plan || 'free');
+                    if (data.demo) params.set('mode', 'demo');
+                    params.set('restored', '1');
+                    window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
+                }
+            } catch (e) {
+                console.error('Failed to restore auth:', e);
+            }
+        }
+    </script>
+    """
+    st.markdown(restore_script, unsafe_allow_html=True)
 
 def init_session_state():
     """Initialize session state variables."""
@@ -762,26 +814,33 @@ def process_url_params():
     """Process parameters passed from landing page."""
     query_params = st.query_params
 
-    # Check for email from waitlist
+    # Check for email from waitlist or restored session
     if 'email' in query_params:
-        st.session_state.user_email = query_params['email'][0]
-        st.session_state.show_welcome = True
+        st.session_state.user_email = query_params['email']
+        # If this is a restored session, authenticate automatically
+        if 'restored' in query_params:
+            st.session_state.authenticated = True
+        else:
+            # From waitlist - save to localStorage but don't auth yet (they need to sign up)
+            st.session_state.show_welcome = True
 
     # Check for selected plan
     if 'plan' in query_params:
-        st.session_state.user_plan = query_params['plan'][0]
+        st.session_state.user_plan = query_params['plan']
         st.session_state.show_pricing = True
 
     # Check for demo mode
-    if 'mode' in query_params and query_params['mode'][0] == 'demo':
+    if 'mode' in query_params and query_params['mode'] == 'demo':
         st.session_state.demo_mode = True
         st.session_state.authenticated = True
         st.session_state.user_email = 'demo@investforge.io'
+        # Save demo auth to localStorage
+        save_auth_to_storage('demo@investforge.io', 'free', demo=True)
 
     # Check for referral source
     if 'ref' in query_params:
-        st.session_state.referral_source = query_params['ref'][0]
-        track_referral(query_params['ref'][0])
+        st.session_state.referral_source = query_params['ref']
+        track_referral(query_params['ref'])
 
     # Check for navigation - only process once per navigation event
     # This prevents breaking existing flows like portfolio generation
@@ -807,8 +866,7 @@ def process_url_params():
             # Mark this navigation as processed
             st.session_state[nav_key] = True
 
-            # Clear query params to prevent re-processing on subsequent interactions
-            st.query_params.clear()
+            # Trigger rerun to update UI with new navigation state
             st.rerun()
 
 
@@ -942,6 +1000,8 @@ def show_login_signup():
                     if success:
                         st.session_state.authenticated = True
                         st.session_state.user_email = email
+                        # Save to localStorage for persistence across page reloads
+                        save_auth_to_storage(email, st.session_state.user_plan, demo=False)
                         if remember:
                             save_session_cookie(email)
                         # Load user preferences and route to appropriate page
@@ -955,6 +1015,8 @@ def show_login_signup():
                     st.session_state.demo_mode = True
                     st.session_state.authenticated = True
                     st.session_state.user_email = "demo@investforge.io"
+                    # Save demo mode to localStorage
+                    save_auth_to_storage("demo@investforge.io", "free", demo=True)
                     st.rerun()
             
         # Forgot password link (moved outside tab to avoid form context issues)
@@ -988,6 +1050,8 @@ def show_login_signup():
                                 st.success("Account created successfully! Welcome to InvestForge!")
                                 st.session_state.authenticated = True
                                 st.session_state.user_email = email
+                                # Save to localStorage for persistence across page reloads
+                                save_auth_to_storage(email, st.session_state.user_plan, demo=False)
                                 track_signup(email, plan)
                                 # Load user preferences and route to appropriate page
                                 load_user_preferences()
@@ -6506,6 +6570,9 @@ def extract_user_profile_for_tutorial(ticker: str) -> Dict[str, str]:
 # =====================================
 
 if __name__ == "__main__":
+    # Restore authentication from localStorage (must be first, before any redirects)
+    restore_session_from_storage()
+
     # Initialize session state
     init_session_state()
 
