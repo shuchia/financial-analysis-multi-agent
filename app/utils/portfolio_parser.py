@@ -104,14 +104,17 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
                 
                 # Extract category and reasoning
                 category = ""
-                reasoning = ""
-                
+                reasoning_text = ""
+
                 # Priority: category in parentheses, then category after amount
                 if 'category_in_parens' in locals() and category_in_parens:
                     category = category_in_parens.strip()
-                    # The reasoning should be in the next section
-                    if 'category_after' in locals() and category_after:
-                        reasoning = category_after.strip()
+                    # The actual reasoning should be in match[5] (the 'reasoning' variable from line 77)
+                    # Only use category_after if the main reasoning is empty
+                    if 'reasoning' in locals() and reasoning and reasoning.strip():
+                        reasoning_text = reasoning.strip()
+                    elif 'category_after' in locals() and category_after:
+                        reasoning_text = category_after.strip()
                 elif 'category_after' in locals() and category_after:
                     # Check if this looks like a category (short, title case, common sectors)
                     category_keywords = ['Technology', 'Healthcare', 'Financial', 'Consumer', 'Energy',
@@ -120,19 +123,23 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
                                        'Value', 'Large Cap', 'Small Cap', 'International', 'Global', 'Emerging Markets']
                     if any(keyword in category_after for keyword in category_keywords):
                         category = category_after.strip()
-                        reasoning = locals().get('reasoning', '').strip()
+                        # Use the reasoning from match[5] if available
+                        reasoning_text = reasoning.strip() if 'reasoning' in locals() and reasoning else ""
                     else:
-                        reasoning = category_after.strip()
+                        reasoning_text = category_after.strip()
                 elif 'category_or_reasoning' in locals() and category_or_reasoning:
                     # Check if it's likely a category
                     if len(category_or_reasoning.split()) <= 4 and any(word in category_or_reasoning for word in ['ETF', 'Bond', 'International', 'REIT', 'Tech', 'Health', 'Financial', 'Consumer', 'Growth', 'Dividend', 'Value', 'Treasury']):
                         category = category_or_reasoning.strip()
                     else:
-                        reasoning = category_or_reasoning.strip()
-                
-                # Clean up reasoning if it exists
-                if 'extra' in locals() and extra and not reasoning:
-                    reasoning = extra.strip()
+                        reasoning_text = category_or_reasoning.strip()
+
+                # Clean up reasoning if it exists - use match[5] reasoning or extra field
+                if not reasoning_text:
+                    if 'reasoning' in locals() and reasoning and reasoning.strip():
+                        reasoning_text = reasoning.strip()
+                    elif 'extra' in locals() and extra:
+                        reasoning_text = extra.strip()
                 
                 # Validate ticker (2-5 uppercase letters)
                 if 2 <= len(ticker) <= 5 and ticker.isalpha():
@@ -142,7 +149,7 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
                             ticker_data[ticker] = {
                                 'percentage': percentage,
                                 'amount': amount,
-                                'reasoning': reasoning,
+                                'reasoning': reasoning_text,
                                 'category': category
                             }
                             logger.debug(f"Updated {ticker} allocation to {percentage}%")
@@ -150,7 +157,7 @@ def parse_portfolio_output(crew_output: str, investment_amount: float) -> Dict:
                         ticker_data[ticker] = {
                             'percentage': percentage,
                             'amount': amount,
-                            'reasoning': reasoning,
+                            'reasoning': reasoning_text,
                             'category': category
                         }
                         logger.debug(f"Parsed allocation: {ticker} - {percentage}% (${amount}) - {category}")
