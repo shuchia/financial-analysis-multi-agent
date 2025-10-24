@@ -489,16 +489,50 @@ def render_horizontal_nav():
         display: none;
     }
 
-    /* Navigation Bar Container */
-    .investforge-topnav {
+    /* Navigation Bar Wrapper - Makes columns look like one unified navbar */
+    .investforge-topnav-wrapper {
         background: #FFFFFF;
         padding: 12px 24px;
         border-bottom: 1px solid #E1E8ED;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        display: flex;
-        align-items: center;
-        gap: 40px;
         margin-bottom: 24px;
+    }
+
+    /* Remove Streamlit column gaps in navbar and align vertically */
+    .investforge-topnav-wrapper [data-testid="column"] {
+        padding: 0 8px !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    .investforge-topnav-wrapper [data-testid="column"]:first-child {
+        padding-left: 0 !important;
+    }
+
+    .investforge-topnav-wrapper [data-testid="column"]:last-child {
+        padding-right: 0 !important;
+    }
+
+    /* Ensure column children are full width */
+    .investforge-topnav-wrapper [data-testid="column"] > div {
+        width: 100%;
+    }
+
+    /* Style navbar inputs to match theme */
+    .investforge-topnav-wrapper input {
+        border-radius: 6px !important;
+        border: 1px solid #E1E8ED !important;
+        padding: 8px 12px !important;
+    }
+
+    .investforge-topnav-wrapper input:focus {
+        border-color: #FF6B35 !important;
+        box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.1) !important;
+    }
+
+    /* Style selectbox in navbar */
+    .investforge-topnav-wrapper [data-baseweb="select"] {
+        min-height: 38px !important;
     }
 
     /* Logo Section */
@@ -589,75 +623,83 @@ def render_horizontal_nav():
     </style>
     """, unsafe_allow_html=True)
 
-    # Render navigation HTML with search and user controls in same row
+    # Render navigation using columns with consistent styling
     logo_img = f'<img src="data:image/png;base64,{logo_b64}" style="height: 28px;" alt="InvestForge">' if logo_b64 else '<span class="material-symbols-outlined">trending_up</span>'
 
-    nav_html = f"""
-<div class="investforge-topnav">
-    <div class="investforge-topnav-logo">
-        {logo_img}
-        <span>InvestForge</span>
-    </div>
-    <div class="investforge-topnav-links">
-        <a class="investforge-topnav-link {'active' if current_page == 'portfolio' else ''}" id="nav-portfolio">
-            <span class="material-symbols-outlined">pie_chart</span>
-            Portfolio
-        </a>
-        <a class="investforge-topnav-link" id="nav-watchlist">
-            <span class="material-symbols-outlined">visibility</span>
-            Watchlist
-        </a>
-        <a class="investforge-topnav-link {'active' if current_page == 'analyze' else ''}" id="nav-analyze">
-            <span class="material-symbols-outlined">search</span>
-            Analyze Stocks
-        </a>
-        <a class="investforge-topnav-link" id="nav-learn">
-            <span class="material-symbols-outlined">school</span>
-            Learn
-        </a>
-        <a class="investforge-topnav-link" id="nav-budget">
-            <span class="material-symbols-outlined">payments</span>
-            Budget
-        </a>
-    </div>
-</div>
-<script>
-    document.getElementById('nav-portfolio')?.addEventListener('click', () => {{
-        window.location.href = '?nav=portfolio';
-    }});
-    document.getElementById('nav-analyze')?.addEventListener('click', () => {{
-        window.location.href = '?nav=analyze';
-    }});
-    document.getElementById('nav-watchlist')?.addEventListener('click', () => {{
-        alert('Watchlist feature coming soon!');
-    }});
-    document.getElementById('nav-learn')?.addEventListener('click', () => {{
-        alert('Educational resources coming soon!');
-    }});
-    document.getElementById('nav-budget')?.addEventListener('click', () => {{
-        alert('Budget planning feature coming soon!');
-    }});
-</script>
-"""
+    # Add wrapper div for unified navbar look
+    st.markdown('<div class="investforge-topnav-wrapper">', unsafe_allow_html=True)
 
-    st.markdown(nav_html, unsafe_allow_html=True)
+    # Create columns for logo, nav links, search, and user
+    nav_cols = st.columns([1.5, 7, 2.5, 1])
 
-    # Add search and user controls in same row as navigation
-    cols = st.columns([6, 2, 2, 1])
+    with nav_cols[0]:
+        # Logo
+        st.markdown(f"""
+        <div class="investforge-topnav-logo">
+            {logo_img}
+            <span>InvestForge</span>
+        </div>
+        """, unsafe_allow_html=True)
 
-    with cols[1]:
-        search_query = st.text_input(":material/search:", placeholder="Search companies...", label_visibility="collapsed", key="nav_search")
+    with nav_cols[1]:
+        # Navigation links
+        st.markdown(f"""
+        <div class="investforge-topnav-links">
+            <a class="investforge-topnav-link {'active' if current_page == 'portfolio' else ''}" id="nav-portfolio">
+                <span class="material-symbols-outlined">pie_chart</span>
+                Portfolio
+            </a>
+            <a class="investforge-topnav-link" id="nav-watchlist">
+                <span class="material-symbols-outlined">visibility</span>
+                Watchlist
+            </a>
+            <a class="investforge-topnav-link {'active' if current_page == 'analyze' else ''}" id="nav-analyze">
+                <span class="material-symbols-outlined">search</span>
+                Analyze Stocks
+            </a>
+            <a class="investforge-topnav-link" id="nav-learn">
+                <span class="material-symbols-outlined">school</span>
+                Learn
+            </a>
+            <a class="investforge-topnav-link" id="nav-budget">
+                <span class="material-symbols-outlined">payments</span>
+                Budget
+            </a>
+        </div>
+        <script>
+            document.getElementById('nav-portfolio')?.addEventListener('click', () => {{
+                window.location.href = '?nav=portfolio';
+            }});
+            document.getElementById('nav-analyze')?.addEventListener('click', () => {{
+                window.location.href = '?nav=analyze';
+            }});
+            document.getElementById('nav-watchlist')?.addEventListener('click', () => {{
+                alert('Watchlist feature coming soon!');
+            }});
+            document.getElementById('nav-learn')?.addEventListener('click', () => {{
+                alert('Educational resources coming soon!');
+            }});
+            document.getElementById('nav-budget')?.addEventListener('click', () => {{
+                alert('Budget planning feature coming soon!');
+            }});
+        </script>
+        """, unsafe_allow_html=True)
 
-    with cols[2]:
-        # Spacer
-        st.write("")
+    with nav_cols[2]:
+        # Search bar
+        search_query = st.text_input(
+            "search",
+            placeholder="Search companies...",
+            label_visibility="collapsed",
+            key="nav_search"
+        )
 
-    with cols[3]:
-        # User dropdown with Material icon
+    with nav_cols[3]:
+        # User dropdown (selectbox doesn't support Material Icons in options, using simple icon)
         if st.session_state.get('authenticated'):
             user_menu = st.selectbox(
                 "user",
-                [":material/account_circle:", "Account", "Settings", "Logout"],
+                ["👤", "Account", "Settings", "Logout"],
                 label_visibility="collapsed",
                 key="nav_user_dropdown"
             )
@@ -668,6 +710,8 @@ def render_horizontal_nav():
                 st.session_state.authenticated = False
                 st.session_state.user_email = None
                 st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # =====================================
@@ -1958,7 +2002,7 @@ def show_portfolio_results():
         border-radius: 15px;
         padding: 2rem;
         margin-bottom: 2rem;
-        color: white;
+        color: #2C3E50;
     }
     .success-title {
         font-size: 2rem;
@@ -2810,7 +2854,7 @@ def show_portfolio_results():
         # Show Portfolio Insights if no optimization is active
         elif portfolio_output:
             st.markdown("---")
-            st.markdown("## 💡 Portfolio Insights")
+            st.markdown(f"## {icon('lightbulb')} Portfolio Insights", unsafe_allow_html=True)
 
             # Add category styling
             st.markdown("""
