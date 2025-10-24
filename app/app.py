@@ -2856,18 +2856,27 @@ def show_portfolio_results():
             st.markdown("---")
             st.markdown(f"## {icon('lightbulb')} Portfolio Insights", unsafe_allow_html=True)
 
-            # Add enhanced card-based styling for Portfolio Insights
+            # Add enhanced card-based styling for Portfolio Insights with Show More functionality
             st.markdown("""
             <style>
+            /* 2x2 Grid Layout - Equal Heights Per Row */
+            .insights-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1.5rem;
+                grid-auto-rows: auto;
+            }
+
             /* Modern Card Layout for Portfolio Insights */
             .insight-category {
                 background: #FFFFFF;
                 border: 1px solid #E1E8ED;
                 border-radius: 16px;
                 padding: 1.75rem;
-                margin: 1rem 0;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
                 transition: all 0.3s ease;
+                display: flex;
+                flex-direction: column;
             }
             .insight-category:hover {
                 box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
@@ -2884,6 +2893,44 @@ def show_portfolio_results():
                 padding-bottom: 0.75rem;
                 border-bottom: 2px solid #F8F9FA;
             }
+
+            /* Card Content Area with Show More Support */
+            .insight-content {
+                flex: 1;
+                position: relative;
+            }
+            .insight-content.collapsed {
+                max-height: 240px;
+                overflow: hidden;
+            }
+            .insight-content.expanded {
+                max-height: none;
+            }
+
+            /* Show More/Less Button */
+            .show-more-btn {
+                background: linear-gradient(135deg, #FF6B35, #1A759F);
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.9rem;
+                font-weight: 600;
+                margin-top: 1rem;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+            }
+            .show-more-btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+            }
+            .show-more-btn .material-symbols-outlined {
+                font-size: 18px;
+            }
+
             .insight-item {
                 margin: 0.75rem 0;
                 padding-left: 1.5rem;
@@ -2900,6 +2947,7 @@ def show_portfolio_results():
                 font-weight: bold;
                 font-size: 1.1rem;
             }
+
             /* Enhanced Holding Row with Full Text Display */
             .holding-row {
                 margin: 0.75rem 0;
@@ -2986,77 +3034,132 @@ def show_portfolio_results():
 
             formatted_output = escape_markdown_latex(portfolio_output)
 
-            # Group insights into categories
-            col1, col2 = st.columns(2)
+            # Build complete HTML for all 4 cards as single string to ensure proper nesting
 
-            with col1:
-                # Asset Allocation - Show each holding with reasoning
-                st.markdown(f'<div class="insight-category"><div class="insight-category-title">{icon("track_changes")} Asset Allocation</div>', unsafe_allow_html=True)
+            # Card 1: Asset Allocation
+            asset_allocation_content = ""
+            for alloc in structured_portfolio.get('allocations', []):
+                ticker = alloc.get('ticker', 'N/A')
+                percentage = alloc.get('percentage', 0)
+                reasoning = alloc.get('reasoning', 'Diversification component')
+                asset_allocation_content += f'''
+                <div class="holding-row">
+                    <div class="holding-ticker">{ticker} - {percentage:.1f}%</div>
+                    <div class="holding-reasoning">{reasoning}</div>
+                </div>
+                '''
 
-                # Use structured portfolio data (already parsed correctly)
-                for alloc in structured_portfolio.get('allocations', []):
-                    ticker = alloc.get('ticker', 'N/A')
-                    percentage = alloc.get('percentage', 0)
-                    reasoning = alloc.get('reasoning', 'Diversification component')
-                    st.markdown(f'''
-                    <div class="holding-row">
-                        <div class="holding-ticker">{ticker} - {percentage:.1f}%</div>
-                        <div class="holding-reasoning">{reasoning}</div>
+            # Determine if content needs "Show More" (>240px ~ 4-5 holdings)
+            asset_needs_expand = len(structured_portfolio.get('allocations', [])) > 4
+
+            # Card 2: Risk Management
+            risk_content = ""
+            risk_list = risk_items[:10] if risk_items else [
+                "Monitor market volatility and economic conditions",
+                "Maintain emergency fund before investing",
+                "Review portfolio allocation quarterly"
+            ]
+            for risk in risk_list:
+                risk_content += f'<div class="insight-item">{risk}</div>'
+
+            risk_needs_expand = len(risk_list) > 4
+
+            # Card 3: Performance Outlook
+            perf_content = ""
+            perf_items = []
+            if expected_return_range:
+                perf_items.append(f'Expected annual return: {expected_return_range}')
+            if rebalancing_trigger:
+                perf_items.append(f'<strong>Rebalancing:</strong> {rebalancing_trigger}')
+            if monitoring_frequency:
+                perf_items.append(f'<strong>Monitoring:</strong> {monitoring_frequency}')
+            if volatility_expectations:
+                perf_items.append(f'<strong>Volatility:</strong> {volatility_expectations}')
+
+            if not perf_items:
+                perf_items = [
+                    "Portfolio designed to align with your investment goals and timeline",
+                    "Review quarterly and rebalance when allocations drift significantly"
+                ]
+
+            for item in perf_items:
+                perf_content += f'<div class="insight-item">{item}</div>'
+
+            perf_needs_expand = len(perf_items) > 4
+
+            # Card 4: Cost Efficiency
+            cost_content = ""
+            cost_list = cost_items[:8] if cost_items else [
+                "Low-cost index funds prioritized",
+                "Tax-efficient fund structure",
+                "Minimal management fees"
+            ]
+            for cost in cost_list:
+                cost_content += f'<div class="insight-item">{cost}</div>'
+
+            cost_needs_expand = len(cost_list) > 4
+
+            # Build complete grid HTML with all 4 cards
+            insights_html = f'''
+            <div class="insights-grid">
+                <!-- Card 1: Asset Allocation -->
+                <div class="insight-category">
+                    <div class="insight-category-title">{icon("track_changes")} Asset Allocation</div>
+                    <div class="insight-content {'collapsed' if asset_needs_expand else ''}" id="asset-content">
+                        {asset_allocation_content}
                     </div>
-                    ''', unsafe_allow_html=True)
+                    {'<button class="show-more-btn" onclick="toggleCard(\'asset-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if asset_needs_expand else ''}
+                </div>
 
-                st.markdown('</div>', unsafe_allow_html=True)
+                <!-- Card 2: Risk Management -->
+                <div class="insight-category">
+                    <div class="insight-category-title">{icon("warning")} Risk Management</div>
+                    <div class="insight-content {'collapsed' if risk_needs_expand else ''}" id="risk-content">
+                        {risk_content}
+                    </div>
+                    {'<button class="show-more-btn" onclick="toggleCard(\'risk-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if risk_needs_expand else ''}
+                </div>
 
-                # Performance Outlook - Show expected return and KPIs
-                st.markdown(f'<div class="insight-category"><div class="insight-category-title">{icon("assessment")} Performance Outlook</div>', unsafe_allow_html=True)
+                <!-- Card 3: Performance Outlook -->
+                <div class="insight-category">
+                    <div class="insight-category-title">{icon("assessment")} Performance Outlook</div>
+                    <div class="insight-content {'collapsed' if perf_needs_expand else ''}" id="perf-content">
+                        {perf_content}
+                    </div>
+                    {'<button class="show-more-btn" onclick="toggleCard(\'perf-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if perf_needs_expand else ''}
+                </div>
 
-                if expected_return_range:
-                    st.markdown(f'<div class="insight-item">Expected annual return: {expected_return_range}</div>', unsafe_allow_html=True)
+                <!-- Card 4: Cost Efficiency -->
+                <div class="insight-category">
+                    <div class="insight-category-title">{icon("payments")} Cost Efficiency</div>
+                    <div class="insight-content {'collapsed' if cost_needs_expand else ''}" id="cost-content">
+                        {cost_content}
+                    </div>
+                    {'<button class="show-more-btn" onclick="toggleCard(\'cost-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if cost_needs_expand else ''}
+                </div>
+            </div>
 
-                if rebalancing_trigger:
-                    st.markdown(f'<div class="insight-item"><strong>Rebalancing:</strong> {rebalancing_trigger}</div>', unsafe_allow_html=True)
+            <script>
+            function toggleCard(contentId, button) {{
+                const content = document.getElementById(contentId);
+                const icon = button.querySelector('.material-symbols-outlined');
 
-                if monitoring_frequency:
-                    st.markdown(f'<div class="insight-item"><strong>Monitoring:</strong> {monitoring_frequency}</div>', unsafe_allow_html=True)
+                if (content.classList.contains('collapsed')) {{
+                    content.classList.remove('collapsed');
+                    content.classList.add('expanded');
+                    icon.textContent = 'expand_less';
+                    button.childNodes[1].textContent = 'Show Less';
+                }} else {{
+                    content.classList.remove('expanded');
+                    content.classList.add('collapsed');
+                    icon.textContent = 'expand_more';
+                    button.childNodes[1].textContent = 'Show More';
+                }}
+            }}
+            </script>
+            '''
 
-                if volatility_expectations:
-                    st.markdown(f'<div class="insight-item"><strong>Volatility:</strong> {volatility_expectations}</div>', unsafe_allow_html=True)
-
-                # Fallback if no data extracted
-                if not expected_return_range and not rebalancing_trigger:
-                    st.markdown('<div class="insight-item">Portfolio designed to align with your investment goals and timeline</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="insight-item">Review quarterly and rebalance when allocations drift significantly</div>', unsafe_allow_html=True)
-
-                st.markdown('</div>', unsafe_allow_html=True)
-
-            with col2:
-                # Risk Management - Show portfolio-specific risks
-                st.markdown(f'<div class="insight-category"><div class="insight-category-title">{icon("warning")} Risk Management</div>', unsafe_allow_html=True)
-
-                if risk_items:
-                    for risk in risk_items[:5]:  # Show up to 5 risks
-                        st.markdown(f'<div class="insight-item">{risk}</div>', unsafe_allow_html=True)
-                else:
-                    # Fallback risks
-                    st.markdown('<div class="insight-item">Monitor market volatility and economic conditions</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="insight-item">Maintain emergency fund before investing</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="insight-item">Review portfolio allocation quarterly</div>', unsafe_allow_html=True)
-
-                st.markdown('</div>', unsafe_allow_html=True)
-
-                # Cost Efficiency - Show specific expense ratios and fee insights
-                st.markdown(f'<div class="insight-category"><div class="insight-category-title">{icon("payments")} Cost Efficiency</div>', unsafe_allow_html=True)
-
-                if cost_items:
-                    for cost_item in cost_items[:4]:  # Show up to 4 cost items
-                        st.markdown(f'<div class="insight-item">{cost_item}</div>', unsafe_allow_html=True)
-                else:
-                    # Fallback cost insights
-                    st.markdown('<div class="insight-item">Low-cost index funds prioritized</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="insight-item">Tax-efficient fund structure</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="insight-item">Minimal management fees</div>', unsafe_allow_html=True)
-
-                st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown(insights_html, unsafe_allow_html=True)
 
     # ============================================
     # TAB 2: RISK ANALYSIS
