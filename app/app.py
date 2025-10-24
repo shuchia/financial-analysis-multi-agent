@@ -1950,9 +1950,17 @@ def show_portfolio_results():
     elif hasattr(result, 'tasks_output') and result.tasks_output:
         # First time or not optimized - parse from original result
         portfolio_output = result.tasks_output[0].raw if result.tasks_output else "No portfolio data"
+
+        # DEBUG: Log raw portfolio output (first 1000 chars)
+        logger.info(f"DEBUG: Raw portfolio output (first 1000 chars): {str(portfolio_output)[:1000]}")
+
         structured_portfolio = parse_portfolio_output(result, investment_amount)
         st.session_state.structured_portfolio = structured_portfolio
         logger.info(f"Parsed original portfolio from result: {len(structured_portfolio.get('tickers', []))} tickers")
+
+        # DEBUG: Log parsed allocations
+        for alloc in structured_portfolio.get('allocations', []):
+            logger.info(f"DEBUG Parsed: {alloc.get('ticker')} - {alloc.get('percentage')}% - reasoning: '{alloc.get('reasoning')[:50] if alloc.get('reasoning') else 'NONE'}...'")
     else:
         logger.error(f"Unable to parse portfolio - result structure: {result}")
         st.error("Unable to parse portfolio results.")
@@ -3067,10 +3075,14 @@ def show_portfolio_results():
 
             # Card 1: Asset Allocation
             asset_allocation_content = ""
-            for alloc in structured_portfolio.get('allocations', []):
+
+            # DEBUG: Log allocations data
+            logger.info(f"DEBUG: Number of allocations: {len(structured_portfolio.get('allocations', []))}")
+            for i, alloc in enumerate(structured_portfolio.get('allocations', [])):
                 ticker = alloc.get('ticker', 'N/A')
                 percentage = alloc.get('percentage', 0)
                 reasoning = alloc.get('reasoning', 'Diversification component')
+                logger.info(f"DEBUG Allocation {i}: ticker={ticker}, percentage={percentage}, reasoning='{reasoning}', reasoning_length={len(reasoning)}")
                 asset_allocation_content += f'<div class="holding-row"><div class="holding-ticker">{ticker} - {percentage:.1f}%</div><div class="holding-reasoning">{reasoning}</div></div>'
 
             # Determine if content needs "Show More" (>240px ~ 4-5 holdings)
