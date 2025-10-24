@@ -3126,6 +3126,12 @@ def show_portfolio_results():
 
             cost_needs_expand = len(cost_list) > 4
 
+            # Build button HTML strings (avoid backslashes in f-string expressions)
+            asset_btn = '<button class="show-more-btn" onclick="toggleCard(\'asset-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if asset_needs_expand else ''
+            risk_btn = '<button class="show-more-btn" onclick="toggleCard(\'risk-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if risk_needs_expand else ''
+            perf_btn = '<button class="show-more-btn" onclick="toggleCard(\'perf-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if perf_needs_expand else ''
+            cost_btn = '<button class="show-more-btn" onclick="toggleCard(\'cost-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if cost_needs_expand else ''
+
             # Build complete grid HTML with all 4 cards
             insights_html = f'''
             <div class="insights-grid">
@@ -3135,7 +3141,7 @@ def show_portfolio_results():
                     <div class="insight-content {'collapsed' if asset_needs_expand else ''}" id="asset-content">
                         {asset_allocation_content}
                     </div>
-                    {'<button class="show-more-btn" onclick="toggleCard(\'asset-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if asset_needs_expand else ''}
+                    {asset_btn}
                 </div>
 
                 <!-- Card 2: Risk Management -->
@@ -3144,7 +3150,7 @@ def show_portfolio_results():
                     <div class="insight-content {'collapsed' if risk_needs_expand else ''}" id="risk-content">
                         {risk_content}
                     </div>
-                    {'<button class="show-more-btn" onclick="toggleCard(\'risk-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if risk_needs_expand else ''}
+                    {risk_btn}
                 </div>
 
                 <!-- Card 3: Performance Outlook -->
@@ -3153,7 +3159,7 @@ def show_portfolio_results():
                     <div class="insight-content {'collapsed' if perf_needs_expand else ''}" id="perf-content">
                         {perf_content}
                     </div>
-                    {'<button class="show-more-btn" onclick="toggleCard(\'perf-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if perf_needs_expand else ''}
+                    {perf_btn}
                 </div>
 
                 <!-- Card 4: Cost Efficiency -->
@@ -3162,7 +3168,7 @@ def show_portfolio_results():
                     <div class="insight-content {'collapsed' if cost_needs_expand else ''}" id="cost-content">
                         {cost_content}
                     </div>
-                    {'<button class="show-more-btn" onclick="toggleCard(\'cost-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if cost_needs_expand else ''}
+                    {cost_btn}
                 </div>
             </div>
 
