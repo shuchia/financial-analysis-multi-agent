@@ -2304,8 +2304,7 @@ def show_portfolio_results():
                 st.markdown(f"### {icon('pie_chart')} Suggested Portfolio Allocation", unsafe_allow_html=True)
         with col_edu_icon:
             if st.button(":material/school:", key="education_icon_btn", help="Investment Education & Learning Resources"):
-                st.session_state.show_education_overlay = True
-                st.session_state.show_portfolio_info = False  # Close other dialog
+                st.session_state.active_dialog = "education"
 
         # Display allocation table with enhanced design
         if structured_portfolio['tickers']:
@@ -2480,7 +2479,7 @@ def show_portfolio_results():
             st.warning("No portfolio allocation data available.")
 
         # Education Dialog - triggered by icon button
-        if st.session_state.get('show_education_overlay', False):
+        if st.session_state.get('active_dialog') == "education":
             @st.dialog(":material/school: Investment Education & Learning Resources", width="large")
             def show_education_dialog():
                 # Check if education content already exists in session state
@@ -2515,7 +2514,7 @@ def show_portfolio_results():
                         st.markdown(escape_markdown_latex(str(education_result)))
 
                 if st.button("Close", type="primary"):
-                    st.session_state.show_education_overlay = False
+                    st.session_state.active_dialog = None
                     st.rerun()
 
             show_education_dialog()
@@ -2916,11 +2915,10 @@ def show_portfolio_results():
                 st.markdown(f"## {icon('lightbulb')} Portfolio Insights", unsafe_allow_html=True)
             with col_icon:
                 if st.button(":material/info:", key="portfolio_info_btn", help="Understanding Your Portfolio"):
-                    st.session_state.show_portfolio_info = True
-                    st.session_state.show_education_overlay = False  # Close other dialog
+                    st.session_state.active_dialog = "portfolio_info"
 
             # Show portfolio info dialog
-            if st.session_state.get('show_portfolio_info', False):
+            if st.session_state.get('active_dialog') == "portfolio_info":
                 @st.dialog(":material/info: Understanding Your Portfolio", width="large")
                 def show_portfolio_info_dialog():
                     st.markdown("""
@@ -2937,7 +2935,7 @@ def show_portfolio_results():
                     4. Continue learning about each investment
                     """)
                     if st.button("Close", type="primary"):
-                        st.session_state.show_portfolio_info = False
+                        st.session_state.active_dialog = None
                         st.rerun()
 
                 show_portfolio_info_dialog()
