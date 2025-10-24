@@ -3062,7 +3062,6 @@ def show_portfolio_results():
             formatted_output = escape_markdown_latex(portfolio_output)
 
             # Build complete HTML for all 4 cards as single string to ensure proper nesting
-            import html as html_module
 
             # Card 1: Asset Allocation
             asset_allocation_content = ""
@@ -3070,15 +3069,7 @@ def show_portfolio_results():
                 ticker = alloc.get('ticker', 'N/A')
                 percentage = alloc.get('percentage', 0)
                 reasoning = alloc.get('reasoning', 'Diversification component')
-                # HTML escape dynamic content to prevent rendering issues
-                ticker_safe = html_module.escape(str(ticker))
-                reasoning_safe = html_module.escape(str(reasoning))
-                asset_allocation_content += f'''
-                <div class="holding-row">
-                    <div class="holding-ticker">{ticker_safe} - {percentage:.1f}%</div>
-                    <div class="holding-reasoning">{reasoning_safe}</div>
-                </div>
-                '''
+                asset_allocation_content += f'<div class="holding-row"><div class="holding-ticker">{ticker} - {percentage:.1f}%</div><div class="holding-reasoning">{reasoning}</div></div>'
 
             # Determine if content needs "Show More" (>240px ~ 4-5 holdings)
             asset_needs_expand = len(structured_portfolio.get('allocations', [])) > 4
@@ -3091,8 +3082,7 @@ def show_portfolio_results():
                 "Review portfolio allocation quarterly"
             ]
             for risk in risk_list:
-                risk_safe = html_module.escape(str(risk))
-                risk_content += f'<div class="insight-item">{risk_safe}</div>'
+                risk_content += f'<div class="insight-item">{risk}</div>'
 
             risk_needs_expand = len(risk_list) > 4
 
@@ -3100,13 +3090,13 @@ def show_portfolio_results():
             perf_content = ""
             perf_items = []
             if expected_return_range:
-                perf_items.append(f'Expected annual return: {html_module.escape(str(expected_return_range))}')
+                perf_items.append(f'Expected annual return: {expected_return_range}')
             if rebalancing_trigger:
-                perf_items.append(f'<strong>Rebalancing:</strong> {html_module.escape(str(rebalancing_trigger))}')
+                perf_items.append(f'<strong>Rebalancing:</strong> {rebalancing_trigger}')
             if monitoring_frequency:
-                perf_items.append(f'<strong>Monitoring:</strong> {html_module.escape(str(monitoring_frequency))}')
+                perf_items.append(f'<strong>Monitoring:</strong> {monitoring_frequency}')
             if volatility_expectations:
-                perf_items.append(f'<strong>Volatility:</strong> {html_module.escape(str(volatility_expectations))}')
+                perf_items.append(f'<strong>Volatility:</strong> {volatility_expectations}')
 
             if not perf_items:
                 perf_items = [
@@ -3127,8 +3117,7 @@ def show_portfolio_results():
                 "Minimal management fees"
             ]
             for cost in cost_list:
-                cost_safe = html_module.escape(str(cost))
-                cost_content += f'<div class="insight-item">{cost_safe}</div>'
+                cost_content += f'<div class="insight-item">{cost}</div>'
 
             cost_needs_expand = len(cost_list) > 4
 
@@ -3139,64 +3128,45 @@ def show_portfolio_results():
             cost_btn = '<button class="show-more-btn" onclick="toggleCard(\'cost-content\', this)"><span class="material-symbols-outlined">expand_more</span>Show More</button>' if cost_needs_expand else ''
 
             # Build complete grid HTML with all 4 cards
-            insights_html = f'''
-            <div class="insights-grid">
-                <!-- Card 1: Asset Allocation -->
-                <div class="insight-category">
-                    <div class="insight-category-title">{icon("track_changes")} Asset Allocation</div>
-                    <div class="insight-content {'collapsed' if asset_needs_expand else ''}" id="asset-content">
-                        {asset_allocation_content}
-                    </div>
-                    {asset_btn}
-                </div>
-
-                <!-- Card 2: Risk Management -->
-                <div class="insight-category">
-                    <div class="insight-category-title">{icon("warning")} Risk Management</div>
-                    <div class="insight-content {'collapsed' if risk_needs_expand else ''}" id="risk-content">
-                        {risk_content}
-                    </div>
-                    {risk_btn}
-                </div>
-
-                <!-- Card 3: Performance Outlook -->
-                <div class="insight-category">
-                    <div class="insight-category-title">{icon("assessment")} Performance Outlook</div>
-                    <div class="insight-content {'collapsed' if perf_needs_expand else ''}" id="perf-content">
-                        {perf_content}
-                    </div>
-                    {perf_btn}
-                </div>
-
-                <!-- Card 4: Cost Efficiency -->
-                <div class="insight-category">
-                    <div class="insight-category-title">{icon("payments")} Cost Efficiency</div>
-                    <div class="insight-content {'collapsed' if cost_needs_expand else ''}" id="cost-content">
-                        {cost_content}
-                    </div>
-                    {cost_btn}
-                </div>
-            </div>
-
-            <script>
-            function toggleCard(contentId, button) {{
-                const content = document.getElementById(contentId);
-                const icon = button.querySelector('.material-symbols-outlined');
-
-                if (content.classList.contains('collapsed')) {{
-                    content.classList.remove('collapsed');
-                    content.classList.add('expanded');
-                    icon.textContent = 'expand_less';
-                    button.childNodes[1].textContent = 'Show Less';
-                }} else {{
-                    content.classList.remove('expanded');
-                    content.classList.add('collapsed');
-                    icon.textContent = 'expand_more';
-                    button.childNodes[1].textContent = 'Show More';
-                }}
-            }}
-            </script>
-            '''
+            insights_html = f'''<div class="insights-grid">
+<div class="insight-category">
+<div class="insight-category-title">{icon("track_changes")} Asset Allocation</div>
+<div class="insight-content {'collapsed' if asset_needs_expand else ''}" id="asset-content">{asset_allocation_content}</div>
+{asset_btn}
+</div>
+<div class="insight-category">
+<div class="insight-category-title">{icon("warning")} Risk Management</div>
+<div class="insight-content {'collapsed' if risk_needs_expand else ''}" id="risk-content">{risk_content}</div>
+{risk_btn}
+</div>
+<div class="insight-category">
+<div class="insight-category-title">{icon("assessment")} Performance Outlook</div>
+<div class="insight-content {'collapsed' if perf_needs_expand else ''}" id="perf-content">{perf_content}</div>
+{perf_btn}
+</div>
+<div class="insight-category">
+<div class="insight-category-title">{icon("payments")} Cost Efficiency</div>
+<div class="insight-content {'collapsed' if cost_needs_expand else ''}" id="cost-content">{cost_content}</div>
+{cost_btn}
+</div>
+</div>
+<script>
+function toggleCard(contentId, button) {{
+const content = document.getElementById(contentId);
+const icon = button.querySelector('.material-symbols-outlined');
+if (content.classList.contains('collapsed')) {{
+content.classList.remove('collapsed');
+content.classList.add('expanded');
+icon.textContent = 'expand_less';
+button.childNodes[1].textContent = 'Show Less';
+}} else {{
+content.classList.remove('expanded');
+content.classList.add('collapsed');
+icon.textContent = 'expand_more';
+button.childNodes[1].textContent = 'Show More';
+}}
+}}
+</script>'''
 
             st.markdown(insights_html, unsafe_allow_html=True)
 
