@@ -55,13 +55,39 @@
     gap: 8px !important;
 }
 
-.stButton > button[kind="primary"] {
+.stButton > button[kind="primary"],
+.stButton > button[data-testid="baseButton-primary"],
+button[kind="primary"],
+button[data-testid="baseButton-primary"] {
     background: linear-gradient(135deg, var(--primary-color), var(--accent-color)) !important;
     color: var(--text-white) !important;
     box-shadow: var(--shadow-light) !important;
 }
 
-.stButton > button[kind="primary"]:hover {
+.stButton > button[kind="primary"]:hover,
+.stButton > button[data-testid="baseButton-primary"]:hover,
+button[kind="primary"]:hover,
+button[data-testid="baseButton-primary"]:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: var(--shadow-hover) !important;
+}
+
+/* Form Submit Buttons - Primary Style */
+.stFormSubmitButton > button,
+button[kind="formSubmit"],
+button[data-testid="stFormSubmitButton"] {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color)) !important;
+    color: var(--text-white) !important;
+    border-radius: var(--border-radius) !important;
+    font-weight: 600 !important;
+    padding: 12px 24px !important;
+    border: none !important;
+    box-shadow: var(--shadow-light) !important;
+}
+
+.stFormSubmitButton > button:hover,
+button[kind="formSubmit"]:hover,
+button[data-testid="stFormSubmitButton"]:hover {
     transform: translateY(-2px) !important;
     box-shadow: var(--shadow-hover) !important;
 }
