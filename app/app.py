@@ -2925,13 +2925,15 @@ def show_portfolio_results():
             .insight-content {
                 flex: 1;
                 position: relative;
+                transition: max-height 0.3s ease;
             }
             .insight-content.collapsed {
                 max-height: 240px;
                 overflow: hidden;
             }
             .insight-content.expanded {
-                max-height: none;
+                max-height: 2000px;
+                overflow: visible;
             }
 
             /* Show More/Less Button */
@@ -3151,6 +3153,7 @@ def show_portfolio_results():
 </div>
 </div>
 <script>
+(function() {{
 function toggleCard(contentId, button) {{
 const content = document.getElementById(contentId);
 const icon = button.querySelector('.material-symbols-outlined');
@@ -3166,6 +3169,19 @@ icon.textContent = 'expand_more';
 button.childNodes[1].textContent = 'Show More';
 }}
 }}
+// Make toggleCard available globally for onclick handlers
+window.toggleCard = toggleCard;
+// Also attach event listeners as backup
+setTimeout(function() {{
+const buttons = document.querySelectorAll('.show-more-btn');
+buttons.forEach(function(btn) {{
+btn.onclick = function() {{
+const contentId = this.getAttribute('onclick').match(/'([^']+)'/)[1];
+toggleCard(contentId, this);
+}};
+}});
+}}, 100);
+}})();
 </script>'''
 
             st.markdown(insights_html, unsafe_allow_html=True)
