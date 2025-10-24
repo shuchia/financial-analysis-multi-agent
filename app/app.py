@@ -1010,8 +1010,8 @@ def show_forgot_password():
                 # For now, show a placeholder message
                 # TODO: Implement actual password reset API call
                 st.success(f"If an account exists with {email}, you will receive a password reset link shortly.")
-                st.info("📧 Please check your email (including spam folder) for the reset link.")
-                st.info("🔗 The reset link will expire in 1 hour for security.")
+                st.markdown(f"{icon('mail')} Please check your email (including spam folder) for the reset link.", unsafe_allow_html=True)
+                st.markdown(f"{icon('link')} The reset link will expire in 1 hour for security.", unsafe_allow_html=True)
                 
             elif submit and not email:
                 st.error("Please enter your email address.")
@@ -1248,7 +1248,7 @@ def show_onboarding():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         # Logo and branding
-        render_investforge_header("Welcome to InvestForge! 🚀", "Let's personalize your experience in 30 seconds")
+        render_investforge_header(f"Welcome to InvestForge! {icon('rocket_launch')}", "Let's personalize your experience in 30 seconds")
 
         # Single form with all questions
         with st.form("streamlined_onboarding"):
@@ -1324,14 +1324,14 @@ def show_onboarding():
                 amount_options,
                 index=2,  # Default to $100
                 key="initial_investment_amount",  # Unique key for proper state tracking
-                help="💡 Remember: only invest what you can afford to lose. You can always add more later!"
+                help=f"{icon('lightbulb')} Remember: only invest what you can afford to lose. You can always add more later!"
             )
 
             st.markdown("---")
 
             # Question 4: Loss Reaction Test
             # Use escaped text to prevent KaTeX rendering of dollar signs
-            st.markdown("### 📉 If I invested \\$100 and it dropped to \\$70 next month, I'd probably:")
+            st.markdown(f"### {icon('trending_down')} If I invested \\$100 and it dropped to \\$70 next month, I'd probably:", unsafe_allow_html=True)
             loss_reaction = st.radio(
                 "My likely reaction:",
                 [
@@ -1348,7 +1348,7 @@ def show_onboarding():
 
             # Submit button
             submitted = st.form_submit_button(
-                "🚀 Start Investing",
+                ":material/rocket_launch: Start Investing",
                 type="primary",
                 use_container_width=True
             )
@@ -1568,23 +1568,23 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
     with col1:
         st.markdown(f"### {icon('track_changes')} Your Investment Profile: **{risk_profile['category']}**", unsafe_allow_html=True)
         st.markdown(f"*{risk_profile['description']}*")
-        
-        st.markdown("#### 📊 Recommended Asset Allocation")
+
+        st.markdown(f"#### {icon('pie_chart')} Recommended Asset Allocation", unsafe_allow_html=True)
         allocation = risk_profile['allocation']
         
         # Create a simple text-based visualization
         st.markdown(f"""
-        - **Stocks**: {allocation['stocks']}% 📈
-        - **Bonds**: {allocation['bonds']}% 🏦  
-        - **Cash**: {allocation['cash']}% 💵
+        - **Stocks**: {allocation['stocks']}% {icon('trending_up')}
+        - **Bonds**: {allocation['bonds']}% {icon('account_balance')}
+        - **Cash**: {allocation['cash']}% {icon('payments')}
         """)
         
         st.markdown("#### 🛒 Recommended Products")
         for product in risk_profile['products']:
             st.markdown(f"• {product}")
-    
+
     with col2:
-        st.markdown("#### 🎯 Inferred Goal")
+        st.markdown(f"#### {icon('flag')} Inferred Goal", unsafe_allow_html=True)
         goal_display = {
             "emergency_fund": "🚨 Emergency Fund",
             "first_investment": "🌱 First Investment", 
@@ -1592,9 +1592,9 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
             "wealth_building": "💰 Wealth Building",
             "retirement_planning": "🏖️ Retirement Planning"
         }
-        st.info(goal_display.get(primary_goal, "💰 Wealth Building"))
-        
-        st.markdown("#### 📈 Risk Score")
+        st.info(goal_display.get(primary_goal, f"{icon('account_balance')} Wealth Building"))
+
+        st.markdown(f"#### {icon('trending_up')} Risk Score", unsafe_allow_html=True)
         st.metric("Risk Tolerance", f"{risk_profile['score']:.2f}")
     
     # Action button - simplified to only portfolio generation
@@ -1610,7 +1610,7 @@ def show_onboarding_results(risk_profile: dict, primary_goal: str):
     
     # Add informational text about stock analysis
     st.markdown("---")
-    st.info("💡 **Tip**: After generating your portfolio, you can analyze individual stocks in the main application interface!")
+    st.markdown(f"{icon('lightbulb')} **Tip**: After generating your portfolio, you can analyze individual stocks in the main application interface!", unsafe_allow_html=True)
 
 
 def generate_portfolio_with_progress():
@@ -1626,12 +1626,12 @@ def generate_portfolio_with_progress():
     else:
         # Standard UI for direct portfolio generation (not from onboarding)
         # Add navigation menu
-        st.markdown("## 🎯 InvestForge Portfolio Creator")
+        st.markdown(f"## {icon('track_changes')} InvestForge Portfolio Creator", unsafe_allow_html=True)
 
         # Simple navigation
         col1, col2 = st.columns([1, 3])
         with col1:
-            if st.button("📊 Analyze Stocks", use_container_width=True):
+            if st.button(":material/assessment: Analyze Stocks", use_container_width=True):
                 # Switch to stock analysis mode
                 st.session_state.show_portfolio_generation = False
                 st.session_state.show_main_app = True
@@ -1684,7 +1684,7 @@ def generate_portfolio_with_progress():
         }
         
         # Show parsed investment amount for user verification
-        st.info(f"💰 Generating portfolio for: **${investment_amount:,.0f}**")
+        st.markdown(f"{icon('payments')} Generating portfolio for: **${investment_amount:,.0f}**", unsafe_allow_html=True)
 
         # Progress updates
         status_placeholder.write("🔄 Initializing portfolio analysis...")
@@ -1695,7 +1695,7 @@ def generate_portfolio_with_progress():
         progress_bar.progress(20)
 
         # Create portfolio
-        status_placeholder.write(f"💡 Analyzing best investments for ${investment_amount:,.0f}...")
+        status_placeholder.write(f"{icon('lightbulb')} Analyzing best investments for ${investment_amount:,.0f}...")
         progress_bar.progress(40)
         
         # Call portfolio crew (pass numeric value, not formatted string)
@@ -1972,7 +1972,7 @@ def show_portfolio_results():
         - Parsing error in portfolio output
         - Network or API issues
         """)
-        st.info("💡 Please try generating the portfolio again or contact support if the issue persists.")
+        st.markdown(f"{icon('lightbulb')} Please try generating the portfolio again or contact support if the issue persists.", unsafe_allow_html=True)
         if st.button(":material/refresh: Try Again", type="primary"):
             st.session_state.show_portfolio_results = False
             st.session_state.show_portfolio_generation = True
@@ -2478,7 +2478,7 @@ def show_portfolio_results():
                 recommendations = opt_result.get('recommendations', [])
 
                 st.markdown("---")
-                st.markdown("## 📊 Quantitative Optimization Metrics")
+                st.markdown(f"## {icon('assessment')} Quantitative Optimization Metrics", unsafe_allow_html=True)
 
                 # SECTION A: Current vs Optimized Comparison
                 col1, col2 = st.columns(2)
@@ -2558,16 +2558,16 @@ def show_portfolio_results():
 
                 # SECTION B: Recommendations Table
                 if recommendations:
-                    st.markdown("### 💡 Recommended Changes")
+                    st.markdown(f"### {icon('lightbulb')} Recommended Changes", unsafe_allow_html=True)
                     for rec in recommendations:
                         if rec['action'] == 'increase':
                             st.success(
-                                f"📈 **{rec['ticker']}**: Increase from {rec['current_weight']*100:.1f}% to {rec['optimized_weight']*100:.1f}% "
+                                f"{icon('trending_up')} **{rec['ticker']}**: Increase from {rec['current_weight']*100:.1f}% to {rec['optimized_weight']*100:.1f}% "
                                 f"(+{rec['percentage_change']:.1f}% / ${rec['dollar_amount']:,.2f})"
                             )
                         else:
                             st.warning(
-                                f"📉 **{rec['ticker']}**: Decrease from {rec['current_weight']*100:.1f}% to {rec['optimized_weight']*100:.1f}% "
+                                f"{icon('trending_down')} **{rec['ticker']}**: Decrease from {rec['current_weight']*100:.1f}% to {rec['optimized_weight']*100:.1f}% "
                                 f"(-{rec['percentage_change']:.1f}% / ${rec['dollar_amount']:,.2f})"
                             )
 
@@ -2584,7 +2584,7 @@ def show_portfolio_results():
                         tool_output = opt_result.get('tool_output', {})
                         structured_portfolio = st.session_state.get('structured_portfolio', {})
 
-                        st.markdown("### ⚠️ This will replace your original portfolio")
+                        st.markdown(f"### {icon('warning')} This will replace your original portfolio", unsafe_allow_html=True)
 
                         # Show before/after comparison
                         col1, col2 = st.columns(2)
@@ -2829,8 +2829,8 @@ def show_portfolio_results():
                                 if 'portfolio_optimization_crew' in st.session_state:
                                     del st.session_state.portfolio_optimization_crew
 
-                                st.success("✅ Portfolio successfully updated with optimized allocation!")
-                                st.info("📊 Portfolio insights, risk analysis, and projections have been regenerated.")
+                                st.markdown(f"{icon('check_circle')} Portfolio successfully updated with optimized allocation!", unsafe_allow_html=True)
+                                st.markdown(f"{icon('assessment')} Portfolio insights, risk analysis, and projections have been regenerated.", unsafe_allow_html=True)
 
                             except Exception as e:
                                 logger.error(f"Error applying optimized portfolio: {str(e)}")
@@ -3157,10 +3157,10 @@ def show_portfolio_results():
                     valid_tickers = crew_risk_result.get('valid_tickers', [])
 
                     if invalid_tickers:
-                        st.warning(
-                            f"⚠️ **Data Limitation**: {len(invalid_tickers)} ticker(s) excluded from risk analysis due to insufficient historical data: "
+                        st.markdown(
+                            f"{icon('warning')} **Data Limitation**: {len(invalid_tickers)} ticker(s) excluded from risk analysis due to insufficient historical data: "
                             f"**{', '.join(invalid_tickers)}**\n\n"
-                            f"Risk metrics calculated using: **{', '.join(valid_tickers)}**"
+                            f"Risk metrics calculated using: **{', '.join(valid_tickers)}**", unsafe_allow_html=True
                         )
 
             # Display Risk Metrics Dashboard FIRST
@@ -3246,7 +3246,7 @@ def show_portfolio_results():
                         # Display the full narrative cleanly (no parsing needed)
                         st.markdown(escape_markdown_latex(crew_output))
             else:
-                st.info("📊 Risk analysis will appear here once portfolio is parsed")
+                st.markdown(f"{icon('assessment')} Risk analysis will appear here once portfolio is parsed", unsafe_allow_html=True)
 
     # ============================================
     # TAB 3: PROJECTIONS
@@ -3295,12 +3295,12 @@ def show_portfolio_results():
             # Display AI narrative about projections
             if projection_narrative:
                 st.markdown("---")
-                st.markdown("#### 💬 What This Means for You")
+                st.markdown(f"#### {icon('chat')} What This Means for You", unsafe_allow_html=True)
                 st.markdown(escape_markdown_latex(projection_narrative))
             elif projection_data and 'summary' in projection_data:
                 # Fallback: Generate simple narrative from projection data
                 st.markdown("---")
-                st.markdown("#### 💬 What This Means for You")
+                st.markdown(f"#### {icon('chat')} What This Means for You", unsafe_allow_html=True)
                 summary = projection_data['summary']
                 timeline_years = projection_data.get('timeline_years', 5)
 
@@ -3326,7 +3326,7 @@ def show_portfolio_results():
                 """
                 st.markdown(fallback_narrative)
         else:
-            st.info("📊 Performance projections will be displayed here after generation.")
+            st.markdown(f"{icon('show_chart')} Performance projections will be displayed here after generation.", unsafe_allow_html=True)
 
     # ============================================
     # TAB 4: BUDGET PLAN
@@ -3350,7 +3350,7 @@ def show_portfolio_results():
             st.write("• **Long-term (10+ years):** Maximize growth, review semi-annually")
 
         with col2:
-            st.markdown("#### 🎯 Action Plan")
+            st.markdown(f"#### {icon('flag')} Action Plan", unsafe_allow_html=True)
             st.markdown("""
             ✅ **Step 1:** Open a brokerage account (if needed)
             - Recommended: Fidelity, Vanguard, or Schwab
@@ -3623,12 +3623,12 @@ def show_portfolio_results():
                 
                 # Show recommendations
                 if opt_results.get('recommendations'):
-                    st.markdown("#### 💡 Optimization Recommendations")
+                    st.markdown(f"#### {icon('lightbulb')} Optimization Recommendations", unsafe_allow_html=True)
                     for rec in opt_results['recommendations']:
                         if rec['action'] == 'increase':
-                            st.success(f"📈 **{rec['ticker']}**: Increase by {rec['percentage_change']:.1f}% (${rec['dollar_amount']:,.2f})")
+                            st.markdown(f"{icon('trending_up')} **{rec['ticker']}**: Increase by {rec['percentage_change']:.1f}% (${rec['dollar_amount']:,.2f})", unsafe_allow_html=True)
                         else:
-                            st.warning(f"📉 **{rec['ticker']}**: Decrease by {abs(rec['percentage_change']):.1f}% (${rec['dollar_amount']:,.2f})")
+                            st.markdown(f"{icon('trending_down')} **{rec['ticker']}**: Decrease by {abs(rec['percentage_change']):.1f}% (${rec['dollar_amount']:,.2f})", unsafe_allow_html=True)
                 
                     if st.button(":material/check_circle: Apply Optimized Allocation", type="primary"):
                         st.info("🚧 Feature coming soon: Apply optimization and rebalance portfolio")
@@ -3722,7 +3722,7 @@ def show_portfolio_results():
 def show_portfolio_landing():
     """Portfolio landing page - shows latest saved portfolio."""
 
-    st.title("📊 My Portfolio")
+    st.markdown(f"# {icon('pie_chart')} My Portfolio", unsafe_allow_html=True)
 
     portfolio = st.session_state.get('latest_portfolio')
 
@@ -3930,7 +3930,7 @@ def load_and_refresh_portfolio(portfolio):
                 st.session_state.portfolio_output = "Portfolio loaded successfully."
 
         # STEP 2: Regenerate risk analysis
-        with st.spinner("⚠️ Analyzing current risk metrics..."):
+        with st.spinner(f"{icon('warning')} Analyzing current risk metrics..."):
             try:
                 crew_risk_result = QuantitativeAnalysisCrew().analyze_portfolio_risk(
                     tickers=tickers,
@@ -3986,7 +3986,7 @@ def load_and_refresh_portfolio(portfolio):
                 logger.error(f"Error regenerating risk: {str(e)}")
 
         # STEP 3: Regenerate projections
-        with st.spinner("📈 Calculating updated performance projections..."):
+        with st.spinner(f"{icon('trending_up')} Calculating updated performance projections..."):
             try:
                 from tools.performance_projection_tool import _calculate_projections_impl
                 from portfoliocrew import parse_timeline_to_years
@@ -4125,36 +4125,36 @@ def show_demographics_step():
         st.markdown("**Your age range:**")
         age_range = st.selectbox(
             "Choose your age group",
-            ["16-20 (High school/Early college)", "21-25 (College/Entry career)", 
+            ["16-20 (High school/Early college)", "21-25 (College/Entry career)",
              "26-30 (Early career)", "31-35 (Establishing career)", "36+ (Experienced)"],
-            help="💡 Different life stages have different investment strategies"
+            help=f"{icon('lightbulb')} Different life stages have different investment strategies"
         )
         
         st.markdown("**Your current income range:**")
         income_range = st.selectbox(
             "Choose your income bracket",
             ["Student/No income", "$0-25k", "$25k-50k", "$50k-75k", "$75k+"],
-            help="💡 This helps us suggest appropriate investment amounts"
+            help=f"{icon('lightbulb')} This helps us suggest appropriate investment amounts"
         )
     
     with col2:
         st.markdown("**What's your primary goal?**")
         primary_goal = st.selectbox(
             "Choose your main objective",
-            ["Learn investing basics", "Build emergency fund", "Save for a major purchase", 
+            ["Learn investing basics", "Build emergency fund", "Save for a major purchase",
              "Long-term wealth building", "Retirement planning", "Generate side income"],
-            help="💡 Your goal shapes your investment strategy"
+            help=f"{icon('lightbulb')} Your goal shapes your investment strategy"
         )
         
         st.markdown("**Investment timeline:**")
         timeline = st.selectbox(
             "When do you need this money?",
             ["Learning only (no timeline)", "1-2 years", "3-5 years", "5-10 years", "10+ years"],
-            help="💡 Longer timelines allow for more growth-focused strategies"
+            help=f"{icon('lightbulb')} Longer timelines allow for more growth-focused strategies"
         )
-    
+
     # Educational tip
-    st.info("💡 **Quick Tip:** Starting early is your biggest advantage! Even small amounts can grow significantly over time thanks to compound interest.")
+    st.markdown(f"{icon('lightbulb')} **Quick Tip:** Starting early is your biggest advantage! Even small amounts can grow significantly over time thanks to compound interest.", unsafe_allow_html=True)
     
     # Navigation
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -4171,7 +4171,7 @@ def show_demographics_step():
 
 def show_risk_scenarios_step():
     """Step 2: Scenario-based risk assessment with real-world examples."""
-    st.markdown("### 🎯 How do you handle uncertainty?")
+    st.markdown(f"### {icon('track_changes')} How do you handle uncertainty?", unsafe_allow_html=True)
     st.markdown("Let's explore different scenarios to understand your comfort level with risk.")
     
     # Scenario 1: Market volatility
@@ -4243,7 +4243,7 @@ def show_risk_scenarios_step():
 
 def show_investment_amount_step():
     """Step 3: Investment amount with contextual comparisons and guidance."""
-    st.markdown("### 💰 Let's talk money")
+    st.markdown(f"### {icon('payments')} Let's talk money", unsafe_allow_html=True)
     st.markdown("How much can you comfortably invest? Remember: only invest what you can afford to lose!")
     
     # Get user context
@@ -4252,22 +4252,22 @@ def show_investment_amount_step():
     
     # Contextual guidance based on income
     if income_range == "Student/No income":
-        st.info("💡 **Student Tip:** Start small! Even $25-50 monthly helps you learn. Focus on paper trading or micro-investing apps first.")
+        st.markdown(f"{icon('lightbulb')} **Student Tip:** Start small! Even $25-50 monthly helps you learn. Focus on paper trading or micro-investing apps first.", unsafe_allow_html=True)
         amount_options = ["$0 (learning mode)", "$25-50", "$50-100", "$100-250", "$250+"]
     elif "$0-25k" in income_range:
-        st.info("💡 **Starting Out:** Build your emergency fund first! Then start with whatever you're comfortable losing - even $50 is a great start.")
+        st.markdown(f"{icon('lightbulb')} **Starting Out:** Build your emergency fund first! Then start with whatever you're comfortable losing - even $50 is a great start.", unsafe_allow_html=True)
         amount_options = ["$25-50", "$50-100", "$100-250", "$250-500", "$500+"]
     elif "$25k-50k" in income_range:
-        st.info("💡 **Building Wealth:** Consider the 50/30/20 rule: 50% needs, 30% wants, 20% savings/investing.")
+        st.markdown(f"{icon('lightbulb')} **Building Wealth:** Consider the 50/30/20 rule: 50% needs, 30% wants, 20% savings/investing.", unsafe_allow_html=True)
         amount_options = ["$100-250", "$250-500", "$500-1,000", "$1,000-2,500", "$2,500+"]
     else:
-        st.info("💡 **Growing Wealth:** You're in a strong position! Consider maximizing tax-advantaged accounts first.")
+        st.markdown(f"{icon('lightbulb')} **Growing Wealth:** You're in a strong position! Consider maximizing tax-advantaged accounts first.", unsafe_allow_html=True)
         amount_options = ["$500-1,000", "$1,000-2,500", "$2,500-5,000", "$5,000-10,000", "$10,000+"]
     
     initial_amount = st.selectbox(
         "Choose your starting investment amount:",
         amount_options,
-        help="💡 You can always add more later as you get comfortable"
+        help=f"{icon('lightbulb')} You can always add more later as you get comfortable"
     )
     
     # Contextual comparison
@@ -4293,11 +4293,11 @@ def show_investment_amount_step():
     st.markdown("**🏦 Quick financial health check:**")
     has_emergency = st.checkbox(
         "I have at least $500-1,000 saved for emergencies",
-        help="💡 Emergency funds should come before investing!"
+        help=f"{icon('lightbulb')} Emergency funds should come before investing!"
     )
-    
+
     if not has_emergency and initial_amount not in ["$0 (learning mode)", "$25-50"]:
-        st.warning("⚠️ **Consider building an emergency fund first!** This protects your investments by preventing early withdrawals.")
+        st.markdown(f"{icon('warning')} **Consider building an emergency fund first!** This protects your investments by preventing early withdrawals.", unsafe_allow_html=True)
     
     # Navigation
     col1, col2, col3 = st.columns([1, 1, 1])
@@ -4316,7 +4316,7 @@ def show_investment_amount_step():
 
 def show_first_analysis_tutorial():
     """Step 4: Interactive tutorial for first stock analysis."""
-    st.markdown("### 📈 Your First Stock Analysis")
+    st.markdown(f"### {icon('trending_up')} Your First Stock Analysis", unsafe_allow_html=True)
     st.markdown("Let's walk through analyzing a real company together!")
     
     # Tutorial introduction
@@ -4336,7 +4336,7 @@ def show_first_analysis_tutorial():
     tutorial_stock = st.selectbox(
         "Pick one for your first analysis:",
         list(suggested_stocks.keys()),
-        help="💡 These are all well-established companies perfect for learning"
+        help=f"{icon('lightbulb')} These are all well-established companies perfect for learning"
     )
     
     # What they'll learn
@@ -4372,7 +4372,7 @@ def show_first_analysis_tutorial():
 
 def show_action_plan_step():
     """Step 5: Generate personalized action plan and complete onboarding."""
-    st.markdown("### 🎯 Your Personalized Investment Plan")
+    st.markdown(f"### {icon('flag')} Your Personalized Investment Plan", unsafe_allow_html=True)
     
     # Get user data
     data = st.session_state.onboarding_data
