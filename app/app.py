@@ -2492,13 +2492,14 @@ def show_portfolio_results():
         if 'show_education_overlay' not in st.session_state:
             st.session_state.show_education_overlay = False
 
-        # Hidden button that JavaScript will trigger (styled to be invisible)
-        st.markdown('<style>#education_trigger { display: none !important; }</style>', unsafe_allow_html=True)
-        education_trigger = st.button("Trigger Education", key="education_trigger", type="primary")
-
-        if education_trigger or st.session_state.show_education_overlay:
+        # Use query params to detect education icon click
+        query_params = st.query_params
+        if query_params.get('trigger_education') == 'true':
             st.session_state.show_education_overlay = True
+            # Clear the query param
+            st.query_params.clear()
 
+        if st.session_state.show_education_overlay:
             # Check if education content already exists in session state
             if 'education_content' not in st.session_state:
                 # Generate education content
@@ -2564,14 +2565,10 @@ def show_portfolio_results():
         st.markdown('''
         <script>
         function showEducationOverlay() {
-            // Find and click the hidden trigger button
-            const buttons = window.parent.document.querySelectorAll('button');
-            for (let btn of buttons) {
-                if (btn.innerText && btn.innerText.includes('Trigger Education')) {
-                    btn.click();
-                    break;
-                }
-            }
+            // Set query param and reload page to trigger education generation
+            const url = new URL(window.location.href);
+            url.searchParams.set('trigger_education', 'true');
+            window.location.href = url.toString();
         }
         </script>
         ''', unsafe_allow_html=True)
@@ -2580,6 +2577,7 @@ def show_portfolio_results():
         if st.session_state.get('close_education', False):
             st.session_state.show_education_overlay = False
             st.session_state.close_education = False
+            st.rerun()
 
         # ============================================
         # OPTIMIZATION METRICS OR PORTFOLIO INSIGHTS
@@ -2979,6 +2977,42 @@ def show_portfolio_results():
                     <span class="material-symbols-outlined" style="color: #1A759F; font-size: 28px;">info</span>
                 </button>
             </div>
+
+            <!-- Portfolio Info Overlay -->
+            <div class="overlay-backdrop" id="portfolioInfoBackdrop" onclick="closePortfolioInfoOverlay()"></div>
+            <div class="overlay-modal" id="portfolioInfoModal">
+                <div class="overlay-header">
+                    <h3>{icon('info')} Understanding Your Portfolio</h3>
+                    <button class="overlay-close" onclick="closePortfolioInfoOverlay()">×</button>
+                </div>
+                <div class="overlay-content">
+                    <h4>Why this portfolio?</h4>
+                    <ul>
+                        <li>Matched to your risk tolerance and timeline</li>
+                        <li>Diversified across asset classes</li>
+                        <li>Optimized for your investment amount</li>
+                        <li>Suitable for your experience level</li>
+                    </ul>
+                    <h4>Next Steps:</h4>
+                    <ol>
+                        <li>Open a brokerage account if you haven't already</li>
+                        <li>Start with the recommended allocation</li>
+                        <li>Review and rebalance quarterly</li>
+                        <li>Continue learning about each investment</li>
+                    </ol>
+                </div>
+            </div>
+
+            <script>
+            function showPortfolioInfoOverlay() {{
+                document.getElementById('portfolioInfoBackdrop').classList.add('active');
+                document.getElementById('portfolioInfoModal').classList.add('active');
+            }}
+            function closePortfolioInfoOverlay() {{
+                document.getElementById('portfolioInfoBackdrop').classList.remove('active');
+                document.getElementById('portfolioInfoModal').classList.remove('active');
+            }}
+            </script>
             ''', unsafe_allow_html=True)
 
             # Add enhanced card-based styling for Portfolio Insights with Show More functionality
@@ -3447,45 +3481,6 @@ toggleCard(contentId, this);
 </script>'''
 
             st.markdown(insights_html, unsafe_allow_html=True)
-
-            # Add overlay HTML for Portfolio Info
-            portfolio_info_overlay = f'''
-            <div class="overlay-backdrop" id="portfolioInfoBackdrop" onclick="closePortfolioInfoOverlay()"></div>
-            <div class="overlay-modal" id="portfolioInfoModal">
-                <div class="overlay-header">
-                    <h3>{icon('info')} Understanding Your Portfolio</h3>
-                    <button class="overlay-close" onclick="closePortfolioInfoOverlay()">×</button>
-                </div>
-                <div class="overlay-content">
-                    <h4>Why this portfolio?</h4>
-                    <ul>
-                        <li>Matched to your risk tolerance and timeline</li>
-                        <li>Diversified across asset classes</li>
-                        <li>Optimized for your investment amount</li>
-                        <li>Suitable for your experience level</li>
-                    </ul>
-                    <h4>Next Steps:</h4>
-                    <ol>
-                        <li>Open a brokerage account if you haven't already</li>
-                        <li>Start with the recommended allocation</li>
-                        <li>Review and rebalance quarterly</li>
-                        <li>Continue learning about each investment</li>
-                    </ol>
-                </div>
-            </div>
-
-            <script>
-            function showPortfolioInfoOverlay() {{
-                document.getElementById('portfolioInfoBackdrop').classList.add('active');
-                document.getElementById('portfolioInfoModal').classList.add('active');
-            }}
-            function closePortfolioInfoOverlay() {{
-                document.getElementById('portfolioInfoBackdrop').classList.remove('active');
-                document.getElementById('portfolioInfoModal').classList.remove('active');
-            }}
-            </script>
-            '''
-            st.markdown(portfolio_info_overlay, unsafe_allow_html=True)
 
     # ============================================
     # TAB 2: RISK ANALYSIS
