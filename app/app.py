@@ -2856,63 +2856,81 @@ def show_portfolio_results():
             st.markdown("---")
             st.markdown(f"## {icon('lightbulb')} Portfolio Insights", unsafe_allow_html=True)
 
-            # Add category styling
+            # Add enhanced card-based styling for Portfolio Insights
             st.markdown("""
             <style>
+            /* Modern Card Layout for Portfolio Insights */
             .insight-category {
-                background: #ffffff;
-                border: 1px solid #e0e0e0;
-                border-radius: 12px;
-                padding: 1.5rem;
+                background: #FFFFFF;
+                border: 1px solid #E1E8ED;
+                border-radius: 16px;
+                padding: 1.75rem;
                 margin: 1rem 0;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+                transition: all 0.3s ease;
+            }
+            .insight-category:hover {
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+                transform: translateY(-2px);
             }
             .insight-category-title {
-                font-size: 1.1rem;
+                font-size: 1.2rem;
                 font-weight: 700;
-                margin-bottom: 1rem;
+                margin-bottom: 1.25rem;
                 color: #2C3E50;
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
+                padding-bottom: 0.75rem;
+                border-bottom: 2px solid #F8F9FA;
             }
             .insight-item {
-                margin: 0.5rem 0;
+                margin: 0.75rem 0;
                 padding-left: 1.5rem;
                 position: relative;
                 font-size: 0.95rem;
-                line-height: 1.5;
+                line-height: 1.6;
+                color: #555;
             }
             .insight-item:before {
                 content: "✓";
                 position: absolute;
                 left: 0;
-                color: #4ECDC4;
+                color: #00BA6D;
                 font-weight: bold;
+                font-size: 1.1rem;
             }
+            /* Enhanced Holding Row with Full Text Display */
             .holding-row {
                 margin: 0.75rem 0;
-                padding: 0.75rem;
-                background: #f8f9fa;
-                border-radius: 6px;
-                border-left: 3px solid #4ECDC4;
+                padding: 1rem;
+                background: #F8F9FA;
+                border-radius: 8px;
+                border-left: 4px solid #FF6B35;
+                transition: all 0.2s ease;
+            }
+            .holding-row:hover {
+                background: #F0F2F5;
+                border-left-color: #1A759F;
             }
             .holding-ticker {
                 font-weight: 700;
                 color: #2C3E50;
-                font-size: 1rem;
+                font-size: 1.05rem;
+                margin-bottom: 0.5rem;
             }
             .holding-reasoning {
                 color: #555;
-                font-size: 0.9rem;
-                margin-top: 0.25rem;
-                white-space: normal;
-                word-wrap: break-word;
-                overflow-wrap: break-word;
-                line-height: 1.5;
-                display: block;
-                overflow: visible;
-                max-width: 100%;
-                text-overflow: clip;
+                font-size: 0.95rem;
+                white-space: normal !important;
+                word-wrap: break-word !important;
+                overflow-wrap: break-word !important;
+                line-height: 1.6;
+                display: block !important;
+                overflow: visible !important;
+                max-width: 100% !important;
+                text-overflow: clip !important;
+                hyphens: auto;
             }
             </style>
             """, unsafe_allow_html=True)
