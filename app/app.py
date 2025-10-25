@@ -2698,14 +2698,20 @@ def show_portfolio_results():
                     st.markdown(f"### {icon('lightbulb')} Recommended Changes", unsafe_allow_html=True)
                     for rec in recommendations:
                         if rec['action'] == 'increase':
-                            st.success(
-                                f"{icon('trending_up')} **{rec['ticker']}**: Increase from {rec['current_weight']*100:.1f}% to {rec['optimized_weight']*100:.1f}% "
-                                f"(+{rec['percentage_change']:.1f}% / ${rec['dollar_amount']:,.2f})"
+                            st.markdown(
+                                f'<div style="padding: 12px; background-color: #d4edda; border-left: 4px solid #28a745; border-radius: 4px; margin-bottom: 8px;">'
+                                f'{icon("trending_up")} <strong>{rec["ticker"]}</strong>: Increase from {rec["current_weight"]*100:.1f}% to {rec["optimized_weight"]*100:.1f}% '
+                                f'(+{rec["percentage_change"]:.1f}% / ${rec["dollar_amount"]:,.2f})'
+                                f'</div>',
+                                unsafe_allow_html=True
                             )
                         else:
-                            st.warning(
-                                f"{icon('trending_down')} **{rec['ticker']}**: Decrease from {rec['current_weight']*100:.1f}% to {rec['optimized_weight']*100:.1f}% "
-                                f"(-{rec['percentage_change']:.1f}% / ${rec['dollar_amount']:,.2f})"
+                            st.markdown(
+                                f'<div style="padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin-bottom: 8px;">'
+                                f'{icon("trending_down")} <strong>{rec["ticker"]}</strong>: Decrease from {rec["current_weight"]*100:.1f}% to {rec["optimized_weight"]*100:.1f}% '
+                                f'(-{rec["percentage_change"]:.1f}% / ${rec["dollar_amount"]:,.2f})'
+                                f'</div>',
+                                unsafe_allow_html=True
                             )
 
                     # Apply button - Show confirmation dialog
