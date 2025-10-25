@@ -842,32 +842,23 @@ def process_url_params():
         st.session_state.referral_source = query_params['ref']
         track_referral(query_params['ref'])
 
-    # Check for navigation - only process once per navigation event
-    # This prevents breaking existing flows like portfolio generation
+    # Check for navigation - process and set session state
     if 'nav' in query_params:
         nav_target = query_params['nav']
-        # Create a unique key for this navigation event
-        nav_key = f"nav_processed_{nav_target}_{query_params.get('ticker', '')}"
 
-        # Only process if we haven't already handled this exact navigation
-        if not st.session_state.get(nav_key, False):
-            if nav_target == 'analyze':
-                st.session_state.show_main_app = True
-                st.session_state.show_portfolio_landing = False
-                st.session_state.show_portfolio_results = False
-                # Check for ticker parameter
-                if 'ticker' in query_params:
-                    st.session_state.suggested_ticker = query_params['ticker']
-            elif nav_target == 'portfolio':
-                st.session_state.show_main_app = False
-                st.session_state.show_portfolio_landing = True
-                st.session_state.show_portfolio_results = False
-
-            # Mark this navigation as processed
-            st.session_state[nav_key] = True
-
-            # Trigger rerun to update UI with new navigation state
-            st.rerun()
+        # Always set navigation state when nav param is present
+        # This ensures state is correct even after reruns
+        if nav_target == 'analyze':
+            st.session_state.show_main_app = True
+            st.session_state.show_portfolio_landing = False
+            st.session_state.show_portfolio_results = False
+            # Check for ticker parameter
+            if 'ticker' in query_params:
+                st.session_state.suggested_ticker = query_params['ticker']
+        elif nav_target == 'portfolio':
+            st.session_state.show_main_app = False
+            st.session_state.show_portfolio_landing = True
+            st.session_state.show_portfolio_results = False
 
 
 # =====================================
