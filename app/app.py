@@ -2695,23 +2695,17 @@ def show_portfolio_results():
 
                 # SECTION B: Recommendations Table
                 if recommendations:
-                    st.markdown(f"### {icon('lightbulb')} Recommended Changes", unsafe_allow_html=True)
+                    st.markdown("### :material/lightbulb: Recommended Changes")
                     for rec in recommendations:
                         if rec['action'] == 'increase':
-                            st.markdown(
-                                f'<div style="padding: 12px; background-color: #d4edda; border-left: 4px solid #28a745; border-radius: 4px; margin-bottom: 8px;">'
-                                f'{icon("trending_up")} <strong>{rec["ticker"]}</strong>: Increase from {rec["current_weight"]*100:.1f}% to {rec["optimized_weight"]*100:.1f}% '
-                                f'(+{rec["percentage_change"]:.1f}% / ${rec["dollar_amount"]:,.2f})'
-                                f'</div>',
-                                unsafe_allow_html=True
+                            st.success(
+                                f":material/trending_up: **{rec['ticker']}**: Increase from {rec['current_weight']*100:.1f}% to {rec['optimized_weight']*100:.1f}% "
+                                f"(+{rec['percentage_change']:.1f}% / ${rec['dollar_amount']:,.2f})"
                             )
                         else:
-                            st.markdown(
-                                f'<div style="padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin-bottom: 8px;">'
-                                f'{icon("trending_down")} <strong>{rec["ticker"]}</strong>: Decrease from {rec["current_weight"]*100:.1f}% to {rec["optimized_weight"]*100:.1f}% '
-                                f'(-{rec["percentage_change"]:.1f}% / ${rec["dollar_amount"]:,.2f})'
-                                f'</div>',
-                                unsafe_allow_html=True
+                            st.warning(
+                                f":material/trending_down: **{rec['ticker']}**: Decrease from {rec['current_weight']*100:.1f}% to {rec['optimized_weight']*100:.1f}% "
+                                f"(-{rec['percentage_change']:.1f}% / ${rec['dollar_amount']:,.2f})"
                             )
 
                     # Apply button - Show confirmation dialog
