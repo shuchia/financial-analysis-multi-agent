@@ -3275,7 +3275,8 @@ def show_portfolio_results():
                 reasoning = alloc.get('reasoning', 'Diversification component')
                 logger.info(f"DEBUG Allocation {i}: ticker={ticker}, percentage={percentage}, reasoning='{reasoning}', reasoning_length={len(reasoning)}")
                 # Make ticker clickable to navigate to analysis page
-                asset_allocation_content += f'<div class="holding-row"><div class="holding-ticker"><a href="?nav=analyze&ticker={ticker}" class="holding-ticker-link">{ticker}</a> - {percentage:.1f}%</div><div class="holding-reasoning">{reasoning}</div></div>'
+                # Use JavaScript handler to preserve authentication
+                asset_allocation_content += f'''<div class="holding-row"><div class="holding-ticker"><a href="javascript:void(0)" onclick="navigateWithAuth('analyze', '{ticker}')" class="holding-ticker-link">{ticker}</a> - {percentage:.1f}%</div><div class="holding-reasoning">{reasoning}</div></div>'''
 
             # Determine if content needs "Show More" (>240px ~ 4-5 holdings)
             asset_needs_expand = len(structured_portfolio.get('allocations', [])) > 4
@@ -3386,6 +3387,30 @@ toggleCard(contentId, this);
 }});
 }}, 100);
 }})();
+
+// Navigate with authentication preserved
+window.navigateWithAuth = function(nav, ticker) {{
+    try {{
+        const authData = localStorage.getItem('investforge_auth');
+        const params = new URLSearchParams();
+        params.set('nav', nav);
+        if (ticker) params.set('ticker', ticker);
+
+        if (authData) {{
+            const data = JSON.parse(authData);
+            params.set('email', data.email);
+            params.set('plan', data.plan || 'free');
+            if (data.demo) params.set('mode', 'demo');
+            params.set('restored', '1');
+        }}
+
+        window.location.href = window.location.pathname + '?' + params.toString();
+    }} catch (e) {{
+        console.error('Navigation error:', e);
+        // Fallback navigation without auth
+        window.location.href = '?nav=' + nav + (ticker ? '&ticker=' + ticker : '');
+    }}
+}};
 </script>'''
 
             st.markdown(insights_html, unsafe_allow_html=True)
