@@ -5,20 +5,32 @@ Extracted from app.py to enable clean navigation from ticker links
 
 import streamlit as st
 import sys
+import os
 from pathlib import Path
 
 # Add parent directory to path to import from app
 app_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(app_dir))
+if str(app_dir) not in sys.path:
+    sys.path.insert(0, str(app_dir))
+
+# Change to app directory for relative imports to work
+os.chdir(app_dir)
 
 # Import necessary functions from app
-from components.analysis import render_analysis_page
-from app import (
-    load_user_usage,
-    check_usage_limits,
-    initiate_payment,
-    icon
-)
+try:
+    from components.analysis import render_analysis_page
+    from app import (
+        load_user_usage,
+        check_usage_limits,
+        initiate_payment,
+        icon
+    )
+except ImportError as e:
+    st.error(f"Import error: {e}")
+    st.error(f"Current directory: {os.getcwd()}")
+    st.error(f"App dir: {app_dir}")
+    st.error(f"sys.path: {sys.path}")
+    st.stop()
 
 # Page configuration
 st.set_page_config(
@@ -27,9 +39,15 @@ st.set_page_config(
     layout="wide"
 )
 
+# Debug: Show session state
+st.write("DEBUG - Session State Keys:", list(st.session_state.keys()))
+st.write("DEBUG - Authenticated:", st.session_state.get('authenticated', False))
+st.write("DEBUG - User Email:", st.session_state.get('user_email', None))
+
 # Authentication check
 if not st.session_state.get('authenticated', False):
     st.error("⚠️ Please log in to access stock analysis.")
+    st.info("Session state seems empty. This might be a Streamlit multi-page app issue.")
     if st.button("Go to Login"):
         st.switch_page("app.py")
     st.stop()
