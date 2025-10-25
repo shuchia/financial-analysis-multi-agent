@@ -3347,64 +3347,67 @@ def show_portfolio_results():
 <div class="insight-content {'collapsed' if cost_needs_expand else ''}" id="cost-content">{cost_content}</div>
 {cost_btn}
 </div>
-</div>
-<script>
-(function() {{
-function toggleCard(contentId, button) {{
+</div>'''
+
+            # JavaScript for card toggling and navigation (separate to avoid escaping issues)
+            insights_script = '''<script>
+(function() {
+function toggleCard(contentId, button) {
 const content = document.getElementById(contentId);
 const icon = button.querySelector('.material-symbols-outlined');
-if (content.classList.contains('collapsed')) {{
+if (content.classList.contains('collapsed')) {
 content.classList.remove('collapsed');
 content.classList.add('expanded');
 icon.textContent = 'expand_less';
 button.childNodes[1].textContent = 'Show Less';
-}} else {{
+} else {
 content.classList.remove('expanded');
 content.classList.add('collapsed');
 icon.textContent = 'expand_more';
 button.childNodes[1].textContent = 'Show More';
-}}
-}}
+}
+}
 // Make toggleCard available globally for onclick handlers
 window.toggleCard = toggleCard;
 // Also attach event listeners as backup
-setTimeout(function() {{
+setTimeout(function() {
 const buttons = document.querySelectorAll('.show-more-btn');
-buttons.forEach(function(btn) {{
-btn.onclick = function() {{
+buttons.forEach(function(btn) {
+btn.onclick = function() {
 const contentId = this.getAttribute('onclick').match(/'([^']+)'/)[1];
 toggleCard(contentId, this);
-}};
-}});
-}}, 100);
-}})();
+};
+});
+}, 100);
+})();
 
 // Navigate with authentication preserved
-window.navigateWithAuth = function(nav, ticker) {{
-    try {{
+window.navigateWithAuth = function(nav, ticker) {
+    try {
         const authData = localStorage.getItem('investforge_auth');
         const params = new URLSearchParams();
         params.set('nav', nav);
         if (ticker) params.set('ticker', ticker);
 
-        if (authData) {{
+        if (authData) {
             const data = JSON.parse(authData);
             params.set('email', data.email);
             params.set('plan', data.plan || 'free');
             if (data.demo) params.set('mode', 'demo');
             params.set('restored', '1');
-        }}
+        }
 
         window.location.href = window.location.pathname + '?' + params.toString();
-    }} catch (e) {{
+    } catch (e) {
         console.error('Navigation error:', e);
         // Fallback navigation without auth
         window.location.href = '?nav=' + nav + (ticker ? '&ticker=' + ticker : '');
-    }}
-}};
+    }
+};
 </script>'''
 
             st.markdown(insights_html, unsafe_allow_html=True)
+            st.markdown(insights_script, unsafe_allow_html=True)
 
     # ============================================
     # TAB 2: RISK ANALYSIS
