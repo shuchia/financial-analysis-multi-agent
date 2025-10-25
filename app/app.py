@@ -3260,14 +3260,19 @@ def show_portfolio_results():
 
             # DEBUG: Log allocations data
             logger.info(f"DEBUG: Number of allocations: {len(structured_portfolio.get('allocations', []))}")
+
+            # Store tickers for navigation buttons
+            portfolio_tickers = []
+
             for i, alloc in enumerate(structured_portfolio.get('allocations', [])):
                 ticker = alloc.get('ticker', 'N/A')
                 percentage = alloc.get('percentage', 0)
                 reasoning = alloc.get('reasoning', 'Diversification component')
+                portfolio_tickers.append(ticker)
                 logger.info(f"DEBUG Allocation {i}: ticker={ticker}, percentage={percentage}, reasoning='{reasoning}', reasoning_length={len(reasoning)}")
-                # Make ticker clickable to navigate to analysis page
-                # Use JavaScript handler to preserve authentication
-                asset_allocation_content += f'''<div class="holding-row"><div class="holding-ticker"><a href="javascript:void(0)" onclick="navigateWithAuth('analyze', '{ticker}')" class="holding-ticker-link">{ticker}</a> - {percentage:.1f}%</div><div class="holding-reasoning">{reasoning}</div></div>'''
+
+                # Ticker text with analysis button indicator
+                asset_allocation_content += f'''<div class="holding-row"><div class="holding-ticker"><span class="holding-ticker-text">{ticker}</span> - {percentage:.1f}%</div><div class="holding-reasoning">{reasoning}</div></div>'''
 
             # Determine if content needs "Show More" (>240px ~ 4-5 holdings)
             asset_needs_expand = len(structured_portfolio.get('allocations', [])) > 4
@@ -3408,6 +3413,24 @@ window.navigateWithAuth = function(nav, ticker) {
 
             st.markdown(insights_html, unsafe_allow_html=True)
             st.markdown(insights_script, unsafe_allow_html=True)
+
+            # Ticker Navigation Buttons (Phase 2: Native Streamlit navigation)
+            if portfolio_tickers:
+                st.markdown("---")
+                st.markdown("#### 📊 Analyze Holdings")
+                st.markdown("Click any ticker to view detailed stock analysis:")
+
+                # Create columns for ticker buttons
+                cols_per_row = 4
+                for i in range(0, len(portfolio_tickers), cols_per_row):
+                    cols = st.columns(cols_per_row)
+                    for j, col in enumerate(cols):
+                        if i + j < len(portfolio_tickers):
+                            ticker = portfolio_tickers[i + j]
+                            with col:
+                                if st.button(f"🔍 {ticker}", key=f"analyze_{ticker}", use_container_width=True):
+                                    st.session_state.suggested_ticker = ticker
+                                    st.switch_page("pages/Analysis.py")
 
     # ============================================
     # TAB 2: RISK ANALYSIS
